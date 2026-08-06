@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gerador ChatShop</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+:root{--p:#6d28d9;--p2:#4c1d95;--bg:#f5f3ff;--line:#e5e7eb;--text:#1f2937;--muted:#6b7280;--ok:#15803d;--danger:#b91c1c}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+.top{background:linear-gradient(135deg,var(--p2),var(--p));color:#fff;padding:16px 20px}.top h1{margin:0;font-size:22px}.top p{margin:5px 0 0;font-size:13px;opacity:.9}
+.layout{display:grid;grid-template-columns:minmax(350px,520px) 1fr;gap:16px;padding:16px}.panel,.preview{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 8px 30px #312e8120}.panel{padding:18px}.section{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:16px}.section:last-child{border:0}.section h2{font-size:16px;margin:0 0 12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}.field label{font-size:12px;font-weight:700}.field input,.field textarea{width:100%;border:1px solid #d1d5db;border-radius:10px;padding:10px;font:inherit}.field small{font-size:11px;color:var(--muted)}input[type=color]{height:42px;padding:4px}.product{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;background:#fafafa}.product-head{display:flex;justify-content:space-between;align-items:center}.remove{border:0;background:#fee2e2;color:var(--danger);padding:7px 9px;border-radius:8px;cursor:pointer}.image-preview{height:140px;border:1px dashed #cbd5e1;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff;margin:8px 0;color:#94a3b8;font-size:12px}.image-preview img{width:100%;height:100%;object-fit:contain}.tabs{display:flex;gap:7px;margin:8px 0}.tab{flex:1;border:1px solid #ddd;background:#fff;padding:8px;border-radius:8px;cursor:pointer;font-weight:700}.tab.active{background:#ede9fe;border-color:#8b5cf6;color:#4c1d95}.upload-box{display:none}.upload-box.active{display:block}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btn{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer;background:#ede9fe;color:#4c1d95}.btn.primary{background:var(--p);color:#fff}.btn.success{background:var(--ok);color:#fff}.btn.dark{background:#111827;color:#fff}.btn.danger{background:#fee2e2;color:var(--danger)}.notice{font-size:12px;line-height:1.45;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:10px;color:#713f12}.toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:11px 14px;border-radius:10px;opacity:0;transition:.2s;z-index:99}.toast.show{opacity:1}
+.preview{min-height:720px;display:flex;flex-direction:column}.previewbar{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}.status{font-size:11px;color:var(--ok)}
+#liveApp{flex:1;min-height:680px;display:grid;grid-template-columns:1fr 230px;background:#5B2029}.live-chat{display:flex;flex-direction:column;background:#FBF3EC;min-width:0}.live-head{background:#7A2E3B;color:#fff;padding:13px 15px;display:flex;align-items:center;gap:10px}.live-avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#C9A24B;font-weight:800}.live-messages{flex:1;overflow:auto;padding:15px;display:flex;flex-direction:column;gap:9px}.live-row{display:flex}.live-row.user{justify-content:flex-end}.live-bubble{max-width:82%;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid #ead9cc;line-height:1.4;font-size:14px}.live-row.user .live-bubble{background:#f3e3d3;border:0;border-top-right-radius:3px}.live-time{display:block;text-align:right;font-size:10px;color:#8a7570;margin-top:4px}.live-inputbar{display:flex;gap:8px;padding:10px;background:#f1e6dc}.live-inputbar input{flex:1;border:0;border-radius:22px;padding:12px 15px;font-size:15px;outline:none}.live-inputbar button{width:44px;height:44px;border:0;border-radius:50%;background:#7A2E3B;color:#fff;font-size:18px;cursor:pointer;display:grid;place-items:center;flex-shrink:0}.live-inputbar button.recording{background:#dc2626;animation:pulse 1s infinite}@keyframes pulse{50%{transform:scale(1.08)}}.audio-wrap{display:flex;align-items:center;gap:8px;min-width:210px}.audio-wrap audio{width:190px;height:36px}.rec-status{display:none;align-items:center;gap:6px;color:#b91c1c;font-size:12px;font-weight:700;padding:0 4px}.rec-status.show{display:flex}.live-catalog{background:#5B2029;padding:12px;overflow:auto}.live-catalog h2{color:#C9A24B;font-size:15px;margin:3px 0 12px}.live-card{background:#fff;border-radius:12px;padding:9px;margin-bottom:12px}.live-card img,.live-pcard img{width:100%;height:125px;object-fit:contain;border-radius:8px;background:#f6f6f6}.live-noimg{height:125px;display:grid;place-items:center;background:#f3f4f6;border-radius:8px;font-size:36px}.live-card b{display:block;font-size:13px;margin-top:7px}.live-price{color:#7A2E3B;font-weight:800;margin:4px 0}.live-buy{display:block;text-align:center;background:#7A2E3B;color:#fff;text-decoration:none;padding:8px;border-radius:8px;font-weight:700;font-size:12px}.live-pcard{width:220px;margin-top:8px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.preview{min-height:650px}#liveApp{grid-template-columns:1fr;grid-template-rows:1fr 190px}.live-catalog{display:flex;gap:10px;overflow-x:auto}.live-catalog h2{display:none}.live-card{min-width:145px;margin:0}.live-card img,.live-card .live-noimg{height:85px}}
+#authScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.authBox{background:#fff;border-radius:16px;padding:28px 26px;max-width:380px;width:100%;box-shadow:0 8px 30px #312e8120}
+.authBox h1{font-size:20px;margin:0 0 4px}.authBox p{font-size:13px;color:var(--muted);margin:0 0 18px}
+.authTabs{display:flex;gap:6px;margin-bottom:16px}.authTabs button{flex:1;border:1px solid #ddd;background:#fff;padding:9px;border-radius:8px;cursor:pointer;font-weight:700;color:var(--muted)}.authTabs button.active{background:#ede9fe;border-color:#8b5cf6;color:#4c1d95}
+#authError{font-size:12.5px;color:var(--danger);background:#fee2e2;border-radius:8px;padding:8px 10px;margin-top:10px;display:none}
+.userbar{display:flex;align-items:center;gap:10px;justify-content:flex-end;padding:8px 20px;background:#fff;border-bottom:1px solid var(--line);font-size:13px}
+.userbar b{color:var(--p2)}.userbar button{border:0;background:#fee2e2;color:var(--danger);padding:6px 10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px}
+#dashboard{padding:20px;max-width:960px;margin:0 auto}
+.dash-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px}
+.dash-head h1{font-size:21px;margin:0}
+.plan-tag{font-size:12px;background:#ede9fe;color:#4c1d95;padding:5px 10px;border-radius:20px;font-weight:700;display:inline-block;margin-top:4px}
+.storegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:18px}
+.storecard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 4px 16px #312e8112}
+.storecard h3{margin:0 0 4px;font-size:15px}
+.storecard .slugtag{font-size:11.5px;color:var(--muted);word-break:break-all}
+.storecard .metrics{display:flex;gap:14px;margin:12px 0;font-size:12px}
+.storecard .metrics b{display:block;font-size:17px;color:var(--p2)}
+.storecard .cardbtns{display:flex;gap:8px}
+.storecard .cardbtns button,.storecard .cardbtns a{flex:1;text-align:center;border:0;border-radius:8px;padding:8px;font-size:12.5px;font-weight:700;cursor:pointer;text-decoration:none}
+.storecard .cardbtns .edit{background:var(--p);color:#fff}
+.storecard .cardbtns .visit{background:#f3f4f6;color:var(--text)}
+.newcard{border:2px dashed #c4b5fd;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;cursor:pointer;color:#7c3aed;font-weight:700;padding:16px;min-height:150px}
+.newcard:hover{background:#faf5ff}
+.newcard.locked{opacity:.5;cursor:not-allowed}
+.backbar{padding:10px 20px;background:#fff;border-bottom:1px solid var(--line)}
+.backbar button{border:0;background:none;color:var(--p);font-weight:700;cursor:pointer;font-size:13px}
+.empty-hint{font-size:13px;color:var(--muted);margin-top:10px}
+#plansModal{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
+.plans-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+.plans-box{position:relative;background:#fff;border-radius:16px;padding:20px;max-width:640px;width:100%;max-height:88vh;overflow:auto}
+.planscols{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:16px}
+.plan-card{border:2px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+.plan-card.current{border-color:#8b5cf6;background:#faf5ff}
+.plan-card h3{margin:0 0 4px;font-size:15px}
+.plan-card .preco{font-weight:800;color:var(--p2);margin:6px 0}
+.plan-card .lim{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.plan-card button{width:100%;border:0;border-radius:8px;padding:9px;font-weight:700;font-size:13px;cursor:pointer;background:var(--p);color:#fff}
+.plan-card button:disabled{background:#e5e7eb;color:var(--muted);cursor:default}
+#limitBanner{background:#fef3c7;border:1px solid #fbbf24;color:#92400e;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px}
+#limitBanner a{color:#92400e;font-weight:700}
+#storefrontScreen{min-height:100vh;background:#5B2029}
+#storefrontScreen #liveApp{height:100vh;height:100dvh}
+.store-loading,.store-error{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center;background:#f5f3ff;color:#1f2937}
+.store-error-box{max-width:520px;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px;box-shadow:0 8px 30px #312e8120}
+.store-error-box h1{font-size:21px;margin:0 0 8px}.store-error-box p{color:#6b7280;line-height:1.5;margin:0}
+</style>
+</head>
+<body>
+
+<div id="storefrontScreen" style="display:none"></div>
+
+<div id="authScreen">
+  <div class="authBox">
+    <h1>🛍️ ChatShop</h1>
+    <p>Crie sua conta ou entre para publicar o chatbot da sua loja.</p>
+    <div class="authTabs">
+      <button id="tabLogin" class="active">Entrar</button>
+      <button id="tabSignup">Criar conta</button>
+    </div>
+    <div class="field"><label>E-mail</label><input id="authEmail" type="email" placeholder="voce@email.com"></div>
+    <div class="field"><label>Senha</label><input id="authPass" type="password" placeholder="Mínimo 6 caracteres"></div>
+    <button class="btn primary" id="authSubmit" style="width:100%">Entrar</button>
+    <div id="authError"></div>
+  </div>
+</div>
+
+<div id="genApp" style="display:none">
+<div class="userbar">Logado como <b id="userEmail"></b><button id="logoutBtn">Sair</button></div>
+
+<div id="dashboard" style="display:none">
+  <div class="dash-head">
+    <div><h1>🛍️ Meus ChatShops</h1><span class="plan-tag" id="planTag">Plano Grátis</span></div>
+    <button class="btn primary" id="verPlanosBtn" type="button">Ver planos</button>
+  </div>
+  <div class="storegrid" id="storeGrid"></div>
+  <p class="empty-hint" id="emptyHint" style="display:none">Você ainda não publicou nenhum chatbot. Toque em "+ Novo ChatShop" para começar.</p>
+</div>
+
+<div id="plansModal" style="display:none">
+  <div class="plans-overlay"></div>
+  <div class="plans-box">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Planos ChatShop</h2>
+      <button id="fecharPlanos" style="border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)">×</button>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin-top:4px">Cada plano possui um limite de ChatShops e de produtos por ChatShop.</p>
+    <div class="planscols" id="plansCols"></div>
+    <p id="plansMsg" class="empty-hint" style="display:none"></p>
+  </div>
+</div>
+
+<div id="editorView" style="display:none">
+<div class="backbar"><button id="backToDash">← Voltar ao painel</button></div>
+<header class="top"><h1>🛍️ Gerador ChatShop</h1><p>Crie, teste, grave áudio, copie o HTML ou baixe o index.html pronto.</p></header>
+<main class="layout">
+<div id="limitBanner" style="display:none"></div>
+<section class="panel">
+<div class="section"><h2>1. Dados da loja</h2>
+<div class="field"><label>Nome da loja</label><input id="brand" value="Minha Loja"></div>
+<div class="field"><label>WhatsApp</label><input id="whatsapp" value="5511999999999" inputmode="numeric"><small>Somente números, com 55 + DDD + número.</small></div>
+<div class="field"><label>Mensagem inicial</label><textarea id="welcome" rows="3">Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja a vitrine.</textarea></div>
+<div class="field"><label>Subdomínio (endereço do chatbot)</label><input id="slug" value="minha-loja"><small>Vai ficar em: <b id="slugPreview">minha-loja.alibr.com.br</b> — use só letras minúsculas, números e hífen.</small></div>
+</div>
+<div class="section"><h2>2. Aparência</h2><div class="grid2">
+<div class="field"><label>Cor principal</label><input type="color" id="mainColor" value="#7A2E3B"></div>
+<div class="field"><label>Cor escura</label><input type="color" id="darkColor" value="#5B2029"></div>
+<div class="field"><label>Destaque</label><input type="color" id="accentColor" value="#C9A24B"></div>
+<div class="field"><label>Fundo do chat</label><input type="color" id="chatBg" value="#FBF3EC"></div>
+</div></div>
+<div class="section"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">3. Produtos</h2><button class="btn" id="addProduct">+ Produto</button></div><div id="products"></div></div>
+<div class="section"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">3b. Perguntas e Respostas</h2><button class="btn" id="addQnA">+ Pergunta</button></div><div id="qnaList"></div><small style="color:var(--muted)">Cadastre dúvidas comuns (prazo de entrega, trocas, formas de pagamento...). O bot responde automaticamente quando o cliente perguntar algo parecido.</small></div>
+<div class="section"><h2>4. Publicar</h2><div class="actions">
+<button class="btn primary" id="publishBtn" style="grid-column:1/-1">🚀 Publicar Chatbot (gera o subdomínio)</button>
+</div><div class="notice" id="publishStatus" style="margin-top:10px">Preencha os dados e clique em publicar. O link do cliente aparece aqui.</div></div>
+<div class="section"><h2>5. Alternativas manuais</h2><div class="actions">
+<button class="btn primary" id="previewBtn">Atualizar prévia</button>
+<button class="btn dark" id="copyBtn">Copiar HTML</button>
+<button class="btn success" id="downloadBtn">Baixar index.html</button>
+<button class="btn" id="saveBtn">Salvar rascunho</button>
+<button class="btn danger" id="resetBtn">Limpar tudo</button>
+</div></div>
+<div class="notice"><b>Imagem:</b> use um link direto ou faça upload do aparelho. A imagem enviada fica embutida no HTML.<br><b>Áudio:</b> toque no microfone para começar e toque no botão vermelho para parar e enviar. Em celular, publique no Netlify para garantir acesso seguro ao microfone.</div>
+</section>
+<section class="preview"><div class="previewbar"><b>Prévia funcionando no gerador</b><span class="status" id="status">Pronto</span></div>
+<div id="liveApp"><section class="live-chat"><div class="live-head"><div class="live-avatar" id="liveAvatar">M</div><div><b id="liveBrand">Minha Loja</b><small style="display:block;opacity:.85">Atendimento online</small></div></div><div class="live-messages" id="liveMessages"></div><div class="live-inputbar"><button id="liveMic" type="button" title="Gravar áudio">🎤</button><input id="liveInput" placeholder="Digite o que procura"><span class="rec-status" id="liveRecStatus">🔴 <span id="liveRecTime">00:00</span></span><button id="liveSend" type="button">➤</button></div></section><aside class="live-catalog" id="liveCatalog"><h2>Vitrine</h2></aside></div>
+</section>
+</main><div class="toast" id="toast"></div>
+</div>
+</div>
+<script>
+/* ============================================================
+   FIREBASE — cole aqui a config do SEU projeto (Firebase Console
+   > Configurações do projeto > Geral > Seus apps > SDK setup)
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyBZlCM-6l_iV_GTirvTwUumKM3ZGRvgxt8",
+  authDomain: "chatshop-97ea3.firebaseapp.com",
+  projectId: "chatshop-97ea3",
+  storageBucket: "chatshop-97ea3.firebasestorage.app",
+  messagingSenderId: "430779427610",
+  appId: "1:430779427610:web:7418f6e4f6006535209aa3"
+};
+const DOMINIO_BASE = "alibr.com.br";
+const COLECAO = "chatshops"; // coleção no Firestore onde cada loja vira 1 documento
+const HOST_ATUAL = window.location.hostname.toLowerCase().replace(/\.$/, '');
+const SUFIXO_LOJA = '.' + DOMINIO_BASE;
+const STOREFRONT_SLUG = HOST_ATUAL.endsWith(SUFIXO_LOJA)
+  ? HOST_ATUAL.slice(0, -SUFIXO_LOJA.length)
+  : '';
+const STOREFRONT_MODE = !!STOREFRONT_SLUG
+  && STOREFRONT_SLUG !== 'www'
+  && !STOREFRONT_SLUG.includes('.');
+
+let db = null, auth = null;
+try{
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  auth = firebase.auth();
+}catch(e){ console.warn('Firebase não configurado ainda:', e); }
+
+let currentUser = null;   // usuário logado
+let myUid = null;
+let mySlug = null;        // slug já publicado por esse usuário (se houver)
+
+const PLANOS = {
+  aprendiz: { nome:'Aprendiz', preco:0, precoTexto:'Grátis', limiteProdutos:1, limiteChats:1 },
+  basico: { nome:'Básico', preco:18.00, precoTexto:'R$ 18,00/mês', limiteProdutos:10, limiteChats:1 },
+  profissional: { nome:'Profissional', preco:49.90, precoTexto:'R$ 49,90/mês', limiteProdutos:50, limiteChats:30 },
+};
+let myPlan = 'aprendiz';
+let myProductLimit = 1;
+let myChatLimit = 1;
+
+const $=s=>document.querySelector(s), productsEl=$('#products');let productCount=0, debounceTimer;
+
+function slugify(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'minha-loja';
+}
+$('#slug').addEventListener('input', ()=>{
+  $('#slug').value = $('#slug').value.toLowerCase().replace(/[^a-z0-9-]/g,'');
+  $('#slugPreview').textContent = (($('#slug').value)||'minha-loja') + '.' + DOMINIO_BASE;
+});
+$('#brand').addEventListener('blur', ()=>{
+  if($('#slug').dataset.touched) return;
+  $('#slug').value = slugify($('#brand').value);
+  $('#slugPreview').textContent = $('#slug').value + '.' + DOMINIO_BASE;
+});
+$('#slug').addEventListener('focus', ()=>{ $('#slug').dataset.touched = '1'; });
+
+/* ============================================================
+   AUTENTICAÇÃO — cada assinante entra com e-mail/senha e só
+   enxerga/edita a própria loja
+   ============================================================ */
+let authMode = 'login';
+$('#tabLogin').onclick = ()=>{ authMode='login'; $('#tabLogin').classList.add('active'); $('#tabSignup').classList.remove('active'); $('#authSubmit').textContent='Entrar'; $('#authError').style.display='none'; };
+$('#tabSignup').onclick = ()=>{ authMode='signup'; $('#tabSignup').classList.add('active'); $('#tabLogin').classList.remove('active'); $('#authSubmit').textContent='Criar conta'; $('#authError').style.display='none'; };
+
+function showAuthError(msg){ const el=$('#authError'); el.textContent=msg; el.style.display='block'; }
+
+$('#authSubmit').onclick = async ()=>{
+  if(!auth){ showAuthError('Firebase ainda não configurado neste arquivo.'); return; }
+  const email = $('#authEmail').value.trim();
+  const pass = $('#authPass').value;
+  if(!email || pass.length < 6){ showAuthError('Preencha um e-mail válido e senha com 6+ caracteres.'); return; }
+  $('#authSubmit').disabled = true;
+  try{
+    if(authMode === 'signup'){
+      await auth.createUserWithEmailAndPassword(email, pass);
+    } else {
+      await auth.signInWithEmailAndPassword(email, pass);
+    }
+  }catch(e){
+    const map = {
+      'auth/email-already-in-use':'Esse e-mail já tem conta. Toque em "Entrar".',
+      'auth/invalid-credential':'E-mail ou senha incorretos.',
+      'auth/wrong-password':'E-mail ou senha incorretos.',
+      'auth/user-not-found':'Não existe conta com esse e-mail. Toque em "Criar conta".',
+      'auth/weak-password':'Senha muito curta (mínimo 6 caracteres).',
+      'auth/invalid-email':'E-mail inválido.'
+    };
+    showAuthError(map[e.code] || ('Erro: '+e.message));
+  }
+  $('#authSubmit').disabled = false;
+};
+
+$('#logoutBtn').onclick = ()=> auth && auth.signOut();
+
+async function populateForm(data){
+  $('#brand').value = data.brand || '';
+  $('#whatsapp').value = data.whatsapp || '';
+  $('#welcome').value = data.welcome || '';
+  $('#mainColor').value = data.mainColor || '#7A2E3B';
+  $('#darkColor').value = data.darkColor || '#5B2029';
+  $('#accentColor').value = data.accentColor || '#C9A24B';
+  $('#chatBg').value = data.chatBg || '#FBF3EC';
+  productsEl.innerHTML=''; productCount=0;
+  (data.products||[]).forEach(p=>addProduct({name:p.name,price:p.price,link:p.link,keywords:(p.keywords||[]).join(', '),imageUrl:p.image||''}));
+  qnaListEl.innerHTML=''; qnaCount=0;
+  (data.qna||[]).forEach(q=>addQnA(q));
+}
+
+function clearForm(){
+  productsEl.innerHTML=''; productCount=0;
+  qnaListEl.innerHTML=''; qnaCount=0;
+  $('#brand').value='Minha Loja'; $('#whatsapp').value='5511999999999';
+  $('#welcome').value='Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja a vitrine.';
+  $('#mainColor').value='#7A2E3B'; $('#darkColor').value='#5B2029'; $('#accentColor').value='#C9A24B'; $('#chatBg').value='#FBF3EC';
+  $('#slug').value=''; $('#slug').dataset.touched=''; $('#slug').removeAttribute('disabled');
+  $('#slugPreview').textContent='minha-loja.'+DOMINIO_BASE;
+}
+
+function openDashboard(){
+  mySlug = null;
+  $('#dashboard').style.display='block';
+  $('#editorView').style.display='none';
+  loadDashboard();
+}
+function openEditor(slugToEdit, data){
+  mySlug = slugToEdit || null;
+  $('#dashboard').style.display='none';
+  $('#editorView').style.display='block';
+  if(slugToEdit && data){
+    $('#slug').value = slugToEdit;
+    $('#slug').dataset.touched='1';
+    $('#slug').setAttribute('disabled','disabled');
+    $('#slugPreview').textContent = slugToEdit + '.' + DOMINIO_BASE;
+    populateForm(data);
+    $('#publishStatus').innerHTML = `Editando a loja publicada em <b>${slugToEdit}.${DOMINIO_BASE}</b>. Clique em publicar novamente para salvar alterações.`;
+  } else {
+    clearForm();
+    $('#publishStatus').textContent = 'Preencha os dados e clique em publicar para gerar seu subdomínio.';
+  }
+  renderLive();
+  atualizarAvisoLimite();
+}
+$('#backToDash').onclick = openDashboard;
+
+async function loadDashboard(){
+  $('#storeGrid').innerHTML = '<p class="empty-hint">Carregando...</p>';
+  try{
+    const userDoc = await db.collection('users').doc(myUid).get();
+    myPlan = (userDoc.exists && userDoc.data().plan) || 'aprendiz';
+    myProductLimit = (userDoc.exists && userDoc.data().productLimit) || PLANOS[myPlan]?.limiteProdutos || 1;
+    myChatLimit = (userDoc.exists && userDoc.data().chatLimit) || PLANOS[myPlan]?.limiteChats || 1;
+    const planInfo = PLANOS[myPlan] || PLANOS.aprendiz;
+
+    const snap = await db.collection(COLECAO).where('ownerUid','==',myUid).get();
+    const stores = []; snap.forEach(d=>stores.push(d.data()));
+
+    $('#planTag').innerHTML = `Plano ${planInfo.nome} · ${stores.length}/${myChatLimit} ChatShop(s) · até ${myProductLimit} produtos por ChatShop &nbsp; <a href="#" id="verPlanosLink" style="color:#4c1d95;text-decoration:underline">ver planos</a>`;
+    $('#verPlanosLink').onclick = (e)=>{ e.preventDefault(); abrirPlanos(); };
+
+    const grid = $('#storeGrid');
+    grid.innerHTML = '';
+    stores.forEach(s=>{
+      const link = `https://${s.slug}.${DOMINIO_BASE}`;
+      const card = document.createElement('div');
+      card.className = 'storecard';
+      card.innerHTML = `
+        <h3>${esc(s.brand||s.slug)}</h3>
+        <div class="slugtag">${s.slug}.${DOMINIO_BASE}</div>
+        <div class="metrics">
+          <div>👁️ Visitas<br><b>${s.visitCount||0}</b></div>
+          <div>💬 Mensagens<br><b>${s.messageCount||0}</b></div>
+          <div>🛍️ Produtos<br><b>${(s.products||[]).length}/${myProductLimit}</b></div>
+        </div>
+        <div class="cardbtns">
+          <button class="edit">Editar</button>
+          <a class="visit" href="${link}" target="_blank" rel="noopener">Ver chat</a>
+        </div>`;
+      card.querySelector('.edit').onclick = ()=> openEditor(s.slug, s);
+      grid.appendChild(card);
+    });
+
+    const newCard = document.createElement('div');
+    const atingiuLimiteChats = stores.length >= myChatLimit;
+    newCard.className = 'newcard' + (atingiuLimiteChats ? ' locked' : '');
+    newCard.innerHTML = atingiuLimiteChats
+      ? `<span style="font-size:26px">🔒</span><span>Limite de ${myChatLimit} ChatShop(s) atingido</span><small>Veja os planos para criar mais</small>`
+      : '<span style="font-size:26px">+</span><span>Novo ChatShop</span>';
+    newCard.onclick = ()=> atingiuLimiteChats ? abrirPlanos() : openEditor(null, null);
+    grid.appendChild(newCard);
+
+    $('#emptyHint').style.display = stores.length ? 'none' : 'block';
+  }catch(e){
+    console.error(e);
+    $('#storeGrid').innerHTML = '<p class="empty-hint">Não foi possível carregar suas lojas. Veja o console do navegador.</p>';
+  }
+}
+function statusToast(msg){ toast(msg); }
+
+/* ============================================================
+   PLANOS — mostra o modal e cria a assinatura no Mercado Pago
+   ============================================================ */
+function abrirPlanos(){
+  const cols = $('#plansCols');
+  cols.innerHTML = Object.keys(PLANOS).map(key=>{
+    const p = PLANOS[key];
+    const isCurrent = key === myPlan;
+    const isFree = key === 'aprendiz';
+    return `
+      <div class="plan-card ${isCurrent?'current':''}">
+        <h3>${p.nome}</h3>
+        <div class="preco">${p.precoTexto}</div>
+        <div class="lim">até ${p.limiteChats} ChatShop(s)<br>até ${p.limiteProdutos} produtos por ChatShop</div>
+        <button data-plano="${key}" ${isCurrent||isFree?'disabled':''}>${isCurrent?'Plano atual':(isFree?'Grátis':'Assinar')}</button>
+      </div>`;
+  }).join('');
+  cols.querySelectorAll('button[data-plano]').forEach(btn=>{
+    btn.onclick = ()=> assinarPlano(btn.dataset.plano, btn);
+  });
+  $('#plansMsg').style.display='none';
+  $('#plansModal').style.display='flex';
+}
+$('#verPlanosBtn').onclick = abrirPlanos;
+$('#fecharPlanos').onclick = ()=> $('#plansModal').style.display='none';
+document.querySelector('.plans-overlay')?.addEventListener('click', ()=> $('#plansModal').style.display='none');
+
+async function assinarPlano(plano, btn){
+  const msg = $('#plansMsg');
+  msg.style.display='block'; msg.textContent='Gerando link de pagamento...';
+  btn.disabled = true;
+  try{
+    const resp = await fetch('/api/criar-assinatura', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ uid: myUid, email: currentUser.email, plano })
+    });
+    const dados = await resp.json();
+    if(!resp.ok || !dados.link){
+      msg.textContent = '⚠️ ' + (dados.error || 'Não foi possível gerar o pagamento agora.');
+      btn.disabled = false;
+      return;
+    }
+    window.location.href = dados.link; // manda pro checkout do Mercado Pago
+  }catch(e){
+    console.error(e);
+    msg.textContent = '⚠️ Erro de conexão ao criar a assinatura.';
+    btn.disabled = false;
+  }
+}
+
+function atualizarAvisoLimite(){
+  const atual = document.querySelectorAll('#products .product').length;
+  const banner = $('#limitBanner');
+  if(atual >= myProductLimit){
+    banner.style.display='block';
+    banner.innerHTML = `🔒 Você atingiu o limite de ${myProductLimit} produtos do plano ${PLANOS[myPlan]?.nome||'Aprendiz'}. <a href="#" onclick="abrirPlanos();return false">Veja os planos</a> para cadastrar mais produtos.`;
+  } else {
+    banner.style.display='none';
+  }
+}
+
+if(auth && !STOREFRONT_MODE){
+  auth.onAuthStateChanged(async (user)=>{
+    if(!user){
+      currentUser=null; myUid=null; mySlug=null;
+      $('#authScreen').style.display='flex';
+      $('#genApp').style.display='none';
+      return;
+    }
+    currentUser = user; myUid = user.uid;
+    $('#userEmail').textContent = user.email;
+    $('#authScreen').style.display='none';
+    $('#genApp').style.display='block';
+
+    try{
+      const userDoc = await db.collection('users').doc(myUid).get();
+      if(!userDoc.exists){
+        await db.collection('users').doc(myUid).set({ email:user.email, plan:'aprendiz', productLimit:1, chatLimit:1, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      }
+      openDashboard();
+    }catch(e){ console.error(e); }
+  });
+}
+
+/* ============================================================
+   LOJA PUBLICADA — em nomedaloja.alibr.com.br, busca o documento
+   cujo ID é o subdomínio e mostra diretamente o chatbot/vitrine.
+   ============================================================ */
+function storeEsc(s){
+  return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function storeNorm(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function storeSafeUrl(value, fallback='#'){
+  try{
+    const url = new URL(String(value||''), window.location.origin);
+    return ['http:','https:'].includes(url.protocol) ? url.href : fallback;
+  }catch(e){ return fallback; }
+}
+function storeSafeImage(value){
+  const raw=String(value||'');
+  if(/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(raw)) return raw;
+  return storeSafeUrl(raw, '');
+}
+function renderPublishedStore(data){
+  const root = $('#storefrontScreen');
+  const products = Array.isArray(data.products) ? data.products : [];
+  const qna = Array.isArray(data.qna) ? data.qna : [];
+  const main = /^#[0-9a-f]{6}$/i.test(data.mainColor||'') ? data.mainColor : '#7A2E3B';
+  const dark = /^#[0-9a-f]{6}$/i.test(data.darkColor||'') ? data.darkColor : '#5B2029';
+  const accent = /^#[0-9a-f]{6}$/i.test(data.accentColor||'') ? data.accentColor : '#C9A24B';
+  const bg = /^#[0-9a-f]{6}$/i.test(data.chatBg||'') ? data.chatBg : '#FBF3EC';
+  document.documentElement.style.setProperty('--store-main', main);
+  document.documentElement.style.setProperty('--store-dark', dark);
+  document.documentElement.style.setProperty('--store-accent', accent);
+  document.documentElement.style.setProperty('--store-bg', bg);
+  document.title = (data.brand || 'ChatShop') + ' · ChatShop';
+  root.innerHTML = `<div id="liveApp" style="background:var(--store-dark)">
+    <section class="live-chat" style="background:var(--store-bg)">
+      <div class="live-head" style="background:var(--store-main)"><div class="live-avatar" style="background:var(--store-accent)" id="pubAvatar"></div><div><b id="pubBrand"></b><small style="display:block;opacity:.85">Atendimento online</small></div></div>
+      <div class="live-messages" id="pubMessages"></div>
+      <div class="live-inputbar"><button id="pubMic" type="button" title="Gravar áudio" style="background:var(--store-main)">🎤</button><input id="pubInput" placeholder="Digite o que procura"><span class="rec-status" id="pubRecStatus">🔴 <span id="pubRecTime">00:00</span></span><button id="pubSend" type="button" style="background:var(--store-main)">➤</button></div>
+    </section><aside class="live-catalog" id="pubCatalog" style="background:var(--store-dark)"><h2 style="color:var(--store-accent)">Vitrine</h2></aside>
+  </div>`;
+  $('#pubBrand').textContent = data.brand || 'Minha Loja';
+  $('#pubAvatar').textContent = (data.brand || 'L').charAt(0).toUpperCase();
+  const messages = $('#pubMessages'), catalog = $('#pubCatalog');
+  function visual(p){
+    const image = storeSafeImage(p.image);
+    return image ? `<img src="${storeEsc(image)}" alt="${storeEsc(p.name)}">` : '<div class="live-noimg">🛍️</div>';
+  }
+  function card(p, inside){
+    const link=storeSafeUrl(p.link);
+    return `<div class="${inside?'live-pcard':'live-card'}">${visual(p)}<b>${storeEsc(p.name)}</b><div class="live-price" style="color:var(--store-main)">${storeEsc(p.price)}</div><a class="live-buy" style="background:var(--store-main)" href="${storeEsc(link)}" target="_blank" rel="noopener">Comprar</a></div>`;
+  }
+  products.forEach(p=>catalog.insertAdjacentHTML('beforeend',card(p,false)));
+  function add(who,html){
+    if(who==='bot'){
+      try{
+        const clean = String(html).replace(/<[^>]*>/g,' ');
+        const u = new SpeechSynthesisUtterance(clean);
+        u.lang = 'pt-BR';
+        speechSynthesis.speak(u);
+      }catch(e){}
+    }
+    const row=document.createElement('div'); row.className='live-row '+who;
+    row.innerHTML=`<div class="live-bubble">${html}<span class="live-time">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
+    messages.appendChild(row); messages.scrollTop=messages.scrollHeight;
+  }
+  function reply(text){
+    const query=storeNorm(text);
+    const qnaHit=qna.find(item=>(item.keywords||[]).some(k=>query.includes(storeNorm(k))));
+    if(qnaHit){ add('bot',storeEsc(qnaHit.answer)); return; }
+    const found=products.find(p=>[p.name,...(p.keywords||[])].flatMap(x=>storeNorm(x).split(/\s+/)).filter(x=>x.length>2).some(t=>query.includes(t)));
+    if(found){ add('bot','Encontrei este produto para você:'+card(found,true)); return; }
+    if(/oi|ola|bom dia|boa tarde|boa noite/.test(query)){ add('bot',storeEsc(data.welcome||'Olá! Como posso ajudar?')); return; }
+    if(/preco|valor|quanto/.test(query)){ add('bot','Os preços aparecem na vitrine. Digite o nome ou tipo do produto.'); return; }
+    if(/whats|atendente|humano/.test(query)){
+      const phone=String(data.whatsapp||'').replace(/\D/g,'');
+      add('bot',`Fale conosco pelo WhatsApp:<br><a class="live-buy" style="background:var(--store-main)" href="https://wa.me/${phone}" target="_blank" rel="noopener">Abrir WhatsApp</a>`); return;
+    }
+    add('bot','Não encontrei um produto exato. Tente escrever o nome ou uma palavra-chave cadastrada.');
+  }
+  function submit(){ const input=$('#pubInput'),text=input.value.trim(); if(!text)return; add('user',storeEsc(text)); input.value=''; setTimeout(()=>reply(text),250); }
+  $('#pubSend').onclick=submit;
+  $('#pubInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit();}});
+  let recorder=null,chunks=[],stream=null,timer=null,seconds=0;
+  const formatTime=v=>String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0');
+  $('#pubMic').onclick=async()=>{
+    if(recorder&&recorder.state==='recording'){recorder.stop();return;}
+    if(!navigator.mediaDevices||!window.MediaRecorder){add('bot','A gravação de áudio não está disponível neste navegador.');return;}
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({audio:true}); chunks=[]; seconds=0; $('#pubRecTime').textContent='00:00';
+      recorder=new MediaRecorder(stream);
+      recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+      recorder.onstop=()=>{clearInterval(timer);$('#pubMic').classList.remove('recording');$('#pubMic').textContent='🎤';$('#pubRecStatus').classList.remove('show');const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});const url=URL.createObjectURL(blob);add('user',`<div class="audio-wrap">🎤 <audio controls src="${url}"></audio></div>`);stream?.getTracks().forEach(t=>t.stop());setTimeout(()=>add('bot','Recebi seu áudio 🎧. Para localizar o produto, escreva também o nome ou tipo do produto.'),350);};
+      recorder.start();$('#pubMic').classList.add('recording');$('#pubMic').textContent='⏹';$('#pubRecStatus').classList.add('show');timer=setInterval(()=>{$('#pubRecTime').textContent=formatTime(++seconds);},1000);
+    }catch(e){add('bot','Não consegui acessar o microfone. Permita o uso nas configurações do navegador.');}
+  };
+  add('bot',storeEsc(data.welcome||'Olá! Como posso ajudar?'));
+}
+async function loadPublishedStore(){
+  $('#authScreen').style.display='none'; $('#genApp').style.display='none';
+  const root=$('#storefrontScreen'); root.style.display='block';
+  root.innerHTML='<div class="store-loading"><div><b>Carregando loja...</b></div></div>';
+  try{
+    if(!db) throw new Error('Firebase indisponível');
+    const ref=db.collection(COLECAO).doc(STOREFRONT_SLUG);
+    const snap=await ref.get();
+    if(!snap.exists){root.innerHTML='<div class="store-error"><div class="store-error-box"><h1>Loja não encontrada</h1><p>Confira se o endereço foi digitado corretamente ou fale com quem enviou este link.</p></div></div>';return;}
+    renderPublishedStore(snap.data());
+    ref.update({visitCount:firebase.firestore.FieldValue.increment(1)}).catch(()=>{});
+  }catch(e){console.error(e);root.innerHTML='<div class="store-error"><div class="store-error-box"><h1>Não foi possível abrir a loja</h1><p>Tente novamente em alguns instantes. Se o problema continuar, confira as regras do Firestore.</p></div></div>';}
+}
+if(STOREFRONT_MODE) loadPublishedStore();
+
+async function publish(){
+  const statusEl = $('#publishStatus');
+  const btn = $('#publishBtn');
+
+  if(!currentUser){
+    statusEl.innerHTML = '⚠️ Você precisa estar logado para publicar.';
+    return;
+  }
+
+  const slug = slugify($('#slug').value);
+  $('#slug').value = slug;
+  $('#slugPreview').textContent = slug + '.' + DOMINIO_BASE;
+
+  if(!db){
+    statusEl.innerHTML = '⚠️ O Firebase ainda não está configurado neste arquivo. Cole os dados do seu projeto no bloco <code>firebaseConfig</code> no início do script.';
+    return;
+  }
+  if(!slug || slug.length < 3){
+    statusEl.innerHTML = '⚠️ Escolha um subdomínio com pelo menos 3 caracteres.';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Publicando...';
+  statusEl.textContent = 'Verificando disponibilidade...';
+
+  try{
+    if(!mySlug){
+      const minhasLojas = await db.collection(COLECAO).where('ownerUid','==',myUid).get();
+      if(minhasLojas.size >= myChatLimit){
+        statusEl.innerHTML = `⚠️ Seu plano (${PLANOS[myPlan]?.nome||'Aprendiz'}) permite até ${myChatLimit} ChatShop(s). <a href="#" onclick="abrirPlanos();return false">Veja os planos</a> para criar mais.`;
+        btn.disabled = false; btn.textContent = '🚀 Publicar Chatbot (gera o subdomínio)';
+        return;
+      }
+    }
+    const ref = db.collection(COLECAO).doc(slug);
+    const existing = await ref.get();
+    if(existing.exists && existing.data().ownerUid !== myUid){
+      statusEl.innerHTML = `⚠️ O endereço <b>${slug}.${DOMINIO_BASE}</b> já está em uso por outra loja. Escolha outro subdomínio.`;
+      btn.disabled = false; btn.textContent = '🚀 Publicar Chatbot (gera o subdomínio)';
+      return;
+    }
+    // respeita o limite de PRODUTOS do plano (vale por chatbot)
+    const dataPreCheck = collect();
+    if(dataPreCheck.products.length > myProductLimit){
+      statusEl.innerHTML = `⚠️ Seu plano (${PLANOS[myPlan]?.nome||'Aprendiz'}) permite até ${myProductLimit} produtos por loja. Remova alguns produtos ou <a href="#" onclick="abrirPlanos();return false">assine um plano maior</a>.`;
+      btn.disabled = false; btn.textContent = '🚀 Publicar Chatbot (gera o subdomínio)';
+      return;
+    }
+    const data = dataPreCheck;
+    await ref.set({
+      ...data, slug, ownerUid: myUid,
+      visitCount: existing.exists ? (existing.data().visitCount||0) : 0,
+      messageCount: existing.exists ? (existing.data().messageCount||0) : 0,
+      createdAt: existing.exists ? existing.data().createdAt : firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    mySlug = slug;
+    $('#slug').setAttribute('disabled','disabled');
+    const link = `https://${slug}.${DOMINIO_BASE}`;
+    statusEl.innerHTML = `✅ Chatbot publicado! Link do cliente: <br><a href="${link}" target="_blank" rel="noopener"><b>${link}</b></a>`;
+    toast('Chatbot publicado com sucesso');
+  }catch(e){
+    console.error(e);
+    statusEl.innerHTML = '❌ Erro ao publicar. Confira as regras do Firestore e a configuração do Firebase (veja o console do navegador).';
+  }
+  btn.disabled = false; btn.textContent = '🚀 Publicar Chatbot (gera o subdomínio)';
+}
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1900)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function normalize(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function debounce(){clearTimeout(debounceTimer);debounceTimer=setTimeout(renderLive,250)}
+function addProduct(p={}){productCount++;const card=document.createElement('div');card.className='product';card.dataset.upload=p.upload||p.imageData||'';card.innerHTML=`
+<div class="product-head"><b>Produto ${productCount}</b><button type="button" class="remove">Excluir</button></div>
+<div class="grid2"><div class="field"><label>Nome</label><input data-k="name" value="${esc(p.name||'')}"></div><div class="field"><label>Preço</label><input data-k="price" value="${esc(p.price||'')}"></div></div>
+<div class="field"><label>Link de compra</label><input data-k="link" value="${esc(p.link||'https://')}"></div>
+<div class="field"><label>Palavras-chave</label><input data-k="keywords" value="${esc(Array.isArray(p.keywords)?p.keywords.join(', '):(p.keywords||''))}"><small>Exemplo: vestido, longo, festa, azul</small></div>
+<div class="tabs"><button type="button" class="tab active" data-mode="url">Link da imagem</button><button type="button" class="tab" data-mode="upload">Upload do aparelho</button></div>
+<div class="upload-box active" data-box="url"><div class="field"><label>Cole o link direto da imagem</label><input data-k="imageUrl" placeholder="https://site.com/foto.jpg" value="${esc(p.imageUrl||'')}"></div></div>
+<div class="upload-box" data-box="upload"><div class="field"><label>Escolha uma imagem</label><input type="file" accept="image/*" data-k="file"><small>JPG, PNG ou WebP. Máximo recomendado: 2,5 MB.</small></div></div>
+<div class="image-preview"><span>Nenhuma imagem selecionada</span></div>`;
+const tabs=card.querySelectorAll('.tab'),boxes=card.querySelectorAll('.upload-box');tabs.forEach(tab=>tab.onclick=()=>{tabs.forEach(x=>x.classList.remove('active'));boxes.forEach(x=>x.classList.remove('active'));tab.classList.add('active');card.querySelector(`[data-box="${tab.dataset.mode}"]`).classList.add('active')});
+card.querySelector('.remove').onclick=()=>{card.remove();renderLive();atualizarAvisoLimite()};
+card.querySelectorAll('input:not([type=file])').forEach(i=>i.addEventListener('input',()=>{refreshImage(card);debounce()}));
+card.querySelector('[type=file]').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;if(f.size>2.5*1024*1024){toast('Use uma imagem menor que 2,5 MB');e.target.value='';return}const r=new FileReader();r.onload=()=>{card.dataset.upload=r.result;refreshImage(card);renderLive()};r.readAsDataURL(f)});
+productsEl.appendChild(card);refreshImage(card)}
+function refreshImage(card){const img=card.dataset.upload||card.querySelector('[data-k="imageUrl"]').value.trim();const box=card.querySelector('.image-preview');box.innerHTML='';if(!img){box.innerHTML='<span>Nenhuma imagem selecionada</span>';return}const im=document.createElement('img');im.src=img;im.alt='Prévia';im.onerror=()=>box.innerHTML='<span>Não foi possível abrir a imagem</span>';box.appendChild(im)}
+const qnaListEl=$('#qnaList');let qnaCount=0;
+function addQnA(q={}){qnaCount++;const card=document.createElement('div');card.className='product';card.innerHTML=`
+<div class="product-head"><b>Pergunta ${qnaCount}</b><button type="button" class="remove">Excluir</button></div>
+<div class="field"><label>Palavras-chave que disparam essa resposta</label><input data-k="keywords" value="${esc(Array.isArray(q.keywords)?q.keywords.join(', '):(q.keywords||''))}"><small>Exemplo: prazo, entrega, quanto tempo demora</small></div>
+<div class="field"><label>Resposta do bot</label><textarea data-k="answer" rows="2">${esc(q.answer||'')}</textarea></div>`;
+card.querySelector('.remove').onclick=()=>{card.remove();debounce()};
+card.querySelectorAll('input,textarea').forEach(i=>i.addEventListener('input',debounce));
+qnaListEl.appendChild(card)}
+function collectQnA(){return [...document.querySelectorAll('#qnaList .product')].map(card=>{const k=card.querySelector('[data-k="keywords"]').value.trim();const a=card.querySelector('[data-k="answer"]').value.trim();return{keywords:k.split(',').map(x=>x.trim()).filter(Boolean),answer:a}}).filter(q=>q.keywords.length && q.answer)}
+function collect(){return{brand:$('#brand').value.trim()||'Minha Loja',whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';return{name:g('name')||'Produto',price:g('price')||'Consulte',link:g('link')||'#',keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),image:card.dataset.upload||g('imageUrl')||''}}),qna:collectQnA()}}
+function liveVisual(p,cls=''){if(!p.image)return `<div class="live-noimg">🛍️</div>`;return `<img src="${esc(p.image)}" alt="${esc(p.name)}">`}
+function liveCard(p,inside=false){return `<div class="${inside?'live-pcard':'live-card'}">${liveVisual(p)}<b>${esc(p.name)}</b><div class="live-price">${esc(p.price)}</div><a class="live-buy" href="${esc(p.link)}" target="_blank" rel="noopener">Comprar</a></div>`}
+function addLive(who,html){const row=document.createElement('div');row.className='live-row '+who;row.innerHTML=`<div class="live-bubble">${html}<span class="live-time">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;$('#liveMessages').appendChild(row);$('#liveMessages').scrollTop=$('#liveMessages').scrollHeight}
+function renderLive(){const d=collect();$('#liveBrand').textContent=d.brand;$('#liveAvatar').textContent=(d.brand[0]||'L').toUpperCase();$('#liveApp').style.background=d.darkColor;document.querySelector('.live-chat').style.background=d.chatBg;document.querySelector('.live-head').style.background=d.mainColor;$('#liveAvatar').style.background=d.accentColor;$('#liveSend').style.background=d.mainColor;$('#liveMic').style.background=d.mainColor;const cat=$('#liveCatalog');cat.style.background=d.darkColor;cat.innerHTML='<h2>Vitrine</h2>'+d.products.map(p=>liveCard(p)).join('');$('#liveMessages').innerHTML='';addLive('bot',esc(d.welcome));$('#status').textContent='Atualizado'}
+function liveReply(text){const d=collect(),q=normalize(text);
+const qnaHit=(d.qna||[]).find(item=>item.keywords.some(k=>q.includes(normalize(k))));
+if(qnaHit){addLive('bot',esc(qnaHit.answer));return}
+const found=d.products.find(p=>{const terms=[p.name,...p.keywords].flatMap(x=>normalize(x).split(/\s+/)).filter(x=>x.length>2);return terms.some(t=>q.includes(t))});if(found){addLive('bot','Encontrei este produto para você:'+liveCard(found,true));return}if(/oi|ola|bom dia|boa tarde|boa noite/.test(q)){addLive('bot',esc(d.welcome));return}if(/preco|valor|quanto/.test(q)){addLive('bot','Os preços aparecem na vitrine. Digite o nome ou tipo do produto.');return}if(/whats|atendente|humano/.test(q)){addLive('bot',`Fale conosco pelo WhatsApp:<br><a class="live-buy" href="https://wa.me/${d.whatsapp}" target="_blank">Abrir WhatsApp</a>`);return}addLive('bot','Não encontrei um produto exato. Tente escrever o nome ou uma palavra-chave cadastrada.')}
+function liveSubmit(){const input=$('#liveInput'),t=input.value.trim();if(!t)return;addLive('user',esc(t));input.value='';setTimeout(()=>liveReply(t),250)}
+$('#liveSend').onclick=liveSubmit;$('#liveInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();liveSubmit()}});
+let liveRecorder=null,liveChunks=[],liveStream=null,liveTimer=null,liveSeconds=0;
+function liveFormatTime(v){return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')}
+async function toggleLiveAudio(){
+  const mic=$('#liveMic'),status=$('#liveRecStatus'),time=$('#liveRecTime');
+  if(liveRecorder&&liveRecorder.state==='recording'){liveRecorder.stop();return}
+  if(!navigator.mediaDevices||!window.MediaRecorder){toast('O navegador não permite gravação aqui. Teste no Netlify com HTTPS.');return}
+  try{
+    liveStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    liveChunks=[];liveSeconds=0;time.textContent='00:00';
+    liveRecorder=new MediaRecorder(liveStream);
+    liveRecorder.ondataavailable=e=>{if(e.data.size)liveChunks.push(e.data)};
+    liveRecorder.onstop=()=>{clearInterval(liveTimer);mic.classList.remove('recording');mic.textContent='🎤';status.classList.remove('show');const blob=new Blob(liveChunks,{type:liveRecorder.mimeType||'audio/webm'});const url=URL.createObjectURL(blob);addLive('user','<div class="audio-wrap">🎤 <audio controls src="'+url+'"></audio></div>');liveStream?.getTracks().forEach(t=>t.stop());setTimeout(()=>addLive('bot','Recebi seu áudio 🎧. Para eu encontrar o produto certo, escreva também o nome ou tipo do produto.'),350)};
+    liveRecorder.start();mic.classList.add('recording');mic.textContent='⏹';status.classList.add('show');
+    liveTimer=setInterval(()=>{liveSeconds++;time.textContent=liveFormatTime(liveSeconds)},1000);
+  }catch(e){toast('Permita o acesso ao microfone para gravar áudio.')}
+}
+$('#liveMic').onclick=toggleLiveAudio;
+function safeJSON(v){return JSON.stringify(v).replace(/</g,'\\u003c')}
+function generateHTML(){const d=collect(),data=safeJSON(d);return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(d.brand)} · ChatShop</title><style>:root{--main:${d.mainColor};--dark:${d.darkColor};--accent:${d.accentColor};--bg:${d.chatBg}}*{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Arial,sans-serif;color:#33272a}body{background:var(--dark)}#app{height:100vh;height:100dvh;display:grid;grid-template-columns:1fr 250px}.chat{display:flex;flex-direction:column;background:var(--bg);min-width:0}.head{background:var(--main);color:#fff;padding:13px 15px;display:flex;align-items:center;gap:10px}.avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--accent);font-weight:800}.head small{display:block;opacity:.85}.messages{flex:1;overflow:auto;padding:15px;display:flex;flex-direction:column;gap:9px}.row{display:flex}.row.user{justify-content:flex-end}.bubble{max-width:80%;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid #ead9cc;line-height:1.4;font-size:14px}.row.user .bubble{background:#f3e3d3;border:0}.time{display:block;text-align:right;font-size:10px;color:#8a7570;margin-top:4px}.inputbar{display:flex;gap:8px;padding:10px;background:#f1e6dc}.inputbar input{flex:1;border:0;border-radius:22px;padding:12px 15px;font-size:15px;outline:none}.inputbar button{width:44px;height:44px;border:0;border-radius:50%;background:var(--main);color:#fff;font-size:18px;display:grid;place-items:center;flex-shrink:0}.inputbar button.recording{background:#dc2626;animation:pulse 1s infinite}@keyframes pulse{50%{transform:scale(1.08)}}.audio-wrap{display:flex;align-items:center;gap:8px;min-width:210px}.audio-wrap audio{width:190px;height:36px}.rec-status{display:none;align-items:center;gap:6px;color:#b91c1c;font-size:12px;font-weight:700;padding:0 4px}.rec-status.show{display:flex}.catalog{background:var(--dark);padding:12px;overflow:auto}.catalog h2{color:var(--accent);font-size:15px}.card{background:#fff;border-radius:12px;padding:9px;margin-bottom:12px}.card img,.pcard img{width:100%;height:135px;object-fit:contain;border-radius:8px;background:#f6f6f6}.noimg{height:135px;display:grid;place-items:center;background:#f3f4f6;border-radius:8px;font-size:36px}.card b,.pcard b{display:block;font-size:13px;margin-top:7px}.price{color:var(--main);font-weight:800;margin:4px 0}.buy{display:block;text-align:center;background:var(--main);color:#fff;text-decoration:none;padding:8px;border-radius:8px;font-weight:700;font-size:12px}.pcard{width:220px;margin-top:8px}@media(max-width:700px){#app{grid-template-columns:1fr;grid-template-rows:1fr 190px}.catalog{display:flex;gap:10px;overflow-x:auto}.catalog h2{display:none}.card{min-width:145px;margin:0}.card img,.card .noimg{height:85px}}</style></head><body><div id="app"><section class="chat"><div class="head"><div class="avatar" id="avatar"></div><div><b id="brand"></b><small>Atendimento online</small></div></div><div class="messages" id="messages"></div><div class="inputbar"><button id="mic" type="button" title="Gravar áudio">🎤</button><input id="input" placeholder="Digite o que procura"><span class="rec-status" id="recStatus">🔴 <span id="recTime">00:00</span></span><button id="send" type="button">➤</button></div></section><aside class="catalog" id="catalog"><h2>Vitrine</h2></aside></div><script>const DATA=${data};const messages=document.getElementById('messages'),input=document.getElementById('input'),send=document.getElementById('send'),mic=document.getElementById('mic'),recStatus=document.getElementById('recStatus'),recTime=document.getElementById('recTime'),catalog=document.getElementById('catalog');document.getElementById('brand').textContent=DATA.brand;document.getElementById('avatar').textContent=(DATA.brand[0]||'L').toUpperCase();function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'')}function visual(p){return p.image?'<img src="'+esc(p.image)+'" alt="'+esc(p.name)+'">':'<div class="noimg">🛍️</div>'}function card(p,inside){return '<div class="'+(inside?'pcard':'card')+'">'+visual(p)+'<b>'+esc(p.name)+'</b><div class="price">'+esc(p.price)+'</div><a class="buy" href="'+esc(p.link)+'" target="_blank" rel="noopener">Comprar</a></div>'}function add(who,html){const row=document.createElement('div');row.className='row '+who;row.innerHTML='<div class="bubble">'+html+'<span class="time">'+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'</span></div>';messages.appendChild(row);messages.scrollTop=messages.scrollHeight}DATA.products.forEach(p=>catalog.insertAdjacentHTML('beforeend',card(p,false)));function reply(text){const q=norm(text);const qnaHit=(DATA.qna||[]).find(item=>item.keywords.some(k=>q.includes(norm(k))));if(qnaHit){add('bot',esc(qnaHit.answer));return}const found=DATA.products.find(p=>[p.name,...p.keywords].flatMap(x=>norm(x).split(/\\s+/)).filter(x=>x.length>2).some(t=>q.includes(t)));if(found){add('bot','Encontrei este produto para você:'+card(found,true));return}if(/oi|ola|bom dia|boa tarde|boa noite/.test(q)){add('bot',esc(DATA.welcome));return}if(/preco|valor|quanto/.test(q)){add('bot','Os preços aparecem na vitrine. Digite o nome ou tipo do produto.');return}if(/whats|atendente|humano/.test(q)){add('bot','Fale conosco pelo WhatsApp:<br><a class="buy" href="https://wa.me/'+DATA.whatsapp+'" target="_blank">Abrir WhatsApp</a>');return}add('bot','Não encontrei um produto exato. Tente escrever o nome ou uma palavra-chave cadastrada.')}function submit(){const t=input.value.trim();if(!t)return;add('user',esc(t));input.value='';setTimeout(()=>reply(t),250)}send.onclick=submit;input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit()}});let recorder=null,chunks=[],stream=null,timer=null,seconds=0;function fmt(v){return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')}async function toggleAudio(){if(recorder&&recorder.state==='recording'){recorder.stop();return}if(!navigator.mediaDevices||!window.MediaRecorder){add('bot','A gravação de áudio precisa ser aberta em um site HTTPS, como o Netlify.');return}try{stream=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];seconds=0;recTime.textContent='00:00';recorder=new MediaRecorder(stream);recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onstop=()=>{clearInterval(timer);mic.classList.remove('recording');mic.textContent='🎤';recStatus.classList.remove('show');const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});const url=URL.createObjectURL(blob);add('user','<div class="audio-wrap">🎤 <audio controls src="'+url+'"></audio></div>');stream?.getTracks().forEach(t=>t.stop());setTimeout(()=>add('bot','Recebi seu áudio 🎧. Para eu localizar o produto, escreva também o nome ou tipo do produto.'),350)};recorder.start();mic.classList.add('recording');mic.textContent='⏹';recStatus.classList.add('show');timer=setInterval(()=>{seconds++;recTime.textContent=fmt(seconds)},1000)}catch(e){add('bot','Não consegui acessar o microfone. Permita o uso do microfone no navegador.')}}mic.onclick=toggleAudio;add('bot',esc(DATA.welcome));<\/script></body></html>`}
+async function copyHTML(){const html=generateHTML();try{await navigator.clipboard.writeText(html);toast('HTML copiado com sucesso')}catch{const ta=document.createElement('textarea');ta.value=html;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('HTML copiado com sucesso')}}
+function download(){const html=generateHTML(),url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='index.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('index.html baixado')}
+function save(){try{localStorage.setItem('chatshop-v4',JSON.stringify(collect()));toast('Rascunho salvo')}catch{toast('Rascunho grande demais. Baixe o index.html.')}}
+$('#addProduct').onclick=()=>{
+  const atual = document.querySelectorAll('#products .product').length;
+  if(atual >= myProductLimit){ abrirPlanos(); return; }
+  addProduct();renderLive();atualizarAvisoLimite();
+};
+$('#addQnA').onclick=()=>{addQnA();renderLive()};$('#previewBtn').onclick=renderLive;$('#publishBtn').onclick=publish;$('#copyBtn').onclick=copyHTML;$('#downloadBtn').onclick=download;$('#saveBtn').onclick=save;$('#resetBtn').onclick=()=>{localStorage.removeItem('chatshop-v4');location.reload()};['brand','whatsapp','welcome','mainColor','darkColor','accentColor','chatBg'].forEach(id=>$('#'+id).addEventListener('input',debounce));
+[{name:'Vestido Longo Serena',price:'R$ 189,90',link:'https://sualoja.com/vestido',keywords:['vestido','longo','festa'],imageUrl:'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=600&q=80'},{name:'Saia Midi',price:'R$ 129,90',link:'https://sualoja.com/saia',keywords:['saia','midi','moda'],imageUrl:'https://images.unsplash.com/photo-1583496661160-fb5886a13d27?auto=format&fit=crop&w=600&q=80'}].forEach(addProduct);
+[{keywords:['prazo','entrega','demora','quanto tempo'],answer:'Nossas entregas levam de 3 a 7 dias úteis, dependendo da sua região.'},{keywords:['troca','devolucao','devolução'],answer:'Você tem até 7 dias após o recebimento para solicitar troca ou devolução, com o produto sem uso.'}].forEach(addQnA);
+renderLive();
+</script>
+</body></html>
