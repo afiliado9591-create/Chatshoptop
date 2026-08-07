@@ -148,6 +148,7 @@
     </div>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn" id="adminTabUsuarios" type="button">👤 Usuários</button>
+      <button class="btn" id="adminTabIndicacoes" type="button">🔗 Indicações</button>
       <button class="btn" id="adminTabVideos" type="button">🎥 Vídeos</button>
     </div>
     <div id="adminConteudo" style="margin-top:14px;max-height:60vh;overflow-y:auto"></div>
@@ -596,6 +597,27 @@ async function mostrarAdminUsuarios(){
     });
   }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar os usuários. Confira as regras do Firestore.</p>'; }
 }
+async function mostrarAdminIndicacoes(){
+  const box = $('#adminConteudo');
+  box.innerHTML = '<p class="empty-hint">Carregando indicações...</p>';
+  try{
+    const snap = await db.collection('users').get();
+    const todos = snap.docs.map(d=>({uid:d.id, ...d.data()}));
+    const porCodigo = {};
+    todos.forEach(u=>{ if(u.affiliateCode) porCodigo[u.affiliateCode] = u; });
+    const indicados = todos.filter(u=>u.referredBy);
+    if(!indicados.length){ box.innerHTML = '<p class="empty-hint">Nenhuma indicação registrada ainda.</p>'; return; }
+    box.innerHTML = indicados.map(u=>{
+      const afiliado = porCodigo[u.referredBy];
+      const planoIndicado = (PLANOS[u.plan] || PLANOS.aprendiz).nome;
+      const pagou = u.plan && u.plan !== 'aprendiz';
+      return `<div style="padding:10px 0;border-bottom:1px solid #eee">
+        <div style="font-size:13px"><b>${esc(u.email||u.uid)}</b> ${pagou?'<span style="color:#16a34a;font-size:11px">✓ plano pago ('+esc(planoIndicado)+')</span>':'<span style="color:var(--muted);font-size:11px">plano grátis</span>'}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Indicado por: ${afiliado ? '<b>'+esc(afiliado.email)+'</b>' : 'código "'+esc(u.referredBy)+'" (usuário não encontrado)'}</div>
+      </div>`;
+    }).join('');
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+}
 async function mostrarAdminVideos(){
   const box = $('#adminConteudo');
   box.innerHTML = '<p class="empty-hint">Carregando vídeos...</p>';
@@ -637,6 +659,7 @@ async function mostrarAdminVideos(){
 }
 $('#adminBtn').onclick = abrirAdmin;
 $('#adminTabUsuarios').onclick = mostrarAdminUsuarios;
+$('#adminTabIndicacoes').onclick = mostrarAdminIndicacoes;
 $('#adminTabVideos').onclick = mostrarAdminVideos;
 $('#fecharAdmin').onclick = ()=> $('#adminModal').style.display='none';
 document.querySelector('#adminModal .plans-overlay')?.addEventListener('click', ()=> $('#adminModal').style.display='none');
