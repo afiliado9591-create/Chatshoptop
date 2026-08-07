@@ -515,18 +515,33 @@ function renderPublishedStore(data){
   function submit(){ const input=$('#pubInput'),text=input.value.trim(); if(!text)return; add('user',storeEsc(text)); input.value=''; setTimeout(()=>reply(text),250); }
   $('#pubSend').onclick=submit;
   $('#pubInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit();}});
-  let recorder=null,chunks=[],stream=null,timer=null,seconds=0;
-  const formatTime=v=>String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0');
-  $('#pubMic').onclick=async()=>{
-    if(recorder&&recorder.state==='recording'){recorder.stop();return;}
-    if(!navigator.mediaDevices||!window.MediaRecorder){add('bot','A gravação de áudio não está disponível neste navegador.');return;}
-    try{
-      stream=await navigator.mediaDevices.getUserMedia({audio:true}); chunks=[]; seconds=0; $('#pubRecTime').textContent='00:00';
-      recorder=new MediaRecorder(stream);
-      recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
-      recorder.onstop=()=>{clearInterval(timer);$('#pubMic').classList.remove('recording');$('#pubMic').textContent='🎤';$('#pubRecStatus').classList.remove('show');const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});const url=URL.createObjectURL(blob);add('user',`<div class="audio-wrap">🎤 <audio controls src="${url}"></audio></div>`);stream?.getTracks().forEach(t=>t.stop());setTimeout(()=>add('bot','Recebi seu áudio 🎧. Para localizar o produto, escreva também o nome ou tipo do produto.'),350);};
-      recorder.start();$('#pubMic').classList.add('recording');$('#pubMic').textContent='⏹';$('#pubRecStatus').classList.add('show');timer=setInterval(()=>{$('#pubRecTime').textContent=formatTime(++seconds);},1000);
-    }catch(e){add('bot','Não consegui acessar o microfone. Permita o uso nas configurações do navegador.');}
+  let pubRecognition=null, pubListening=false;
+  function pubMakeRecognition(){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR) return null;
+    const r = new SR();
+    r.lang='pt-BR'; r.continuous=false; r.interimResults=false; r.maxAlternatives=1;
+    return r;
+  }
+  $('#pubMic').onclick=()=>{
+    if(pubListening){ pubRecognition && pubRecognition.stop(); return; }
+    pubRecognition = pubMakeRecognition();
+    if(!pubRecognition){ add('bot','Seu navegador não permite busca por voz. Use o Chrome (celular ou computador) ou escreva o que procura.'); return; }
+    pubListening = true;
+    $('#pubMic').classList.add('recording'); $('#pubMic').textContent='⏹'; $('#pubRecStatus').classList.add('show');
+    pubRecognition.onresult=(e)=>{
+      const text = e.results[0][0].transcript;
+      add('user', storeEsc(text));
+      setTimeout(()=>reply(text),250);
+    };
+    pubRecognition.onerror=()=>{
+      add('bot','Não consegui entender o áudio. Tente novamente ou escreva o que procura.');
+    };
+    pubRecognition.onend=()=>{
+      pubListening=false;
+      $('#pubMic').classList.remove('recording'); $('#pubMic').textContent='🎤'; $('#pubRecStatus').classList.remove('show');
+    };
+    try{ pubRecognition.start(); }catch(e){ pubListening=false; $('#pubMic').classList.remove('recording'); $('#pubMic').textContent='🎤'; $('#pubRecStatus').classList.remove('show'); }
   };
   add('bot',storeEsc(data.welcome||'Olá! Como posso ajudar?'));
 }
