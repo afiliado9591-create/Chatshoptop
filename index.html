@@ -227,6 +227,7 @@
 <div class="field"><label>Cor do botão "Comprar"</label><input type="color" id="buyColor" value="#7A2E3B"></div>
 <div class="field"><label>Cor do preço</label><input type="color" id="priceColor" value="#7A2E3B"></div>
 <div class="field"><label>Cor de fundo do cartão (onde fica o nome do produto)</label><input type="color" id="cardColor" value="#FFFFFF"></div>
+<div class="field"><label>Transparência do cartão: <span id="cardOpacityValue">95%</span></label><input type="range" id="cardOpacity" min="0" max="100" value="95"><small>Arraste pra esquerda pra deixar mais transparente (vê a foto por trás), ou pra direita pra deixar mais sólido.</small></div>
 <div class="field"><label>Cor do nome do produto</label><input type="color" id="cardTextColor" value="#1A1A1A"></div>
 <div class="field"><label>Cor do selo de categoria</label><input type="color" id="categoryColor" value="#7A2E3B"></div>
 <div class="field"><label>Cor do texto do selo de categoria</label><input type="color" id="categoryTextColor" value="#FFFFFF"></div>
@@ -298,11 +299,11 @@ let myProductLimit = 1;
 let myChatLimit = 1;
 
 const PALETAS = [
-  { nome:'Roxo (padrão)', main:'#7A2E3B', dark:'#5B2029', accent:'#C9A24B', bg:'#FBF3EC', buy:'#7A2E3B', price:'#7A2E3B', card:'#FFFFFF', cardText:'#1A1A1A', cat:'#7A2E3B', catText:'#FFFFFF' },
-  { nome:'Rosa', main:'#C2185B', dark:'#6d1235', accent:'#F48FB1', bg:'#FFF0F5', buy:'#C2185B', price:'#C2185B', card:'#FFFFFF', cardText:'#1A1A1A', cat:'#C2185B', catText:'#FFFFFF' },
-  { nome:'Azul', main:'#1565C0', dark:'#0D3B75', accent:'#90CAF9', bg:'#EFF6FF', buy:'#1565C0', price:'#1565C0', card:'#FFFFFF', cardText:'#1A1A1A', cat:'#1565C0', catText:'#FFFFFF' },
-  { nome:'Verde', main:'#2E7D32', dark:'#1B4D1F', accent:'#A5D6A7', bg:'#F1F8F1', buy:'#2E7D32', price:'#2E7D32', card:'#FFFFFF', cardText:'#1A1A1A', cat:'#2E7D32', catText:'#FFFFFF' },
-  { nome:'Preto & Dourado', main:'#1a1a1a', dark:'#000000', accent:'#D4AF37', bg:'#FAF7F0', buy:'#D4AF37', price:'#D4AF37', card:'#1A1A1A', cardText:'#FFFFFF', cat:'#D4AF37', catText:'#1A1A1A' },
+  { nome:'Roxo (padrão)', main:'#7A2E3B', dark:'#5B2029', accent:'#C9A24B', bg:'#FBF3EC', buy:'#7A2E3B', price:'#7A2E3B', card:'#FFFFFF', cardOpacity:95, cardText:'#1A1A1A', cat:'#7A2E3B', catText:'#FFFFFF' },
+  { nome:'Rosa', main:'#C2185B', dark:'#6d1235', accent:'#F48FB1', bg:'#FFF0F5', buy:'#C2185B', price:'#C2185B', card:'#FFFFFF', cardOpacity:95, cardText:'#1A1A1A', cat:'#C2185B', catText:'#FFFFFF' },
+  { nome:'Azul', main:'#1565C0', dark:'#0D3B75', accent:'#90CAF9', bg:'#EFF6FF', buy:'#1565C0', price:'#1565C0', card:'#FFFFFF', cardOpacity:95, cardText:'#1A1A1A', cat:'#1565C0', catText:'#FFFFFF' },
+  { nome:'Verde', main:'#2E7D32', dark:'#1B4D1F', accent:'#A5D6A7', bg:'#F1F8F1', buy:'#2E7D32', price:'#2E7D32', card:'#FFFFFF', cardOpacity:95, cardText:'#1A1A1A', cat:'#2E7D32', catText:'#FFFFFF' },
+  { nome:'Preto & Dourado', main:'#1a1a1a', dark:'#000000', accent:'#D4AF37', bg:'#FAF7F0', buy:'#D4AF37', price:'#D4AF37', card:'#1A1A1A', cardOpacity:70, cardText:'#FFFFFF', cat:'#D4AF37', catText:'#1A1A1A' },
 ];
 function renderPaletas(){
   const box = document.getElementById('paletaPresets');
@@ -313,7 +314,7 @@ function renderPaletas(){
       const p = PALETAS[btn.dataset.i];
       $('#mainColor').value = p.main; $('#darkColor').value = p.dark;
       $('#accentColor').value = p.accent; $('#chatBg').value = p.bg; $('#buyColor').value = p.buy;
-      $('#priceColor').value = p.price; $('#cardColor').value = p.card; $('#cardTextColor').value = p.cardText;
+      $('#priceColor').value = p.price; $('#cardColor').value = p.card; $('#cardOpacity').value = p.cardOpacity; $('#cardOpacityValue').textContent = p.cardOpacity+'%'; $('#cardTextColor').value = p.cardText;
       $('#categoryColor').value = p.cat; $('#categoryTextColor').value = p.catText;
       renderLive(); debounce();
     };
@@ -396,6 +397,8 @@ async function populateForm(data){
   $('#buyColor').value = data.buyColor || data.mainColor || '#7A2E3B';
   $('#priceColor').value = data.priceColor || data.buyColor || data.mainColor || '#7A2E3B';
   $('#cardColor').value = data.cardColor || '#FFFFFF';
+  $('#cardOpacity').value = (data.cardOpacity!=null ? data.cardOpacity : 95);
+  $('#cardOpacityValue').textContent = $('#cardOpacity').value + '%';
   $('#cardTextColor').value = data.cardTextColor || '#1A1A1A';
   $('#categoryColor').value = data.categoryColor || data.mainColor || '#7A2E3B';
   $('#categoryTextColor').value = data.categoryTextColor || '#FFFFFF';
@@ -414,7 +417,7 @@ function clearForm(){
   qnaListEl.innerHTML=''; qnaCount=0;
   $('#brand').value='Minha Loja'; $('#whatsapp').value='5511999999999';
   $('#welcome').value='Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja a vitrine.';
-  $('#mainColor').value='#7A2E3B'; $('#darkColor').value='#5B2029'; $('#accentColor').value='#C9A24B'; $('#chatBg').value='#FBF3EC'; $('#buyColor').value='#7A2E3B'; $('#priceColor').value='#7A2E3B'; $('#cardColor').value='#FFFFFF'; $('#cardTextColor').value='#1A1A1A'; $('#categoryColor').value='#7A2E3B'; $('#categoryTextColor').value='#FFFFFF';
+  $('#mainColor').value='#7A2E3B'; $('#darkColor').value='#5B2029'; $('#accentColor').value='#C9A24B'; $('#chatBg').value='#FBF3EC'; $('#buyColor').value='#7A2E3B'; $('#priceColor').value='#7A2E3B'; $('#cardColor').value='#FFFFFF'; $('#cardOpacity').value='95'; $('#cardOpacityValue').textContent='95%'; $('#cardTextColor').value='#1A1A1A'; $('#categoryColor').value='#7A2E3B'; $('#categoryTextColor').value='#FFFFFF';
   $('#logoUrl').value=''; document.getElementById('logoField').dataset.upload=''; refreshLogo();
   $('#slug').value=''; $('#slug').dataset.touched=''; $('#slug').removeAttribute('disabled');
   $('#slugPreview').textContent='minha-loja.'+DOMINIO_BASE;
@@ -842,6 +845,13 @@ if(auth && !STOREFRONT_MODE){
    LOJA PUBLICADA — em nomedaloja.alibr.com.br, busca o documento
    cujo ID é o subdomínio e mostra diretamente o chatbot/vitrine.
    ============================================================ */
+function hex2rgba(hex, opacityPercent){
+  const h = String(hex||'#ffffff').replace('#','');
+  const r = parseInt(h.substring(0,2),16); const g = parseInt(h.substring(2,4),16); const b = parseInt(h.substring(4,6),16);
+  const a = Math.max(0, Math.min(100, Number(opacityPercent??95))) / 100;
+  if(isNaN(r)||isNaN(g)||isNaN(b)) return `rgba(255,255,255,${a})`;
+  return `rgba(${r},${g},${b},${a})`;
+}
 function storeEsc(s){
   return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -877,7 +887,7 @@ function renderPublishedStore(data, ref){
   const priceColor = /^#[0-9a-f]{6}$/i.test(data.priceColor||'') ? data.priceColor : buy;
   document.documentElement.style.setProperty('--store-price', priceColor);
   const cardColor = /^#[0-9a-f]{6}$/i.test(data.cardColor||'') ? data.cardColor : '#FFFFFF';
-  document.documentElement.style.setProperty('--store-card', cardColor);
+  document.documentElement.style.setProperty('--store-card', hex2rgba(cardColor, data.cardOpacity));
   const cardTextColor = /^#[0-9a-f]{6}$/i.test(data.cardTextColor||'') ? data.cardTextColor : '#1A1A1A';
   document.documentElement.style.setProperty('--store-card-text', cardTextColor);
   const categoryColor = /^#[0-9a-f]{6}$/i.test(data.categoryColor||'') ? data.categoryColor : main;
@@ -1217,7 +1227,7 @@ card.querySelector('.remove').onclick=()=>{card.remove();debounce()};
 card.querySelectorAll('input,textarea').forEach(i=>i.addEventListener('input',debounce));
 qnaListEl.appendChild(card)}
 function collectQnA(){return [...document.querySelectorAll('#qnaList .product')].map(card=>{const k=card.querySelector('[data-k="keywords"]').value.trim();const a=card.querySelector('[data-k="answer"]').value.trim();return{keywords:k.split(',').map(x=>x.trim()).filter(Boolean),answer:a}}).filter(q=>q.keywords.length && q.answer)}
-function collect(){return{brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';return{name:g('name')||'Produto',price:g('price')||'Consulte',link:g('link')||'#',keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',image:card.dataset.upload||g('imageUrl')||'',promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
+function collect(){return{brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardOpacity:Number($('#cardOpacity').value),cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';return{name:g('name')||'Produto',price:g('price')||'Consulte',link:g('link')||'#',keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',image:card.dataset.upload||g('imageUrl')||'',promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
 function liveVisual(p,cls=''){if(!p.image)return `<div class="live-noimg">🛍️</div>`;return `<img src="${esc(p.image)}" alt="${esc(p.name)}">`}
 function liveCard(p,inside=false){return `<div class="${inside?'live-pcard':'live-card'}">${liveVisual(p)}<b>${esc(p.name)}</b><div class="live-price">${esc(p.price)}</div><a class="live-buy" href="${esc(p.link)}" target="_blank" rel="noopener">Comprar</a></div>`}
 function addLive(who,html){const row=document.createElement('div');row.className='live-row '+who;row.innerHTML=`<div class="live-bubble">${html}<span class="live-time">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;$('#liveMessages').appendChild(row);$('#liveMessages').scrollTop=$('#liveMessages').scrollHeight}
@@ -1259,6 +1269,7 @@ $('#addProduct').onclick=()=>{
   addProduct();renderLive();atualizarAvisoLimite();
 };
 $('#addQnA').onclick=()=>{addQnA();renderLive()};$('#previewBtn').onclick=renderLive;$('#publishBtn').onclick=publish;$('#copyBtn').onclick=copyHTML;$('#downloadBtn').onclick=download;$('#saveBtn').onclick=save;$('#resetBtn').onclick=()=>{localStorage.removeItem('chatshop-v4');location.reload()};['brand','whatsapp','welcome','mainColor','darkColor','accentColor','chatBg','buyColor','priceColor','cardColor','cardTextColor','categoryColor','categoryTextColor'].forEach(id=>$('#'+id).addEventListener('input',debounce));
+$('#cardOpacity').addEventListener('input',()=>{$('#cardOpacityValue').textContent=$('#cardOpacity').value+'%';debounce()});
 renderPaletas();
 [{name:'Vestido Longo Serena',price:'R$ 189,90',link:'https://sualoja.com/vestido',keywords:['vestido','longo','festa'],imageUrl:'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=600&q=80'},{name:'Saia Midi',price:'R$ 129,90',link:'https://sualoja.com/saia',keywords:['saia','midi','moda'],imageUrl:'https://images.unsplash.com/photo-1583496661160-fb5886a13d27?auto=format&fit=crop&w=600&q=80'}].forEach(addProduct);
 [{keywords:['prazo','entrega','demora','quanto tempo'],answer:'Nossas entregas levam de 3 a 7 dias úteis, dependendo da sua região.'},{keywords:['troca','devolucao','devolução'],answer:'Você tem até 7 dias após o recebimento para solicitar troca ou devolução, com o produto sem uso.'}].forEach(addQnA);
