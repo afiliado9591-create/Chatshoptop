@@ -21,7 +21,7 @@
 .pub-slide-overlay{position:relative;z-index:1;width:100%;padding:26px 18px 100px;background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.25) 30%,rgba(0,0,0,.92) 100%)}
 .pub-slide-textbox{background:rgba(255,255,255,.95);border-radius:14px;padding:12px 14px;display:inline-block;max-width:100%;box-shadow:0 2px 12px rgba(0,0,0,.3)}
 .pub-slide-textbox b{color:#1a1a1a;text-shadow:none}
-.pub-slide-textbox .pub-slide-price{color:var(--store-buy,var(--store-main,#7A2E3B));text-shadow:none}
+.pub-slide-textbox .pub-slide-price{color:var(--store-price,var(--store-main,#7A2E3B));text-shadow:none}
 .pub-slide-textbox .pub-slide-cat{background:var(--store-main,#7A2E3B);color:#fff}
 .pub-slide-overlay b{color:#fff;font-size:21px;display:block;text-shadow:0 1px 4px rgba(0,0,0,.6)}
 .pub-slide-price{color:#fff;font-size:17px;font-weight:800;margin:6px 0 14px;text-shadow:0 1px 4px rgba(0,0,0,.6)}
@@ -37,7 +37,7 @@
 .promo-badge{position:fixed;left:10px;top:46%;transform:translateY(-50%);z-index:25;background:#fff;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.35);width:92px;padding:8px;text-align:center;animation:promoBlink 1.1s infinite;cursor:pointer;border:none;font-family:inherit}
 .promo-badge img{width:100%;height:60px;object-fit:cover;border-radius:8px;display:block}
 .promo-badge .promo-noimg{width:100%;height:60px;border-radius:8px;background:#f3f4f6;display:grid;place-items:center;font-size:24px}
-.promo-badge .promo-price{font-size:11px;font-weight:800;color:var(--store-main,#7A2E3B);margin-top:4px}
+.promo-badge .promo-price{font-size:11px;font-weight:800;color:var(--store-price,var(--store-main,#7A2E3B));margin-top:4px}
 .promo-badge .promo-tag{position:absolute;top:-8px;left:-8px;background:#dc2626;color:#fff;font-size:9px;font-weight:800;padding:3px 6px;border-radius:8px}
 @keyframes promoBlink{0%,100%{opacity:1;box-shadow:0 4px 16px rgba(0,0,0,.35)}50%{opacity:.6;box-shadow:0 4px 26px rgba(255,215,0,.65)}}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.preview{min-height:650px}#liveApp{grid-template-columns:1fr;grid-template-rows:1fr 190px}.live-catalog{display:flex;gap:10px;overflow-x:auto}.live-catalog h2{display:none}.live-card{min-width:145px;margin:0}.live-card img,.live-card .live-noimg{height:85px}}
@@ -225,6 +225,7 @@
 <div class="field"><label>Destaque</label><input type="color" id="accentColor" value="#C9A24B"></div>
 <div class="field"><label>Fundo do chat</label><input type="color" id="chatBg" value="#FBF3EC"></div>
 <div class="field"><label>Cor do botão "Comprar"</label><input type="color" id="buyColor" value="#7A2E3B"></div>
+<div class="field"><label>Cor do preço</label><input type="color" id="priceColor" value="#7A2E3B"></div>
 </div></div>
 <div class="section"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">3. Produtos</h2><button class="btn" id="addProduct">+ Produto</button></div><div id="products"></div></div>
 <div class="section"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">3b. Perguntas e Respostas</h2><button class="btn" id="addQnA">+ Pergunta</button></div><div id="qnaList"></div><small style="color:var(--muted)">Cadastre dúvidas comuns (prazo de entrega, trocas, formas de pagamento...). O bot responde automaticamente quando o cliente perguntar algo parecido.</small></div>
@@ -293,11 +294,11 @@ let myProductLimit = 1;
 let myChatLimit = 1;
 
 const PALETAS = [
-  { nome:'Roxo (padrão)', main:'#7A2E3B', dark:'#5B2029', accent:'#C9A24B', bg:'#FBF3EC', buy:'#7A2E3B' },
-  { nome:'Rosa', main:'#C2185B', dark:'#6d1235', accent:'#F48FB1', bg:'#FFF0F5', buy:'#C2185B' },
-  { nome:'Azul', main:'#1565C0', dark:'#0D3B75', accent:'#90CAF9', bg:'#EFF6FF', buy:'#1565C0' },
-  { nome:'Verde', main:'#2E7D32', dark:'#1B4D1F', accent:'#A5D6A7', bg:'#F1F8F1', buy:'#2E7D32' },
-  { nome:'Preto & Dourado', main:'#1a1a1a', dark:'#000000', accent:'#D4AF37', bg:'#FAF7F0', buy:'#D4AF37' },
+  { nome:'Roxo (padrão)', main:'#7A2E3B', dark:'#5B2029', accent:'#C9A24B', bg:'#FBF3EC', buy:'#7A2E3B', price:'#7A2E3B' },
+  { nome:'Rosa', main:'#C2185B', dark:'#6d1235', accent:'#F48FB1', bg:'#FFF0F5', buy:'#C2185B', price:'#C2185B' },
+  { nome:'Azul', main:'#1565C0', dark:'#0D3B75', accent:'#90CAF9', bg:'#EFF6FF', buy:'#1565C0', price:'#1565C0' },
+  { nome:'Verde', main:'#2E7D32', dark:'#1B4D1F', accent:'#A5D6A7', bg:'#F1F8F1', buy:'#2E7D32', price:'#2E7D32' },
+  { nome:'Preto & Dourado', main:'#1a1a1a', dark:'#000000', accent:'#D4AF37', bg:'#FAF7F0', buy:'#D4AF37', price:'#D4AF37' },
 ];
 function renderPaletas(){
   const box = document.getElementById('paletaPresets');
@@ -308,6 +309,7 @@ function renderPaletas(){
       const p = PALETAS[btn.dataset.i];
       $('#mainColor').value = p.main; $('#darkColor').value = p.dark;
       $('#accentColor').value = p.accent; $('#chatBg').value = p.bg; $('#buyColor').value = p.buy;
+      $('#priceColor').value = p.price;
       renderLive(); debounce();
     };
   });
@@ -387,6 +389,7 @@ async function populateForm(data){
   $('#accentColor').value = data.accentColor || '#C9A24B';
   $('#chatBg').value = data.chatBg || '#FBF3EC';
   $('#buyColor').value = data.buyColor || data.mainColor || '#7A2E3B';
+  $('#priceColor').value = data.priceColor || data.buyColor || data.mainColor || '#7A2E3B';
   const isUploadLogo = (data.logo||'').startsWith('data:');
   $('#logoUrl').value = isUploadLogo ? '' : (data.logo || '');
   document.getElementById('logoField').dataset.upload = isUploadLogo ? data.logo : '';
@@ -402,7 +405,7 @@ function clearForm(){
   qnaListEl.innerHTML=''; qnaCount=0;
   $('#brand').value='Minha Loja'; $('#whatsapp').value='5511999999999';
   $('#welcome').value='Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja a vitrine.';
-  $('#mainColor').value='#7A2E3B'; $('#darkColor').value='#5B2029'; $('#accentColor').value='#C9A24B'; $('#chatBg').value='#FBF3EC'; $('#buyColor').value='#7A2E3B';
+  $('#mainColor').value='#7A2E3B'; $('#darkColor').value='#5B2029'; $('#accentColor').value='#C9A24B'; $('#chatBg').value='#FBF3EC'; $('#buyColor').value='#7A2E3B'; $('#priceColor').value='#7A2E3B';
   $('#logoUrl').value=''; document.getElementById('logoField').dataset.upload=''; refreshLogo();
   $('#slug').value=''; $('#slug').dataset.touched=''; $('#slug').removeAttribute('disabled');
   $('#slugPreview').textContent='minha-loja.'+DOMINIO_BASE;
@@ -862,6 +865,8 @@ function renderPublishedStore(data, ref){
   document.title = (data.brand || 'ChatShop') + ' · ChatShop';
   const buy = /^#[0-9a-f]{6}$/i.test(data.buyColor||'') ? data.buyColor : main;
   document.documentElement.style.setProperty('--store-buy', buy);
+  const priceColor = /^#[0-9a-f]{6}$/i.test(data.priceColor||'') ? data.priceColor : buy;
+  document.documentElement.style.setProperty('--store-price', priceColor);
   root.innerHTML = `<div id="liveApp" style="background:var(--store-dark);position:relative;overflow:hidden">
     <div class="pub-feed" id="pubFeed"><div class="pub-swipe-hint">⬆️ deslize pra ver mais produtos</div></div>
     <button class="pub-chat-toggle" id="pubChatToggle" type="button" title="Abrir chat">💬</button>
@@ -903,7 +908,7 @@ function renderPublishedStore(data, ref){
   }
   function card(p, inside){
     const link=storeSafeUrl(p.link);
-    return `<div class="${inside?'live-pcard':'live-card'}">${visual(p)}<b>${storeEsc(p.name)}</b><div class="live-price" style="color:var(--store-main)">${storeEsc(formatPrice(p.price))}</div><a class="live-buy" style="background:var(--store-buy,var(--store-main))" href="${storeEsc(link)}" target="_blank" rel="noopener">Comprar</a></div>`;
+    return `<div class="${inside?'live-pcard':'live-card'}">${visual(p)}<b>${storeEsc(p.name)}</b><div class="live-price" style="color:var(--store-price,var(--store-main))">${storeEsc(formatPrice(p.price))}</div><a class="live-buy" style="background:var(--store-buy,var(--store-main))" href="${storeEsc(link)}" target="_blank" rel="noopener">Comprar</a></div>`;
   }
   function feedSlide(p){
     const image = storeSafeImage(p.image);
@@ -1195,7 +1200,7 @@ card.querySelector('.remove').onclick=()=>{card.remove();debounce()};
 card.querySelectorAll('input,textarea').forEach(i=>i.addEventListener('input',debounce));
 qnaListEl.appendChild(card)}
 function collectQnA(){return [...document.querySelectorAll('#qnaList .product')].map(card=>{const k=card.querySelector('[data-k="keywords"]').value.trim();const a=card.querySelector('[data-k="answer"]').value.trim();return{keywords:k.split(',').map(x=>x.trim()).filter(Boolean),answer:a}}).filter(q=>q.keywords.length && q.answer)}
-function collect(){return{brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';return{name:g('name')||'Produto',price:g('price')||'Consulte',link:g('link')||'#',keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',image:card.dataset.upload||g('imageUrl')||'',promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
+function collect(){return{brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';return{name:g('name')||'Produto',price:g('price')||'Consulte',link:g('link')||'#',keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',image:card.dataset.upload||g('imageUrl')||'',promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
 function liveVisual(p,cls=''){if(!p.image)return `<div class="live-noimg">🛍️</div>`;return `<img src="${esc(p.image)}" alt="${esc(p.name)}">`}
 function liveCard(p,inside=false){return `<div class="${inside?'live-pcard':'live-card'}">${liveVisual(p)}<b>${esc(p.name)}</b><div class="live-price">${esc(p.price)}</div><a class="live-buy" href="${esc(p.link)}" target="_blank" rel="noopener">Comprar</a></div>`}
 function addLive(who,html){const row=document.createElement('div');row.className='live-row '+who;row.innerHTML=`<div class="live-bubble">${html}<span class="live-time">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;$('#liveMessages').appendChild(row);$('#liveMessages').scrollTop=$('#liveMessages').scrollHeight}
@@ -1236,7 +1241,7 @@ $('#addProduct').onclick=()=>{
   if(atual >= myProductLimit){ abrirPlanos(); return; }
   addProduct();renderLive();atualizarAvisoLimite();
 };
-$('#addQnA').onclick=()=>{addQnA();renderLive()};$('#previewBtn').onclick=renderLive;$('#publishBtn').onclick=publish;$('#copyBtn').onclick=copyHTML;$('#downloadBtn').onclick=download;$('#saveBtn').onclick=save;$('#resetBtn').onclick=()=>{localStorage.removeItem('chatshop-v4');location.reload()};['brand','whatsapp','welcome','mainColor','darkColor','accentColor','chatBg','buyColor'].forEach(id=>$('#'+id).addEventListener('input',debounce));
+$('#addQnA').onclick=()=>{addQnA();renderLive()};$('#previewBtn').onclick=renderLive;$('#publishBtn').onclick=publish;$('#copyBtn').onclick=copyHTML;$('#downloadBtn').onclick=download;$('#saveBtn').onclick=save;$('#resetBtn').onclick=()=>{localStorage.removeItem('chatshop-v4');location.reload()};['brand','whatsapp','welcome','mainColor','darkColor','accentColor','chatBg','buyColor','priceColor'].forEach(id=>$('#'+id).addEventListener('input',debounce));
 renderPaletas();
 [{name:'Vestido Longo Serena',price:'R$ 189,90',link:'https://sualoja.com/vestido',keywords:['vestido','longo','festa'],imageUrl:'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=600&q=80'},{name:'Saia Midi',price:'R$ 129,90',link:'https://sualoja.com/saia',keywords:['saia','midi','moda'],imageUrl:'https://images.unsplash.com/photo-1583496661160-fb5886a13d27?auto=format&fit=crop&w=600&q=80'}].forEach(addProduct);
 [{keywords:['prazo','entrega','demora','quanto tempo'],answer:'Nossas entregas levam de 3 a 7 dias úteis, dependendo da sua região.'},{keywords:['troca','devolucao','devolução'],answer:'Você tem até 7 dias após o recebimento para solicitar troca ou devolução, com o produto sem uso.'}].forEach(addQnA);
