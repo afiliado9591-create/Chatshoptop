@@ -178,6 +178,7 @@
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn" id="adminTabUsuarios" type="button">👤 Usuários</button>
       <button class="btn" id="adminTabIndicacoes" type="button">🔗 Indicações</button>
+      <button class="btn" id="adminTabDominios" type="button">🌐 Domínios</button>
       <button class="btn" id="adminTabVideos" type="button">🎥 Vídeos</button>
     </div>
     <div id="adminConteudo" style="margin-top:14px;max-height:60vh;overflow-y:auto"></div>
@@ -217,6 +218,15 @@
 <div class="field"><label>WhatsApp</label><input id="whatsapp" value="5511999999999" inputmode="numeric"><small>Somente números, com 55 + DDD + número.</small></div>
 <div class="field"><label>Mensagem inicial</label><textarea id="welcome" rows="3">Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja a vitrine.</textarea></div>
 <div class="field"><label>Subdomínio (endereço do chatbot)</label><input id="slug" value="minha-loja"><small>Vai ficar em: <b id="slugPreview">minha-loja.alibr.com.br</b> — use só letras minúsculas, números e hífen.</small></div>
+<div class="field" id="customDomainField" style="display:none">
+<label>Domínio próprio (opcional)</label>
+<input id="customDomain" placeholder="minhaloja.com.br">
+<small>Seu link padrão (<span id="slugPreview2">minha-loja.alibr.com.br</span>) continua funcionando normalmente mesmo com domínio próprio. Depois de salvar, fale com o suporte pra configurar o DNS.</small>
+</div>
+<div class="field" id="customDomainLocked" style="display:none">
+<label>Domínio próprio 🔒</label>
+<small>Disponível a partir do plano Básico. <a href="#" id="verPlanosDominio">Ver planos</a></small>
+</div>
 </div>
 <div class="section"><h2>2. Aparência</h2>
 <div class="field"><label>Paleta de cores pronta (opcional — clique pra aplicar, e depois pode ajustar à vontade)</label>
@@ -281,6 +291,14 @@ const STOREFRONT_MODE = !!STOREFRONT_SLUG
   && STOREFRONT_SLUG !== 'www'
   && !STOREFRONT_SLUG.includes('.');
 
+// Domínio próprio: se o endereço não é um subdomínio da alibr.com.br,
+// nem é o domínio principal do gerador, tratamos como possível domínio
+// próprio de algum assinante e buscamos no Firestore pelo campo customDomain.
+const HOSTS_RESERVADOS = ['localhost', DOMINIO_BASE, 'www.' + DOMINIO_BASE];
+const CUSTOM_DOMAIN_MODE = !STOREFRONT_SLUG
+  && !HOSTS_RESERVADOS.includes(HOST_ATUAL)
+  && !HOST_ATUAL.endsWith('.vercel.app');
+
 let db = null, auth = null;
 try{
   firebase.initializeApp(firebaseConfig);
@@ -344,12 +362,12 @@ function slugify(s){
 }
 $('#slug').addEventListener('input', ()=>{
   $('#slug').value = $('#slug').value.toLowerCase().replace(/[^a-z0-9-]/g,'');
-  $('#slugPreview').textContent = (($('#slug').value)||'minha-loja') + '.' + DOMINIO_BASE;
+  $('#slugPreview').textContent = (($('#slug').value)||'minha-loja') + '.' + DOMINIO_BASE; $('#slugPreview2').textContent = $('#slugPreview').textContent;
 });
 $('#brand').addEventListener('blur', ()=>{
   if($('#slug').dataset.touched) return;
   $('#slug').value = slugify($('#brand').value);
-  $('#slugPreview').textContent = $('#slug').value + '.' + DOMINIO_BASE;
+  $('#slugPreview').textContent = $('#slug').value + '.' + DOMINIO_BASE; $('#slugPreview2').textContent = $('#slugPreview').textContent;
 });
 $('#slug').addEventListener('focus', ()=>{ $('#slug').dataset.touched = '1'; });
 
@@ -395,6 +413,7 @@ async function populateForm(data){
   $('#brand').value = data.brand || '';
   $('#whatsapp').value = data.whatsapp || '';
   $('#welcome').value = data.welcome || '';
+  $('#customDomain').value = data.customDomain || '';
   $('#mainColor').value = data.mainColor || '#7A2E3B';
   $('#darkColor').value = data.darkColor || '#5B2029';
   $('#accentColor').value = data.accentColor || '#C9A24B';
@@ -421,12 +440,12 @@ async function populateForm(data){
 function clearForm(){
   productsEl.innerHTML=''; productCount=0;
   qnaListEl.innerHTML=''; qnaCount=0;
-  $('#brand').value='Minha Loja'; $('#whatsapp').value='5511999999999';
+  $('#brand').value='Minha Loja'; $('#whatsapp').value='5511999999999'; $('#customDomain').value='';
   $('#welcome').value='Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja a vitrine.';
   $('#mainColor').value='#7A2E3B'; $('#darkColor').value='#5B2029'; $('#accentColor').value='#C9A24B'; $('#chatBg').value='#FBF3EC'; $('#buyColor').value='#7A2E3B'; $('#priceColor').value='#7A2E3B'; $('#cardColor').value='#FFFFFF'; $('#cardOpacity').value='95'; $('#cardOpacityValue').textContent='95%'; $('#cardTextColor').value='#1A1A1A'; $('#categoryColor').value='#7A2E3B'; $('#categoryTextColor').value='#FFFFFF'; $('#showCategoryMenu').checked=true;
   $('#logoUrl').value=''; document.getElementById('logoField').dataset.upload=''; refreshLogo();
   $('#slug').value=''; $('#slug').dataset.touched=''; $('#slug').removeAttribute('disabled');
-  $('#slugPreview').textContent='minha-loja.'+DOMINIO_BASE;
+  $('#slugPreview').textContent='minha-loja.'+DOMINIO_BASE; $('#slugPreview2').textContent = $('#slugPreview').textContent;
 }
 
 function openDashboard(){
@@ -439,11 +458,14 @@ function openEditor(slugToEdit, data){
   mySlug = slugToEdit || null;
   $('#dashboard').style.display='none';
   $('#editorView').style.display='block';
+  const podeUsarDominioProprio = myPlan !== 'aprendiz';
+  $('#customDomainField').style.display = podeUsarDominioProprio ? 'block' : 'none';
+  $('#customDomainLocked').style.display = podeUsarDominioProprio ? 'none' : 'block';
   if(slugToEdit && data){
     $('#slug').value = slugToEdit;
     $('#slug').dataset.touched='1';
     $('#slug').setAttribute('disabled','disabled');
-    $('#slugPreview').textContent = slugToEdit + '.' + DOMINIO_BASE;
+    $('#slugPreview').textContent = slugToEdit + '.' + DOMINIO_BASE; $('#slugPreview2').textContent = $('#slugPreview').textContent;
     populateForm(data);
     $('#publishStatus').innerHTML = `Editando a loja publicada em <b>${slugToEdit}.${DOMINIO_BASE}</b>. Clique em publicar novamente para salvar alterações.`;
   } else {
@@ -454,6 +476,7 @@ function openEditor(slugToEdit, data){
   atualizarAvisoLimite();
 }
 $('#backToDash').onclick = openDashboard;
+$('#verPlanosDominio').onclick = (e)=>{ e.preventDefault(); abrirPlanos(); };
 
 async function loadDashboard(){
   $('#storeGrid').innerHTML = '<p class="empty-hint">Carregando...</p>';
@@ -479,6 +502,7 @@ async function loadDashboard(){
       card.innerHTML = `
         <h3>${esc(s.brand||s.slug)}</h3>
         <div class="slugtag">${s.slug}.${DOMINIO_BASE}</div>
+        ${s.customDomain ? `<div class="slugtag" style="color:#16a34a">🌐 ${esc(s.customDomain)}</div>` : ''}
         <div class="metrics">
           <div>👁️ Visitas<br><b>${s.visitCount||0}</b></div>
           <div>💬 Mensagens<br><b>${s.messageCount||0}</b></div>
@@ -692,6 +716,27 @@ async function mostrarAdminIndicacoes(){
     }).join('');
   }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
 }
+async function mostrarAdminDominios(){
+  const box = $('#adminConteudo');
+  box.innerHTML = '<p class="empty-hint">Carregando domínios...</p>';
+  try{
+    const [usersSnap, lojasSnap] = await Promise.all([
+      db.collection('users').get(),
+      db.collection(COLECAO).get()
+    ]);
+    const emailPorUid = {};
+    usersSnap.docs.forEach(d=>{ emailPorUid[d.id] = d.data().email; });
+    const comDominio = lojasSnap.docs.map(d=>d.data()).filter(s=>s.customDomain);
+    if(!comDominio.length){ box.innerHTML = '<p class="empty-hint">Nenhum lojista pediu domínio próprio ainda.</p>'; return; }
+    box.innerHTML = comDominio.map(s=>{
+      const email = emailPorUid[s.ownerUid] || 'e-mail não encontrado';
+      return `<div style="padding:10px 0;border-bottom:1px solid #eee">
+        <div style="font-size:14px"><b>🌐 ${esc(s.customDomain)}</b></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Loja: ${esc(s.brand||s.slug)} (${esc(s.slug)}.${DOMINIO_BASE}) — pedido por <b>${esc(email)}</b></div>
+      </div>`;
+    }).join('');
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+}
 async function mostrarAdminVideos(){
   const box = $('#adminConteudo');
   box.innerHTML = '<p class="empty-hint">Carregando vídeos...</p>';
@@ -734,6 +779,7 @@ async function mostrarAdminVideos(){
 $('#adminBtn').onclick = abrirAdmin;
 $('#adminTabUsuarios').onclick = mostrarAdminUsuarios;
 $('#adminTabIndicacoes').onclick = mostrarAdminIndicacoes;
+$('#adminTabDominios').onclick = mostrarAdminDominios;
 $('#adminTabVideos').onclick = mostrarAdminVideos;
 $('#fecharAdmin').onclick = ()=> $('#adminModal').style.display='none';
 document.querySelector('#adminModal .plans-overlay')?.addEventListener('click', ()=> $('#adminModal').style.display='none');
@@ -1124,14 +1170,21 @@ async function loadPublishedStore(){
   try{
     if(!db) throw new Error('Firebase indisponível');
     try{ if(auth && !auth.currentUser) await auth.signInAnonymously(); }catch(authErr){ console.warn('Login anônimo do visitante falhou:', authErr); }
-    const ref=db.collection(COLECAO).doc(STOREFRONT_SLUG);
-    const snap=await ref.get();
-    if(!snap.exists){root.innerHTML='<div class="store-error"><div class="store-error-box"><h1>Loja não encontrada</h1><p>Confira se o endereço foi digitado corretamente ou fale com quem enviou este link.</p></div></div>';return;}
+    let ref = null, snap = null;
+    if(STOREFRONT_SLUG){
+      ref = db.collection(COLECAO).doc(STOREFRONT_SLUG);
+      snap = await ref.get();
+      if(!snap.exists) snap = null;
+    } else if(CUSTOM_DOMAIN_MODE){
+      const q = await db.collection(COLECAO).where('customDomain','==',HOST_ATUAL).limit(1).get();
+      if(!q.empty){ ref = q.docs[0].ref; snap = q.docs[0]; }
+    }
+    if(!snap){root.innerHTML='<div class="store-error"><div class="store-error-box"><h1>Loja não encontrada</h1><p>Confira se o endereço foi digitado corretamente ou fale com quem enviou este link.</p></div></div>';return;}
     renderPublishedStore(snap.data(), ref);
     ref.update({visitCount:firebase.firestore.FieldValue.increment(1)}).catch(e=>console.warn('Não consegui contar a visita (confira as regras do Firestore):', e));
   }catch(e){console.error(e);root.innerHTML='<div class="store-error"><div class="store-error-box"><h1>Não foi possível abrir a loja</h1><p>Tente novamente em alguns instantes. Se o problema continuar, confira as regras do Firestore.</p></div></div>';}
 }
-if(STOREFRONT_MODE) loadPublishedStore();
+if(STOREFRONT_MODE || CUSTOM_DOMAIN_MODE) loadPublishedStore();
 
 async function publish(){
   const statusEl = $('#publishStatus');
@@ -1144,7 +1197,7 @@ async function publish(){
 
   const slug = slugify($('#slug').value);
   $('#slug').value = slug;
-  $('#slugPreview').textContent = slug + '.' + DOMINIO_BASE;
+  $('#slugPreview').textContent = slug + '.' + DOMINIO_BASE; $('#slugPreview2').textContent = $('#slugPreview').textContent;
 
   if(!db){
     statusEl.innerHTML = '⚠️ O Firebase ainda não está configurado neste arquivo. Cole os dados do seu projeto no bloco <code>firebaseConfig</code> no início do script.';
@@ -1257,7 +1310,7 @@ card.querySelector('.remove').onclick=()=>{card.remove();debounce()};
 card.querySelectorAll('input,textarea').forEach(i=>i.addEventListener('input',debounce));
 qnaListEl.appendChild(card)}
 function collectQnA(){return [...document.querySelectorAll('#qnaList .product')].map(card=>{const k=card.querySelector('[data-k="keywords"]').value.trim();const a=card.querySelector('[data-k="answer"]').value.trim();return{keywords:k.split(',').map(x=>x.trim()).filter(Boolean),answer:a}}).filter(q=>q.keywords.length && q.answer)}
-function collect(){return{brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardOpacity:Number($('#cardOpacity').value),cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,showCategoryMenu:$('#showCategoryMenu').checked,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';return{name:g('name')||'Produto',price:g('price')||'Consulte',link:g('link')||'#',keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',image:card.dataset.upload||g('imageUrl')||'',promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
+function collect(){return{brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',customDomain: myPlan!=='aprendiz' ? $('#customDomain').value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'') : '',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardOpacity:Number($('#cardOpacity').value),cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,showCategoryMenu:$('#showCategoryMenu').checked,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';return{name:g('name')||'Produto',price:g('price')||'Consulte',link:g('link')||'#',keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',image:card.dataset.upload||g('imageUrl')||'',promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
 function liveVisual(p,cls=''){if(!p.image)return `<div class="live-noimg">🛍️</div>`;return `<img src="${esc(p.image)}" alt="${esc(p.name)}">`}
 function liveCard(p,inside=false){return `<div class="${inside?'live-pcard':'live-card'}">${liveVisual(p)}<b>${esc(p.name)}</b><div class="live-price">${esc(p.price)}</div><a class="live-buy" href="${esc(p.link)}" target="_blank" rel="noopener">Comprar</a></div>`}
 function addLive(who,html){const row=document.createElement('div');row.className='live-row '+who;row.innerHTML=`<div class="live-bubble">${html}<span class="live-time">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;$('#liveMessages').appendChild(row);$('#liveMessages').scrollTop=$('#liveMessages').scrollHeight}
