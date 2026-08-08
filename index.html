@@ -19,7 +19,10 @@
 .pub-slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .pub-slide .pub-noimg{position:absolute;inset:0;display:grid;place-items:center;font-size:64px;background:#222;color:#555}
 .pub-slide-overlay{position:relative;z-index:1;width:100%;padding:26px 18px 100px;background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.25) 30%,rgba(0,0,0,.92) 100%)}
-.pub-slide-textbox{background:rgba(0,0,0,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);border-radius:14px;padding:12px 14px;display:inline-block;max-width:100%}
+.pub-slide-textbox{background:rgba(255,255,255,.95);border-radius:14px;padding:12px 14px;display:inline-block;max-width:100%;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.pub-slide-textbox b{color:#1a1a1a;text-shadow:none}
+.pub-slide-textbox .pub-slide-price{color:var(--store-buy,var(--store-main,#7A2E3B));text-shadow:none}
+.pub-slide-textbox .pub-slide-cat{background:var(--store-main,#7A2E3B);color:#fff}
 .pub-slide-overlay b{color:#fff;font-size:21px;display:block;text-shadow:0 1px 4px rgba(0,0,0,.6)}
 .pub-slide-price{color:#fff;font-size:17px;font-weight:800;margin:6px 0 14px;text-shadow:0 1px 4px rgba(0,0,0,.6)}
 .pub-slide-buy{display:inline-block;background:var(--store-buy,var(--store-main));color:#fff;text-decoration:none;padding:12px 24px;border-radius:26px;font-weight:800;font-size:14px}
@@ -892,16 +895,22 @@ function renderPublishedStore(data, ref){
     const image = storeSafeImage(p.image);
     return image ? `<img src="${storeEsc(image)}" alt="${storeEsc(p.name)}">` : '<div class="live-noimg">🛍️</div>';
   }
+  function formatPrice(price){
+    const p = String(price||'').trim();
+    if(!p) return 'Consulte';
+    if(/r\$|\$/i.test(p)) return p;
+    return 'R$ ' + p;
+  }
   function card(p, inside){
     const link=storeSafeUrl(p.link);
-    return `<div class="${inside?'live-pcard':'live-card'}">${visual(p)}<b>${storeEsc(p.name)}</b><div class="live-price" style="color:var(--store-main)">${storeEsc(p.price)}</div><a class="live-buy" style="background:var(--store-buy,var(--store-main))" href="${storeEsc(link)}" target="_blank" rel="noopener">Comprar</a></div>`;
+    return `<div class="${inside?'live-pcard':'live-card'}">${visual(p)}<b>${storeEsc(p.name)}</b><div class="live-price" style="color:var(--store-main)">${storeEsc(formatPrice(p.price))}</div><a class="live-buy" style="background:var(--store-buy,var(--store-main))" href="${storeEsc(link)}" target="_blank" rel="noopener">Comprar</a></div>`;
   }
   function feedSlide(p){
     const image = storeSafeImage(p.image);
     const link = storeSafeUrl(p.link);
     const visualHtml = image ? `<img src="${storeEsc(image)}" alt="${storeEsc(p.name)}">` : '<div class="pub-noimg">🛍️</div>';
     const catHtml = p.category ? `<span class="pub-slide-cat">${storeEsc(p.category)}</span><br>` : '';
-    return `<div class="pub-slide">${visualHtml}<div class="pub-slide-overlay"><div class="pub-slide-textbox">${catHtml}<b>${storeEsc(p.name)}</b><div class="pub-slide-price">${storeEsc(p.price)}</div></div><br><a class="pub-slide-buy" href="${storeEsc(link)}" target="_blank" rel="noopener">Comprar agora</a></div></div>`;
+    return `<div class="pub-slide">${visualHtml}<div class="pub-slide-overlay"><div class="pub-slide-textbox">${catHtml}<b>${storeEsc(p.name)}</b><div class="pub-slide-price">${storeEsc(formatPrice(p.price))}</div></div><br><a class="pub-slide-buy" href="${storeEsc(link)}" target="_blank" rel="noopener">Comprar agora</a></div></div>`;
   }
   products.forEach(p=>feed.insertAdjacentHTML('beforeend', feedSlide(p)));
   if(!products.length){ feed.insertAdjacentHTML('beforeend', '<div class="pub-slide"><div class="pub-slide-overlay"><b>Nenhum produto cadastrado ainda</b></div></div>'); }
@@ -932,7 +941,7 @@ function renderPublishedStore(data, ref){
     const image = storeSafeImage(promoProduct.image);
     const btn = document.createElement('button');
     btn.type='button'; btn.className='promo-badge';
-    btn.innerHTML = `<span class="promo-tag">🔥 OFERTA</span>${image?`<img src="${storeEsc(image)}" alt="${storeEsc(promoProduct.name)}">`:'<div class="promo-noimg">🛍️</div>'}<div class="promo-price">${storeEsc(promoProduct.price)}</div>`;
+    btn.innerHTML = `<span class="promo-tag">🔥 OFERTA</span>${image?`<img src="${storeEsc(image)}" alt="${storeEsc(promoProduct.name)}">`:'<div class="promo-noimg">🛍️</div>'}<div class="promo-price">${storeEsc(formatPrice(promoProduct.price))}</div>`;
     btn.onclick = ()=>{ chatOverlay.classList.add('open'); add('user', promoProduct.name); add('bot', 'Boa escolha! Está em promoção:'+card(promoProduct, true)); };
     document.body.appendChild(btn);
     setTimeout(playCoinSound, 900);
