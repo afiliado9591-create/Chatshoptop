@@ -589,7 +589,7 @@ async function mostrarAdminUsuarios(){
         btn.disabled = true; btn.textContent = 'Aplicando...';
         try{
           const plano = PLANOS.profissional;
-          await db.collection('users').doc(btn.dataset.uid).set({ plan:'profissional', productLimit:plano.productLimit, chatLimit:plano.chatLimit, planBrinde:true }, {merge:true});
+          await db.collection('users').doc(btn.dataset.uid).set({ plan:'profissional', productLimit:plano.limiteProdutos, chatLimit:plano.limiteChats, planBrinde:true }, {merge:true});
           toast('Plano concedido!');
           mostrarAdminUsuarios();
         }catch(e){ console.error(e); toast('Não foi possível aplicar. Confira as regras do Firestore.'); btn.disabled=false; btn.textContent='🎁 Dar Premium grátis'; }
