@@ -254,19 +254,29 @@
   <div class="plans-overlay"></div>
   <div class="plans-box" style="max-width:640px">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <h2 style="margin:0">📦 Catálogo Alibr</h2>
+      <h2 style="margin:0" id="catalogoModalTitulo">📦 Catálogos Alibr</h2>
       <button id="fecharCatalogo" style="border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)">×</button>
     </div>
-    <p style="color:var(--muted);font-size:13px;margin-top:4px">Escolha um produto pronto pra usar na sua loja. O link de venda já vem pronto.</p>
-    <div id="afiliadoParamBox" style="border:1px solid #e0d9f7;background:#f7f5ff;border-radius:8px;padding:12px;margin-top:12px">
-      <label style="font-weight:700;font-size:13px">🔗 Seu parâmetro de afiliado</label>
-      <p style="font-size:12px;color:var(--muted);margin:4px 0 8px">Cadastre uma vez só. Todo produto que você pegar do catálogo já vai sair com esse parâmetro, sem precisar preencher de novo.</p>
-      <a href="https://afiliado-dridalia.goaffpro.com/" target="_blank" rel="noopener" class="btn" style="display:inline-block;text-decoration:none;font-size:12px;margin-bottom:8px">🔗 Abrir conta no parceiro</a>
-      <div class="field"><input id="meuParametroAfiliado" placeholder="Cole aqui seu parâmetro (ex: af_id=SEUCODIGO)"></div>
-      <button class="btn primary" id="salvarParametroBtn" type="button" style="font-size:12px">Salvar parâmetro</button>
-      <span id="parametroSalvoMsg" style="font-size:12px;color:#16a34a;margin-left:8px;display:none">✅ Salvo!</span>
+
+    <div id="catalogoPickerView">
+      <p style="color:var(--muted);font-size:13px;margin-top:4px">Escolha um parceiro pra ver os produtos disponíveis.</p>
+      <div id="catalogoPickerLista" style="margin-top:12px;max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px"></div>
     </div>
-    <div id="catalogoLista" style="margin-top:12px;max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px"></div>
+
+    <div id="catalogoDetalheView" style="display:none">
+      <button id="voltarCatalogos" type="button" style="border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0;margin-top:4px">← Voltar aos catálogos</button>
+      <p style="color:var(--muted);font-size:13px;margin-top:6px">Escolha um produto pronto pra usar na sua loja. O link de venda já vem pronto.</p>
+      <div id="afiliadoParamBox" style="border:1px solid #e0d9f7;background:#f7f5ff;border-radius:8px;padding:12px;margin-top:12px">
+        <label style="font-weight:700;font-size:13px" id="afiliadoParamLabel">🔗 Seu parâmetro de afiliado</label>
+        <p style="font-size:12px;color:var(--muted);margin:4px 0 8px">Cadastre uma vez só pra este catálogo. Todo produto que você pegar dele já vai sair com esse parâmetro, sem precisar preencher de novo.</p>
+        <a href="#" target="_blank" rel="noopener" id="linkAfiliacaoParceiro" class="btn" style="display:inline-block;text-decoration:none;font-size:12px;margin-bottom:8px">🔗 Abrir conta no parceiro</a>
+        <div class="field"><input id="meuParametroAfiliado" placeholder="Cole aqui seu parâmetro (ex: af_id=SEUCODIGO)"></div>
+        <button class="btn primary" id="salvarParametroBtn" type="button" style="font-size:12px">Salvar parâmetro</button>
+        <span id="parametroSalvoMsg" style="font-size:12px;color:#16a34a;margin-left:8px;display:none">✅ Salvo!</span>
+      </div>
+      <div id="catalogoLista" style="margin-top:12px;max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+
   </div>
 </div>
 <div class="section"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">3b. Perguntas e Respostas</h2><button class="btn" id="addQnA">+ Pergunta</button></div><div id="qnaList"></div><small style="color:var(--muted)">Cadastre dúvidas comuns (prazo de entrega, trocas, formas de pagamento...). O bot responde automaticamente quando o cliente perguntar algo parecido.</small></div>
@@ -339,7 +349,7 @@ const PLANOS = {
   profissional: { nome:'Profissional', preco:49.90, precoTexto:'R$ 49,90/mês', limiteProdutos:50, limiteChats:30 },
 };
 let myPlan = 'aprendiz';
-let myCatalogAffiliateParam = '';
+let myCatalogAffiliateParams = {};
 let myProductLimit = 1;
 let myChatLimit = 1;
 
@@ -507,7 +517,7 @@ async function loadDashboard(){
     myPlan = (userDoc.exists && userDoc.data().plan) || 'aprendiz';
     myProductLimit = (userDoc.exists && userDoc.data().productLimit) || PLANOS[myPlan]?.limiteProdutos || 1;
     myChatLimit = (userDoc.exists && userDoc.data().chatLimit) || PLANOS[myPlan]?.limiteChats || 1;
-    myCatalogAffiliateParam = (userDoc.exists && userDoc.data().catalogAffiliateParam) || '';
+    myCatalogAffiliateParams = (userDoc.exists && userDoc.data().catalogAffiliateParams) || {};
     const planInfo = PLANOS[myPlan] || PLANOS.aprendiz;
 
     const snap = await db.collection(COLECAO).where('ownerUid','==',myUid).get();
@@ -766,24 +776,76 @@ async function mostrarAdminDominios(){
    lojista pode puxar pra loja dele (nome, imagem, categoria).
    Coleção no Firestore: catalogoGeral
    ============================================================ */
+const COLECAO_CATALOGOS = 'catalogos';
 const COLECAO_CATALOGO_GERAL = 'catalogoGeral';
 async function mostrarAdminCatalogo(){
   const box = $('#adminConteudo');
-  box.innerHTML = '<p class="empty-hint">Carregando catálogo...</p>';
+  box.innerHTML = '<p class="empty-hint">Carregando catálogos...</p>';
   try{
-    const snap = await db.collection(COLECAO_CATALOGO_GERAL).orderBy('createdAt','desc').limit(300).get();
+    const snap = await db.collection(COLECAO_CATALOGOS).orderBy('createdAt','desc').limit(100).get();
     box.innerHTML = `
+      <div class="field"><label>Nome do parceiro/catálogo</label><input id="ctgNome" placeholder="Ex: Dridália Modas"></div>
+      <div class="field"><label>Link pra virar afiliado desse parceiro</label><input id="ctgLinkAfiliacao" placeholder="https://afiliado-parceiro.com/"></div>
+      <button class="btn primary" id="ctgAdicionarBtn" type="button" style="width:100%;margin-bottom:16px">+ Criar catálogo</button>
+      <div id="ctgLista" style="display:flex;flex-direction:column;gap:10px"></div>`;
+    function renderLista(){
+      const lista = $('#ctgLista');
+      if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum catálogo criado ainda.</p>'; return; }
+      lista.innerHTML = snap.docs.map(d=>{
+        const c = d.data();
+        return `<div style="display:flex;gap:10px;align-items:center;border:1px solid #eee;border-radius:8px;padding:10px">
+          <div style="flex:1;min-width:0"><b style="font-size:13px">${esc(c.nome)}</b><br><span style="font-size:11px;color:var(--muted)">${esc(c.linkAfiliacao||'sem link de afiliação')}</span></div>
+          <button class="btn primary" data-ver="${d.id}" type="button" style="font-size:11px;white-space:nowrap">Produtos</button>
+          <button class="btn" data-del="${d.id}" type="button" style="font-size:11px">🗑️</button>
+        </div>`;
+      }).join('');
+      lista.querySelectorAll('button[data-ver]').forEach(btn=>{
+        btn.onclick = ()=>{
+          const c = snap.docs.find(d=>d.id===btn.dataset.ver).data();
+          mostrarAdminCatalogoProdutos(btn.dataset.ver, c.nome);
+        };
+      });
+      lista.querySelectorAll('button[data-del]').forEach(btn=>{
+        btn.onclick = async ()=>{
+          if(!confirm('Remover este catálogo? Os produtos dele também vão parar de aparecer pros lojistas.')) return;
+          try{ await db.collection(COLECAO_CATALOGOS).doc(btn.dataset.del).delete(); toast('Catálogo removido!'); mostrarAdminCatalogo(); }
+          catch(e){ console.error(e); toast('Não foi possível remover.'); }
+        };
+      });
+    }
+    renderLista();
+    $('#ctgAdicionarBtn').onclick = async ()=>{
+      const nome = $('#ctgNome').value.trim();
+      const linkAfiliacao = $('#ctgLinkAfiliacao').value.trim();
+      if(!nome){ toast('Preencha o nome do catálogo'); return; }
+      try{
+        await db.collection(COLECAO_CATALOGOS).add({ nome, linkAfiliacao, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        toast('Catálogo criado!');
+        mostrarAdminCatalogo();
+      }catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
+    };
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+}
+async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
+  const box = $('#adminConteudo');
+  box.innerHTML = '<p class="empty-hint">Carregando produtos...</p>';
+  try{
+    const snap = await db.collection(COLECAO_CATALOGO_GERAL).where('catalogoId','==',catalogoId).orderBy('createdAt','desc').limit(300).get();
+    box.innerHTML = `
+      <button id="ctgVoltarBtn" type="button" style="border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0;margin-bottom:10px">← Voltar aos catálogos</button>
+      <p style="font-weight:700;font-size:14px;margin:0 0 10px">📦 ${esc(catalogoNome)}</p>
       <div class="field"><label>Nome do produto</label><input id="catNome" placeholder="Ex: Vestido Floral Midi"></div>
       <div class="field"><label>Link da imagem</label><input id="catImagem" placeholder="https://site.com/foto.jpg"></div>
       <div class="field"><label>Categoria</label><input id="catCategoria" placeholder="Ex: Vestidos"></div>
       <div class="field"><label>Palavras-chave</label><input id="catKeywords" placeholder="vestido, floral, festa"></div>
       <div class="field"><label>Preço (R$)</label><input id="catPreco" placeholder="Ex: 129,90"></div>
       <div class="field"><label>Link do produto (sem o parâmetro do afiliado)</label><input id="catLink" placeholder="https://shopee.com.br/produto-xyz"><small>O lojista só vai poder colocar o parâmetro dele; esse link base fica travado.</small></div>
-      <button class="btn primary" id="catAdicionarBtn" type="button" style="width:100%;margin-bottom:16px">+ Adicionar ao catálogo</button>
+      <button class="btn primary" id="catAdicionarBtn" type="button" style="width:100%;margin-bottom:16px">+ Adicionar produto</button>
       <div id="catLista" style="display:flex;flex-direction:column;gap:10px"></div>`;
+    $('#ctgVoltarBtn').onclick = mostrarAdminCatalogo;
     function renderLista(){
       const lista = $('#catLista');
-      if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum produto no catálogo geral ainda.</p>'; return; }
+      if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum produto neste catálogo ainda.</p>'; return; }
       lista.innerHTML = snap.docs.map(d=>{
         const p = d.data();
         return `<div style="display:flex;gap:10px;align-items:center;border:1px solid #eee;border-radius:8px;padding:8px">
@@ -794,8 +856,8 @@ async function mostrarAdminCatalogo(){
       }).join('');
       lista.querySelectorAll('button[data-id]').forEach(btn=>{
         btn.onclick = async ()=>{
-          if(!confirm('Remover este produto do catálogo geral?')) return;
-          try{ await db.collection(COLECAO_CATALOGO_GERAL).doc(btn.dataset.id).delete(); toast('Removido!'); mostrarAdminCatalogo(); }
+          if(!confirm('Remover este produto do catálogo?')) return;
+          try{ await db.collection(COLECAO_CATALOGO_GERAL).doc(btn.dataset.id).delete(); toast('Removido!'); mostrarAdminCatalogoProdutos(catalogoId, catalogoNome); }
           catch(e){ console.error(e); toast('Não foi possível remover.'); }
         };
       });
@@ -810,9 +872,9 @@ async function mostrarAdminCatalogo(){
       const baseLink = $('#catLink').value.trim();
       if(!name || !image){ toast('Preencha pelo menos o nome e o link da imagem'); return; }
       try{
-        await db.collection(COLECAO_CATALOGO_GERAL).add({ name, image, category, keywords, price, baseLink, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-        toast('Produto adicionado ao catálogo!');
-        mostrarAdminCatalogo();
+        await db.collection(COLECAO_CATALOGO_GERAL).add({ name, image, category, keywords, price, baseLink, catalogoId, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        toast('Produto adicionado!');
+        mostrarAdminCatalogoProdutos(catalogoId, catalogoNome);
       }catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
     };
   }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
@@ -1450,15 +1512,48 @@ $('#addProduct').onclick=()=>{
   if(atual >= myProductLimit){ abrirPlanos(); return; }
   addProduct();renderLive();atualizarAvisoLimite();
 };
+let catalogoAtualId = null, catalogoAtualNome = '', catalogoAtualLink = '';
 async function abrirCatalogoGeral(){
   $('#catalogoModal').style.display='flex';
-  $('#meuParametroAfiliado').value = myCatalogAffiliateParam;
-  $('#parametroSalvoMsg').style.display = myCatalogAffiliateParam ? 'inline' : 'none';
-  const lista = $('#catalogoLista');
-  lista.innerHTML = '<p class="empty-hint">Carregando catálogo...</p>';
+  $('#catalogoModalTitulo').textContent = '📦 Catálogos Alibr';
+  $('#catalogoPickerView').style.display='block';
+  $('#catalogoDetalheView').style.display='none';
+  const lista = $('#catalogoPickerLista');
+  lista.innerHTML = '<p class="empty-hint">Carregando catálogos...</p>';
   try{
-    const snap = await db.collection(COLECAO_CATALOGO_GERAL).orderBy('createdAt','desc').limit(300).get();
-    if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum produto disponível no catálogo geral ainda.</p>'; return; }
+    const snap = await db.collection(COLECAO_CATALOGOS).orderBy('createdAt','desc').limit(100).get();
+    if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum catálogo disponível ainda.</p>'; return; }
+    lista.innerHTML = snap.docs.map(d=>{
+      const c = d.data();
+      const jaConfigurado = !!myCatalogAffiliateParams[d.id];
+      return `<button type="button" class="btn" data-id="${d.id}" style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center">
+        <span>📦 ${esc(c.nome)}</span>
+        <span style="font-size:11px;color:${jaConfigurado?'#16a34a':'var(--muted)'}">${jaConfigurado?'✅ configurado':'configurar →'}</span>
+      </button>`;
+    }).join('');
+    lista.querySelectorAll('button[data-id]').forEach(btn=>{
+      btn.onclick = ()=>{
+        const c = snap.docs.find(d=>d.id===btn.dataset.id).data();
+        abrirCatalogoDetalhe(btn.dataset.id, c.nome, c.linkAfiliacao||'');
+      };
+    });
+  }catch(e){ console.error(e); lista.innerHTML = '<p class="empty-hint">Não foi possível carregar os catálogos. Confira as regras do Firestore.</p>'; }
+}
+async function abrirCatalogoDetalhe(catalogoId, catalogoNome, linkAfiliacao){
+  catalogoAtualId = catalogoId; catalogoAtualNome = catalogoNome; catalogoAtualLink = linkAfiliacao;
+  $('#catalogoModalTitulo').textContent = '📦 ' + catalogoNome;
+  $('#catalogoPickerView').style.display='none';
+  $('#catalogoDetalheView').style.display='block';
+  $('#afiliadoParamLabel').textContent = '🔗 Seu parâmetro de afiliado (' + catalogoNome + ')';
+  $('#linkAfiliacaoParceiro').href = linkAfiliacao || '#';
+  const paramAtual = myCatalogAffiliateParams[catalogoId] || '';
+  $('#meuParametroAfiliado').value = paramAtual;
+  $('#parametroSalvoMsg').style.display = paramAtual ? 'inline' : 'none';
+  const lista = $('#catalogoLista');
+  lista.innerHTML = '<p class="empty-hint">Carregando produtos...</p>';
+  try{
+    const snap = await db.collection(COLECAO_CATALOGO_GERAL).where('catalogoId','==',catalogoId).orderBy('createdAt','desc').limit(300).get();
+    if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum produto neste catálogo ainda.</p>'; return; }
     lista.innerHTML = snap.docs.map(d=>{
       const p = d.data();
       return `<div style="display:flex;gap:10px;align-items:center;border:1px solid #eee;border-radius:8px;padding:8px">
@@ -1473,22 +1568,25 @@ async function abrirCatalogoGeral(){
         const p = docSnap.data();
         const atual = document.querySelectorAll('#products .product').length;
         if(atual >= myProductLimit){ $('#catalogoModal').style.display='none'; abrirPlanos(); return; }
-        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', catalogBaseLink:p.baseLink||'', affiliateParam:myCatalogAffiliateParam||'' });
+        const meuParam = myCatalogAffiliateParams[catalogoId] || '';
+        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', catalogBaseLink:p.baseLink||'', affiliateParam:meuParam });
         renderLive(); atualizarAvisoLimite();
         $('#catalogoModal').style.display='none';
-        toast(myCatalogAffiliateParam ? 'Produto adicionado com seu link de afiliado!' : 'Produto adicionado! Configure seu parâmetro de afiliado no topo desta tela.');
+        toast(meuParam ? 'Produto adicionado com seu link de afiliado!' : 'Produto adicionado! Configure seu parâmetro de afiliado neste catálogo.');
       };
     });
-  }catch(e){ console.error(e); lista.innerHTML = '<p class="empty-hint">Não foi possível carregar o catálogo. Confira as regras do Firestore.</p>'; }
+  }catch(e){ console.error(e); lista.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
 }
 $('#usarCatalogoBtn').onclick = abrirCatalogoGeral;
+$('#voltarCatalogos').onclick = abrirCatalogoGeral;
 $('#salvarParametroBtn').onclick = async ()=>{
   const valor = $('#meuParametroAfiliado').value.trim();
+  if(!catalogoAtualId) return;
   try{
-    await db.collection('users').doc(myUid).set({ catalogAffiliateParam: valor }, { merge:true });
-    myCatalogAffiliateParam = valor;
+    await db.collection('users').doc(myUid).update({ [`catalogAffiliateParams.${catalogoAtualId}`]: valor });
+    myCatalogAffiliateParams[catalogoAtualId] = valor;
     $('#parametroSalvoMsg').style.display = valor ? 'inline' : 'none';
-    toast('Parâmetro salvo! Já vale pra todos os produtos que você pegar do catálogo.');
+    toast('Parâmetro salvo! Já vale pra todos os produtos que você pegar deste catálogo.');
   }catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
 };
 $('#fecharCatalogo').onclick = ()=> $('#catalogoModal').style.display='none';
