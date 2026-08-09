@@ -830,7 +830,8 @@ async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
   const box = $('#adminConteudo');
   box.innerHTML = '<p class="empty-hint">Carregando produtos...</p>';
   try{
-    const snap = await db.collection(COLECAO_CATALOGO_GERAL).where('catalogoId','==',catalogoId).orderBy('createdAt','desc').limit(300).get();
+    const snapRaw = await db.collection(COLECAO_CATALOGO_GERAL).where('catalogoId','==',catalogoId).limit(300).get();
+    const snap = { empty: snapRaw.empty, docs: snapRaw.docs.slice().sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0)) };
     box.innerHTML = `
       <button id="ctgVoltarBtn" type="button" style="border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0;margin-bottom:10px">← Voltar aos catálogos</button>
       <p style="font-weight:700;font-size:14px;margin:0 0 10px">📦 ${esc(catalogoNome)}</p>
@@ -1552,7 +1553,8 @@ async function abrirCatalogoDetalhe(catalogoId, catalogoNome, linkAfiliacao){
   const lista = $('#catalogoLista');
   lista.innerHTML = '<p class="empty-hint">Carregando produtos...</p>';
   try{
-    const snap = await db.collection(COLECAO_CATALOGO_GERAL).where('catalogoId','==',catalogoId).orderBy('createdAt','desc').limit(300).get();
+    const snapRaw = await db.collection(COLECAO_CATALOGO_GERAL).where('catalogoId','==',catalogoId).limit(300).get();
+    const snap = { empty: snapRaw.empty, docs: snapRaw.docs.slice().sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0)) };
     if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum produto neste catálogo ainda.</p>'; return; }
     lista.innerHTML = snap.docs.map(d=>{
       const p = d.data();
