@@ -179,6 +179,7 @@
       <button class="btn" id="adminTabUsuarios" type="button">👤 Usuários</button>
       <button class="btn" id="adminTabIndicacoes" type="button">🔗 Indicações</button>
       <button class="btn" id="adminTabDominios" type="button">🌐 Domínios</button>
+      <button class="btn" id="adminTabCatalogo" type="button">📦 Catálogo</button>
       <button class="btn" id="adminTabVideos" type="button">🎥 Vídeos</button>
     </div>
     <div id="adminConteudo" style="margin-top:14px;max-height:60vh;overflow-y:auto"></div>
@@ -247,7 +248,19 @@
 </div>
 <label style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:13px;cursor:pointer"><input type="checkbox" id="showCategoryMenu" checked> Mostrar menu de categorias na lateral da tela do catálogo (o cliente clica e filtra sem precisar abrir o chat)</label>
 </div>
-<div class="section"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">3. Produtos</h2><button class="btn" id="addProduct">+ Produto</button></div><div id="products"></div></div>
+<div class="section"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px"><h2 style="margin:0">3. Produtos</h2><div style="display:flex;gap:8px"><button class="btn" id="usarCatalogoBtn" type="button">📦 Usar produto do catálogo</button><button class="btn" id="addProduct">+ Produto</button></div></div><div id="products"></div></div>
+
+<div id="catalogoModal" style="display:none">
+  <div class="plans-overlay"></div>
+  <div class="plans-box" style="max-width:640px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">📦 Catálogo Alibr</h2>
+      <button id="fecharCatalogo" style="border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)">×</button>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin-top:4px">Escolha um produto pronto pra usar na sua loja. Depois é só ajustar preço e link de venda.</p>
+    <div id="catalogoLista" style="margin-top:12px;max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+</div>
 <div class="section"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">3b. Perguntas e Respostas</h2><button class="btn" id="addQnA">+ Pergunta</button></div><div id="qnaList"></div><small style="color:var(--muted)">Cadastre dúvidas comuns (prazo de entrega, trocas, formas de pagamento...). O bot responde automaticamente quando o cliente perguntar algo parecido.</small></div>
 <div class="section"><h2>4. Publicar</h2><div class="actions">
 <button class="btn primary" id="publishBtn" style="grid-column:1/-1">🚀 Publicar Chatbot (gera o subdomínio)</button>
@@ -737,6 +750,59 @@ async function mostrarAdminDominios(){
     }).join('');
   }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
 }
+
+/* ============================================================
+   CATÁLOGO GERAL — produtos que o admin cadastra e que qualquer
+   lojista pode puxar pra loja dele (nome, imagem, categoria).
+   Coleção no Firestore: catalogoGeral
+   ============================================================ */
+const COLECAO_CATALOGO_GERAL = 'catalogoGeral';
+async function mostrarAdminCatalogo(){
+  const box = $('#adminConteudo');
+  box.innerHTML = '<p class="empty-hint">Carregando catálogo...</p>';
+  try{
+    const snap = await db.collection(COLECAO_CATALOGO_GERAL).orderBy('createdAt','desc').limit(300).get();
+    box.innerHTML = `
+      <div class="field"><label>Nome do produto</label><input id="catNome" placeholder="Ex: Vestido Floral Midi"></div>
+      <div class="field"><label>Link da imagem</label><input id="catImagem" placeholder="https://site.com/foto.jpg"></div>
+      <div class="field"><label>Categoria</label><input id="catCategoria" placeholder="Ex: Vestidos"></div>
+      <div class="field"><label>Palavras-chave</label><input id="catKeywords" placeholder="vestido, floral, festa"></div>
+      <button class="btn primary" id="catAdicionarBtn" type="button" style="width:100%;margin-bottom:16px">+ Adicionar ao catálogo</button>
+      <div id="catLista" style="display:flex;flex-direction:column;gap:10px"></div>`;
+    function renderLista(){
+      const lista = $('#catLista');
+      if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum produto no catálogo geral ainda.</p>'; return; }
+      lista.innerHTML = snap.docs.map(d=>{
+        const p = d.data();
+        return `<div style="display:flex;gap:10px;align-items:center;border:1px solid #eee;border-radius:8px;padding:8px">
+          ${p.image ? `<img src="${esc(p.image)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;flex-shrink:0">` : '<div style="width:48px;height:48px;background:#f3f4f6;border-radius:6px;flex-shrink:0"></div>'}
+          <div style="flex:1;min-width:0"><b style="font-size:13px">${esc(p.name)}</b><br><span style="font-size:11px;color:var(--muted)">${esc(p.category||'sem categoria')}</span></div>
+          <button class="btn" data-id="${d.id}" type="button" style="font-size:11px">🗑️</button>
+        </div>`;
+      }).join('');
+      lista.querySelectorAll('button[data-id]').forEach(btn=>{
+        btn.onclick = async ()=>{
+          if(!confirm('Remover este produto do catálogo geral?')) return;
+          try{ await db.collection(COLECAO_CATALOGO_GERAL).doc(btn.dataset.id).delete(); toast('Removido!'); mostrarAdminCatalogo(); }
+          catch(e){ console.error(e); toast('Não foi possível remover.'); }
+        };
+      });
+    }
+    renderLista();
+    $('#catAdicionarBtn').onclick = async ()=>{
+      const name = $('#catNome').value.trim();
+      const image = $('#catImagem').value.trim();
+      const category = $('#catCategoria').value.trim();
+      const keywords = $('#catKeywords').value.split(',').map(x=>x.trim()).filter(Boolean);
+      if(!name || !image){ toast('Preencha pelo menos o nome e o link da imagem'); return; }
+      try{
+        await db.collection(COLECAO_CATALOGO_GERAL).add({ name, image, category, keywords, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        toast('Produto adicionado ao catálogo!');
+        mostrarAdminCatalogo();
+      }catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
+    };
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+}
 async function mostrarAdminVideos(){
   const box = $('#adminConteudo');
   box.innerHTML = '<p class="empty-hint">Carregando vídeos...</p>';
@@ -780,6 +846,7 @@ $('#adminBtn').onclick = abrirAdmin;
 $('#adminTabUsuarios').onclick = mostrarAdminUsuarios;
 $('#adminTabIndicacoes').onclick = mostrarAdminIndicacoes;
 $('#adminTabDominios').onclick = mostrarAdminDominios;
+$('#adminTabCatalogo').onclick = mostrarAdminCatalogo;
 $('#adminTabVideos').onclick = mostrarAdminVideos;
 $('#fecharAdmin').onclick = ()=> $('#adminModal').style.display='none';
 document.querySelector('#adminModal .plans-overlay')?.addEventListener('click', ()=> $('#adminModal').style.display='none');
@@ -1351,6 +1418,38 @@ $('#addProduct').onclick=()=>{
   if(atual >= myProductLimit){ abrirPlanos(); return; }
   addProduct();renderLive();atualizarAvisoLimite();
 };
+async function abrirCatalogoGeral(){
+  $('#catalogoModal').style.display='flex';
+  const lista = $('#catalogoLista');
+  lista.innerHTML = '<p class="empty-hint">Carregando catálogo...</p>';
+  try{
+    const snap = await db.collection(COLECAO_CATALOGO_GERAL).orderBy('createdAt','desc').limit(300).get();
+    if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum produto disponível no catálogo geral ainda.</p>'; return; }
+    lista.innerHTML = snap.docs.map(d=>{
+      const p = d.data();
+      return `<div style="display:flex;gap:10px;align-items:center;border:1px solid #eee;border-radius:8px;padding:8px">
+        ${p.image ? `<img src="${esc(p.image)}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0">` : '<div style="width:56px;height:56px;background:#f3f4f6;border-radius:6px;flex-shrink:0"></div>'}
+        <div style="flex:1;min-width:0"><b style="font-size:13px">${esc(p.name)}</b><br><span style="font-size:11px;color:var(--muted)">${esc(p.category||'sem categoria')}</span></div>
+        <button class="btn primary" data-id="${d.id}" type="button" style="font-size:12px;white-space:nowrap">Usar este</button>
+      </div>`;
+    }).join('');
+    lista.querySelectorAll('button[data-id]').forEach(btn=>{
+      btn.onclick = ()=>{
+        const docSnap = snap.docs.find(d=>d.id===btn.dataset.id);
+        const p = docSnap.data();
+        const atual = document.querySelectorAll('#products .product').length;
+        if(atual >= myProductLimit){ $('#catalogoModal').style.display='none'; abrirPlanos(); return; }
+        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:'', link:'https://' });
+        renderLive(); atualizarAvisoLimite();
+        $('#catalogoModal').style.display='none';
+        toast('Produto adicionado! Agora só falta seu preço e link de venda.');
+      };
+    });
+  }catch(e){ console.error(e); lista.innerHTML = '<p class="empty-hint">Não foi possível carregar o catálogo. Confira as regras do Firestore.</p>'; }
+}
+$('#usarCatalogoBtn').onclick = abrirCatalogoGeral;
+$('#fecharCatalogo').onclick = ()=> $('#catalogoModal').style.display='none';
+document.querySelector('#catalogoModal .plans-overlay')?.addEventListener('click', ()=> $('#catalogoModal').style.display='none');
 $('#addQnA').onclick=()=>{addQnA();renderLive()};$('#previewBtn').onclick=renderLive;$('#publishBtn').onclick=publish;$('#copyBtn').onclick=copyHTML;$('#downloadBtn').onclick=download;$('#saveBtn').onclick=save;$('#resetBtn').onclick=()=>{localStorage.removeItem('chatshop-v4');location.reload()};['brand','whatsapp','welcome','mainColor','darkColor','accentColor','chatBg','buyColor','priceColor','cardColor','cardTextColor','categoryColor','categoryTextColor'].forEach(id=>$('#'+id).addEventListener('input',debounce));
 $('#cardOpacity').addEventListener('input',()=>{$('#cardOpacityValue').textContent=$('#cardOpacity').value+'%';debounce()});
 $('#showCategoryMenu').addEventListener('change',debounce);
