@@ -385,6 +385,15 @@ function renderPaletas(){
   });
 }
 const PLANO_MINIMO_AFILIADO = 'basico'; // plano mínimo pra poder virar afiliado do ChatShop
+const PERCENTUAL_COMISSAO = 0.5; // 50% de comissão recorrente por indicado pagante
+function calcularComissao(planoKey){
+  const p = PLANOS[planoKey];
+  if(!p || planoKey === 'aprendiz') return 0;
+  return p.preco * PERCENTUAL_COMISSAO;
+}
+function formatarReais(valor){
+  return 'R$ ' + valor.toFixed(2).replace('.', ',');
+}
 
 // Se alguém chegou pelo link de um afiliado (?ref=CODIGO), guarda pra usar no cadastro
 (function(){
@@ -701,11 +710,33 @@ async function abrirAfiliado(){
     box.innerHTML = `
       <p style="line-height:1.5">Seu plano <b>${planAtual.nome}</b> já libera o programa de afiliados 🎉. Compartilhe o link abaixo — quando alguém se cadastrar e assinar um plano pago, você recebe comissão.</p>
       <div class="field"><label>Seu link de afiliado</label><input id="afiliadoLink" value="${link}" readonly></div>
-      <button class="btn dark" id="afiliadoCopiar" style="width:100%">Copiar link</button>`;
+      <button class="btn dark" id="afiliadoCopiar" style="width:100%">Copiar link</button>
+      <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
+      <p style="font-weight:700;font-size:14px;margin:0 0 8px">📊 Suas indicações</p>
+      <div id="afiliadoIndicacoesLista"><p class="empty-hint">Carregando indicações...</p></div>`;
     $('#afiliadoCopiar').onclick = async ()=>{
       try{ await navigator.clipboard.writeText(link); toast('Link copiado!'); }
       catch{ $('#afiliadoLink').select(); document.execCommand('copy'); toast('Link copiado!'); }
     };
+    try{
+      const indicadosSnap = await db.collection('users').where('referredBy','==',codigo).get();
+      const listaEl = $('#afiliadoIndicacoesLista');
+      if(indicadosSnap.empty){ listaEl.innerHTML = '<p class="empty-hint">Você ainda não indicou ninguém. Compartilhe seu link!</p>'; }
+      else{
+        let totalMensal = 0;
+        const linhas = indicadosSnap.docs.map(d=>{
+          const u = d.data();
+          const comissao = calcularComissao(u.plan);
+          totalMensal += comissao;
+          const nomePlano = (PLANOS[u.plan]||PLANOS.aprendiz).nome;
+          return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;font-size:13px">
+            <span>${esc(u.email||'—')}<br><span style="font-size:11px;color:var(--muted)">Plano: ${esc(nomePlano)}</span></span>
+            <b style="color:${comissao>0?'#16a34a':'var(--muted)'};white-space:nowrap">${comissao>0?formatarReais(comissao)+'/mês':'R$ 0,00'}</b>
+          </div>`;
+        }).join('');
+        listaEl.innerHTML = linhas + `<div style="display:flex;justify-content:space-between;padding:10px 0 0;font-weight:800;font-size:14px"><span>Total estimado</span><span style="color:#16a34a">${formatarReais(totalMensal)}/mês</span></div>`;
+      }
+    }catch(e){ console.error(e); $('#afiliadoIndicacoesLista').innerHTML = '<p class="empty-hint">Não foi possível carregar as indicações. Confira as regras do Firestore.</p>'; }
   }catch(e){
     console.error(e);
     box.innerHTML = '<p class="empty-hint">Não foi possível carregar seu link agora. Tente novamente em instantes.</p>';
@@ -782,12 +813,38 @@ async function mostrarAdminIndicacoes(){
     todos.forEach(u=>{ if(u.affiliateCode) porCodigo[u.affiliateCode] = u; });
     const indicados = todos.filter(u=>u.referredBy);
     if(!indicados.length){ box.innerHTML = '<p class="empty-hint">Nenhuma indicação registrada ainda.</p>'; return; }
-    box.innerHTML = indicados.map(u=>{
+
+    // Resumo por afiliado (quanto cada um deve receber por mês)
+    const porAfiliado = {};
+    indicados.forEach(u=>{
+      const comissao = calcularComissao(u.plan);
+      const chave = u.referredBy;
+      if(!porAfiliado[chave]) porAfiliado[chave] = { email: (porCodigo[chave]?.email)||('código "'+chave+'"'), total:0, qtdPagantes:0, qtdTotal:0 };
+      porAfiliado[chave].total += comissao;
+      porAfiliado[chave].qtdTotal++;
+      if(comissao>0) porAfiliado[chave].qtdPagantes++;
+    });
+    const resumo = Object.values(porAfiliado).sort((a,b)=>b.total-a.total);
+    const resumoHtml = resumo.length ? `
+      <p style="font-weight:700;font-size:13px;margin:0 0 8px">💰 Comissão por afiliado (mensal estimada)</p>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px">
+        ${resumo.map(r=>`<div style="display:flex;justify-content:space-between;font-size:13px;border:1px solid #eee;border-radius:8px;padding:8px 10px">
+          <span>${esc(r.email)} <span style="color:var(--muted);font-size:11px">(${r.qtdPagantes}/${r.qtdTotal} pagantes)</span></span>
+          <b style="color:${r.total>0?'#16a34a':'var(--muted)'}">${formatarReais(r.total)}/mês</b>
+        </div>`).join('')}
+      </div>
+      <p style="font-weight:700;font-size:13px;margin:0 0 8px">📋 Todas as indicações</p>` : '';
+
+    box.innerHTML = resumoHtml + indicados.map(u=>{
       const afiliado = porCodigo[u.referredBy];
       const planoIndicado = (PLANOS[u.plan] || PLANOS.aprendiz).nome;
       const pagou = u.plan && u.plan !== 'aprendiz';
+      const comissao = calcularComissao(u.plan);
       return `<div style="padding:10px 0;border-bottom:1px solid #eee">
-        <div style="font-size:13px"><b>${esc(u.email||u.uid)}</b> ${pagou?'<span style="color:#16a34a;font-size:11px">✓ plano pago ('+esc(planoIndicado)+')</span>':'<span style="color:var(--muted);font-size:11px">plano grátis</span>'}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px"><b>${esc(u.email||u.uid)}</b> ${pagou?'<span style="color:#16a34a;font-size:11px">✓ plano pago ('+esc(planoIndicado)+')</span>':'<span style="color:var(--muted);font-size:11px">plano grátis</span>'}</div>
+          ${comissao>0?`<b style="color:#16a34a;font-size:12px;white-space:nowrap">${formatarReais(comissao)}/mês</b>`:''}
+        </div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">Indicado por: ${afiliado ? '<b>'+esc(afiliado.email)+'</b>' : 'código "'+esc(u.referredBy)+'" (usuário não encontrado)'}</div>
       </div>`;
     }).join('');
