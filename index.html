@@ -917,15 +917,21 @@ async function mostrarAdminCatalogoProdutoQnA(catalogoId, catalogoNome, produtoI
       });
     }
     renderQnaLista();
-    $('#qnaProdAdicionarBtn').onclick = ()=>{
+    function adicionarPerguntaAtual(){
       const question = $('#qnaProdPergunta').value.trim();
       const answer = $('#qnaProdResposta').value.trim();
-      if(!question || !answer){ toast('Preencha a pergunta e a resposta'); return; }
+      if(!question || !answer) return false;
       qna.push({question, answer});
       $('#qnaProdPergunta').value=''; $('#qnaProdResposta').value='';
+      return true;
+    }
+    $('#qnaProdAdicionarBtn').onclick = ()=>{
+      const adicionou = adicionarPerguntaAtual();
+      if(!adicionou){ toast('Preencha a pergunta e a resposta'); return; }
       renderQnaLista();
     };
     $('#qnaProdSalvarBtn').onclick = async ()=>{
+      adicionarPerguntaAtual(); // se tiver algo digitado e não adicionado, inclui automaticamente
       try{ await ref.update({ qna }); toast('Perguntas salvas!'); mostrarAdminCatalogoProdutos(catalogoId, catalogoNome); }
       catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
     };
