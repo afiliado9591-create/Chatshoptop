@@ -914,6 +914,7 @@ async function mostrarAdminMetricas(){
   }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
 }
 const COLECAO_CATALOGO_GERAL = 'catalogoGeral';
+const COLECAO_CATALOGOS = 'catalogos';
 async function mostrarAdminCatalogo(){
   const box = $('#adminConteudo');
   box.innerHTML = '<p class="empty-hint">Carregando catálogos...</p>';
