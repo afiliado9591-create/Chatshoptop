@@ -849,12 +849,17 @@ async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
       if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum produto neste catálogo ainda.</p>'; return; }
       lista.innerHTML = snap.docs.map(d=>{
         const p = d.data();
+        const numQna = (p.qna||[]).length;
         return `<div style="display:flex;gap:10px;align-items:center;border:1px solid #eee;border-radius:8px;padding:8px">
           ${p.image ? `<img src="${esc(p.image)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;flex-shrink:0">` : '<div style="width:48px;height:48px;background:#f3f4f6;border-radius:6px;flex-shrink:0"></div>'}
           <div style="flex:1;min-width:0"><b style="font-size:13px">${esc(p.name)}</b><br><span style="font-size:11px;color:var(--muted)">${esc(p.category||'sem categoria')} · R$ ${esc(p.price||'—')}</span></div>
+          <button class="btn" data-qna="${d.id}" type="button" style="font-size:11px;white-space:nowrap">❓ Perguntas${numQna?` (${numQna})`:''}</button>
           <button class="btn" data-id="${d.id}" type="button" style="font-size:11px">🗑️</button>
         </div>`;
       }).join('');
+      lista.querySelectorAll('button[data-qna]').forEach(btn=>{
+        btn.onclick = ()=> mostrarAdminCatalogoProdutoQnA(catalogoId, catalogoNome, btn.dataset.qna);
+      });
       lista.querySelectorAll('button[data-id]').forEach(btn=>{
         btn.onclick = async ()=>{
           if(!confirm('Remover este produto do catálogo?')) return;
@@ -877,6 +882,52 @@ async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
         toast('Produto adicionado!');
         mostrarAdminCatalogoProdutos(catalogoId, catalogoNome);
       }catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
+    };
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+}
+async function mostrarAdminCatalogoProdutoQnA(catalogoId, catalogoNome, produtoId){
+  const box = $('#adminConteudo');
+  box.innerHTML = '<p class="empty-hint">Carregando...</p>';
+  try{
+    const ref = db.collection(COLECAO_CATALOGO_GERAL).doc(produtoId);
+    const doc = await ref.get();
+    if(!doc.exists){ box.innerHTML = '<p class="empty-hint">Produto não encontrado.</p>'; return; }
+    const p = doc.data();
+    let qna = (p.qna||[]).slice();
+    box.innerHTML = `
+      <button id="qnaVoltarBtn" type="button" style="border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0;margin-bottom:10px">← Voltar aos produtos</button>
+      <p style="font-weight:700;font-size:14px;margin:0 0 4px">❓ ${esc(p.name)}</p>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Essas perguntas valem só pra este produto. Quando o lojista usar ele na loja, o chatbot já responde com essas respostas.</p>
+      <div id="qnaProdLista" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"></div>
+      <div class="field"><label>Nova pergunta</label><input id="qnaProdPergunta" placeholder="Ex: qual o tecido"></div>
+      <div class="field"><label>Resposta</label><textarea id="qnaProdResposta" rows="2" placeholder="Ex: É 100% viscose, super leve"></textarea></div>
+      <button class="btn" id="qnaProdAdicionarBtn" type="button" style="width:100%">+ Adicionar pergunta</button>
+      <button class="btn primary" id="qnaProdSalvarBtn" type="button" style="width:100%;margin-top:10px">Salvar perguntas</button>`;
+    $('#qnaVoltarBtn').onclick = ()=> mostrarAdminCatalogoProdutos(catalogoId, catalogoNome);
+    function renderQnaLista(){
+      const lista = $('#qnaProdLista');
+      lista.innerHTML = qna.length ? qna.map((item,i)=>`
+        <div style="border:1px solid #eee;border-radius:8px;padding:8px">
+          <b style="font-size:13px">${esc(item.question)}</b>
+          <p style="font-size:12px;color:var(--muted);margin:4px 0">${esc(item.answer)}</p>
+          <button class="btn" data-i="${i}" type="button" style="font-size:11px">🗑️ Remover</button>
+        </div>`).join('') : '<p class="empty-hint">Nenhuma pergunta cadastrada ainda.</p>';
+      lista.querySelectorAll('button[data-i]').forEach(btn=>{
+        btn.onclick = ()=>{ qna.splice(Number(btn.dataset.i),1); renderQnaLista(); };
+      });
+    }
+    renderQnaLista();
+    $('#qnaProdAdicionarBtn').onclick = ()=>{
+      const question = $('#qnaProdPergunta').value.trim();
+      const answer = $('#qnaProdResposta').value.trim();
+      if(!question || !answer){ toast('Preencha a pergunta e a resposta'); return; }
+      qna.push({question, answer});
+      $('#qnaProdPergunta').value=''; $('#qnaProdResposta').value='';
+      renderQnaLista();
+    };
+    $('#qnaProdSalvarBtn').onclick = async ()=>{
+      try{ await ref.update({ qna }); toast('Perguntas salvas!'); mostrarAdminCatalogoProdutos(catalogoId, catalogoNome); }
+      catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
     };
   }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
 }
@@ -1571,7 +1622,7 @@ async function abrirCatalogoDetalhe(catalogoId, catalogoNome, linkAfiliacao){
         const atual = document.querySelectorAll('#products .product').length;
         if(atual >= myProductLimit){ $('#catalogoModal').style.display='none'; abrirPlanos(); return; }
         const meuParam = myCatalogAffiliateParams[catalogoId] || '';
-        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', catalogBaseLink:p.baseLink||'', affiliateParam:meuParam });
+        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', catalogBaseLink:p.baseLink||'', affiliateParam:meuParam, qna:p.qna||[] });
         renderLive(); atualizarAvisoLimite();
         $('#catalogoModal').style.display='none';
         toast(meuParam ? 'Produto adicionado com seu link de afiliado!' : 'Produto adicionado! Configure seu parâmetro de afiliado neste catálogo.');
