@@ -848,7 +848,7 @@ async function mostrarAdminIndicacoes(){
         <div style="font-size:12px;color:var(--muted);margin-top:2px">Indicado por: ${afiliado ? '<b>'+esc(afiliado.email)+'</b>' : 'código "'+esc(u.referredBy)+'" (usuário não encontrado)'}</div>
       </div>`;
     }).join('');
-  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
 }
 async function mostrarAdminDominios(){
   const box = $('#adminConteudo');
@@ -869,7 +869,7 @@ async function mostrarAdminDominios(){
         <div style="font-size:12px;color:var(--muted);margin-top:2px">Loja: ${esc(s.brand||s.slug)} (${esc(s.slug)}.${DOMINIO_BASE}) — pedido por <b>${esc(email)}</b></div>
       </div>`;
     }).join('');
-  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
 }
 
 /* ============================================================
@@ -911,7 +911,7 @@ async function mostrarAdminMetricas(){
         <span style="font-size:12px;margin-top:4px;display:inline-block">👁️ ${l.visitCount||0} visitas · 💬 ${l.messageCount||0} mensagens</span>
       </div>`;
     }).join('');
-  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
 }
 const COLECAO_CATALOGO_GERAL = 'catalogoGeral';
 async function mostrarAdminCatalogo(){
@@ -969,7 +969,7 @@ async function mostrarAdminCatalogo(){
         mostrarAdminCatalogo();
       }catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
     };
-  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
 }
 async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
   const box = $('#adminConteudo');
@@ -1028,7 +1028,7 @@ async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
         mostrarAdminCatalogoProdutos(catalogoId, catalogoNome);
       }catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
     };
-  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
 }
 async function mostrarAdminCatalogoProdutoQnA(catalogoId, catalogoNome, produtoId){
   const box = $('#adminConteudo');
@@ -1080,7 +1080,7 @@ async function mostrarAdminCatalogoProdutoQnA(catalogoId, catalogoNome, produtoI
       try{ await ref.update({ qna }); toast('Perguntas salvas!'); mostrarAdminCatalogoProdutos(catalogoId, catalogoNome); }
       catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
     };
-  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
 }
 async function mostrarAdminVideos(){
   const box = $('#adminConteudo');
@@ -1153,7 +1153,7 @@ async function mostrarMensagens(){
       const hora = d.data && d.data.toDate ? d.data.toDate().toLocaleString('pt-BR') : '';
       return `<div style="padding:8px 0;border-bottom:1px solid #eee"><div style="font-size:13px">${esc(d.texto||'')}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(hora)}</div></div>`;
     }).join('');
-  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
 }
 async function mostrarContatos(){
   const box = $('#conversasConteudo');
@@ -1170,7 +1170,7 @@ async function mostrarContatos(){
         <a href="https://wa.me/55${esc(numero)}" target="_blank" rel="noopener" style="background:#25D366;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">Abrir WhatsApp</a>
       </div>`;
     }).join('');
-  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
 }
 $('#convTabMensagens').onclick = mostrarMensagens;
 $('#convTabContatos').onclick = mostrarContatos;
@@ -1808,7 +1808,7 @@ async function abrirCatalogoDetalhe(catalogoId, catalogoNome, linkAfiliacao){
         toast(meuParam ? 'Produto adicionado com seu link de afiliado!' : 'Produto adicionado! Configure seu parâmetro de afiliado neste catálogo.');
       };
     });
-  }catch(e){ console.error(e); lista.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+  }catch(e){ console.error(e); lista.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
 }
 $('#usarCatalogoBtn').onclick = abrirCatalogoGeral;
 $('#voltarCatalogos').onclick = abrirCatalogoGeral;
