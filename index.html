@@ -43,6 +43,13 @@
 .pub-cat-menu{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:22;display:flex;flex-direction:column;gap:8px;max-height:66vh;overflow-y:auto;align-items:flex-end}
 .pub-cat-btn{background:rgba(255,255,255,.92);color:var(--store-cat,var(--store-main,#7A2E3B));border:none;padding:8px 13px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap}
 .pub-cat-btn.active{background:var(--store-cat,var(--store-main,#7A2E3B));color:var(--store-cat-text,#fff)}
+.pub-video-toggle{position:fixed;left:16px;bottom:22px;width:58px;height:58px;border-radius:50%;background:#000;color:#fff;font-size:24px;border:0;display:grid;place-items:center;box-shadow:0 3px 14px rgba(0,0,0,.45);z-index:20;cursor:pointer}
+.pub-video-overlay{position:fixed;inset:0;z-index:35;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.92)}
+.pub-video-overlay.open{display:flex}
+.pub-video-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);color:#fff;border:0;width:38px;height:38px;border-radius:50%;font-size:20px;cursor:pointer;z-index:2;line-height:1}
+.pub-video-frame{width:92%;max-width:420px;aspect-ratio:9/16;background:#000;border-radius:12px;overflow:hidden}
+.pub-video-frame.horizontal{aspect-ratio:16/9;max-width:640px}
+.pub-video-frame iframe{width:100%;height:100%;border:0}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.preview{min-height:650px}#liveApp{grid-template-columns:1fr;grid-template-rows:1fr 190px}.live-catalog{display:flex;gap:10px;overflow-x:auto}.live-catalog h2{display:none}.live-card{min-width:145px;margin:0}.live-card img,.live-card .live-noimg{height:85px}}
 #authScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .authBox{background:#fff;border-radius:16px;padding:28px 26px;max-width:380px;width:100%;box-shadow:0 8px 30px #312e8120}
@@ -179,6 +186,7 @@
       <button class="btn" id="adminTabUsuarios" type="button">👤 Usuários</button>
       <button class="btn" id="adminTabIndicacoes" type="button">🔗 Indicações</button>
       <button class="btn" id="adminTabDominios" type="button">🌐 Domínios</button>
+      <button class="btn" id="adminTabMetricas" type="button">📊 Métricas</button>
       <button class="btn" id="adminTabCatalogo" type="button">📦 Catálogo</button>
       <button class="btn" id="adminTabVideos" type="button">🎥 Vídeos</button>
     </div>
@@ -218,6 +226,7 @@
 </div>
 <div class="field"><label>WhatsApp</label><input id="whatsapp" value="5511999999999" inputmode="numeric"><small>Somente números, com 55 + DDD + número.</small></div>
 <div class="field"><label>Mensagem inicial</label><textarea id="welcome" rows="3">Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja a vitrine.</textarea></div>
+<div class="field"><label>Vídeo de destaque (opcional)</label><input id="featuredVideo" placeholder="Cole o link do YouTube, YouTube Shorts, TikTok ou Facebook"><small>Aparece um botão 🎬 na tela do catálogo; ao clicar, o vídeo abre centralizado, ocupando a tela toda.</small></div>
 <div class="field"><label>Subdomínio (endereço do chatbot)</label><input id="slug" value="minha-loja"><small>Vai ficar em: <b id="slugPreview">minha-loja.alibr.com.br</b> — use só letras minúsculas, números e hífen.</small></div>
 <div class="field" id="customDomainField" style="display:none">
 <label>Domínio próprio (opcional)</label>
@@ -445,6 +454,7 @@ async function populateForm(data){
   $('#brand').value = data.brand || '';
   $('#whatsapp').value = data.whatsapp || '';
   $('#welcome').value = data.welcome || '';
+  $('#featuredVideo').value = data.featuredVideo || '';
   $('#customDomain').value = data.customDomain || '';
   $('#mainColor').value = data.mainColor || '#7A2E3B';
   $('#darkColor').value = data.darkColor || '#5B2029';
@@ -474,6 +484,7 @@ function clearForm(){
   qnaListEl.innerHTML=''; qnaCount=0;
   $('#brand').value='Minha Loja'; $('#whatsapp').value='5511999999999'; $('#customDomain').value='';
   $('#welcome').value='Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja a vitrine.';
+  $('#featuredVideo').value='';
   $('#mainColor').value='#7A2E3B'; $('#darkColor').value='#5B2029'; $('#accentColor').value='#C9A24B'; $('#chatBg').value='#FBF3EC'; $('#buyColor').value='#7A2E3B'; $('#priceColor').value='#7A2E3B'; $('#cardColor').value='#FFFFFF'; $('#cardOpacity').value='95'; $('#cardOpacityValue').textContent='95%'; $('#cardTextColor').value='#1A1A1A'; $('#categoryColor').value='#7A2E3B'; $('#categoryTextColor').value='#FFFFFF'; $('#showCategoryMenu').checked=true;
   $('#logoUrl').value=''; document.getElementById('logoField').dataset.upload=''; refreshLogo();
   $('#slug').value=''; $('#slug').dataset.touched=''; $('#slug').removeAttribute('disabled');
@@ -510,6 +521,22 @@ function openEditor(slugToEdit, data){
 $('#backToDash').onclick = openDashboard;
 $('#verPlanosDominio').onclick = (e)=>{ e.preventDefault(); abrirPlanos(); };
 
+async function excluirMinhaLoja(slug, nomeLoja){
+  if(!confirm(`Tem certeza que quer excluir a loja "${nomeLoja}"? Essa ação não pode ser desfeita.`)) return;
+  try{
+    const userDoc = await db.collection('users').doc(myUid).get();
+    const lojasExcluidas = (userDoc.exists && userDoc.data().lojasExcluidas) || 0;
+    if(myPlan === 'aprendiz' && lojasExcluidas >= 3){
+      alert('Você já excluiu 3 lojas no plano grátis. Pra continuar excluindo/criando lojas, assine pelo menos o plano Básico.');
+      abrirPlanos();
+      return;
+    }
+    await db.collection(COLECAO).doc(slug).delete();
+    await db.collection('users').doc(myUid).set({ lojasExcluidas: lojasExcluidas + 1 }, { merge:true });
+    toast('Loja excluída.');
+    loadDashboard();
+  }catch(e){ console.error(e); toast('Não foi possível excluir. Confira as regras do Firestore.'); }
+}
 async function loadDashboard(){
   $('#storeGrid').innerHTML = '<p class="empty-hint">Carregando...</p>';
   try{
@@ -545,9 +572,11 @@ async function loadDashboard(){
           <button class="edit">Editar</button>
           <button class="ver-conversas" type="button" style="border:1px solid #6d28d9;background:#fff;color:#6d28d9;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer">💬 Conversas</button>
           <a class="visit" href="${link}" target="_blank" rel="noopener">Ver chat</a>
+          <button class="excluir-loja" type="button" style="border:1px solid #dc2626;background:#fff;color:#dc2626;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer">🗑️ Excluir loja</button>
         </div>`;
       card.querySelector('.edit').onclick = ()=> openEditor(s.slug, s);
       card.querySelector('.ver-conversas').onclick = ()=> abrirConversas(s.slug, s.brand||s.slug);
+      card.querySelector('.excluir-loja').onclick = ()=> excluirMinhaLoja(s.slug, s.brand||s.slug);
       grid.appendChild(card);
     });
 
@@ -709,9 +738,10 @@ async function mostrarAdminUsuarios(){
       const d = doc.data();
       const planoAtual = (PLANOS[d.plan] || PLANOS.aprendiz).nome;
       const brinde = d.planBrinde ? ' <span style="color:#16a34a;font-size:11px">(brinde admin)</span>' : '';
-      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #eee">
-        <div style="min-width:0"><b style="word-break:break-all">${esc(d.email||doc.id)}</b><br><span style="font-size:12px;color:var(--muted)">Plano: ${esc(planoAtual)}${brinde}</span></div>
+      return `<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #eee">
+        <div style="min-width:0;flex:1"><b style="word-break:break-all">${esc(d.email||doc.id)}</b><br><span style="font-size:12px;color:var(--muted)">Plano: ${esc(planoAtual)}${brinde}</span></div>
         <button class="btn success" data-uid="${doc.id}" type="button" style="font-size:12px;white-space:nowrap">🎁 Dar Premium grátis</button>
+        <button class="btn" data-excluir="${doc.id}" type="button" style="font-size:12px;white-space:nowrap;color:#dc2626">🗑️ Excluir conta</button>
       </div>`;
     }).join('');
     box.querySelectorAll('button[data-uid]').forEach(btn=>{
@@ -724,6 +754,20 @@ async function mostrarAdminUsuarios(){
           toast('Plano concedido!');
           mostrarAdminUsuarios();
         }catch(e){ console.error(e); toast('Não foi possível aplicar. Confira as regras do Firestore.'); btn.disabled=false; btn.textContent='🎁 Dar Premium grátis'; }
+      };
+    });
+    box.querySelectorAll('button[data-excluir]').forEach(btn=>{
+      btn.onclick = async ()=>{
+        const uid = btn.dataset.excluir;
+        if(!confirm('Isso vai apagar todas as lojas e os dados desse usuário no ChatShop. O login dele (e-mail/senha) continua existindo, mas sem nenhum dado. Confirma?')) return;
+        btn.disabled = true; btn.textContent = 'Excluindo...';
+        try{
+          const lojasSnap = await db.collection(COLECAO).where('ownerUid','==',uid).get();
+          await Promise.all(lojasSnap.docs.map(d=>d.ref.delete()));
+          await db.collection('users').doc(uid).delete();
+          toast('Conta excluída!');
+          mostrarAdminUsuarios();
+        }catch(e){ console.error(e); toast('Não foi possível excluir. Confira as regras do Firestore.'); btn.disabled=false; btn.textContent='🗑️ Excluir conta'; }
       };
     });
   }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar os usuários. Confira as regras do Firestore.</p>'; }
@@ -772,11 +816,46 @@ async function mostrarAdminDominios(){
 }
 
 /* ============================================================
-   CATÁLOGO GERAL — produtos que o admin cadastra e que qualquer
-   lojista pode puxar pra loja dele (nome, imagem, categoria).
-   Coleção no Firestore: catalogoGeral
+   MÉTRICAS — visão geral de tráfego (visitas/mensagens) de
+   todas as lojas, tanto lojistas quanto afiliados.
+   Localização de visitantes não é exibida: exigiria um serviço
+   externo de geolocalização por IP ou pedir permissão de
+   localização ao visitante, o que adiciona complexidade e
+   levanta questões de privacidade — por isso ficou de fora.
    ============================================================ */
-const COLECAO_CATALOGOS = 'catalogos';
+async function mostrarAdminMetricas(){
+  const box = $('#adminConteudo');
+  box.innerHTML = '<p class="empty-hint">Carregando métricas...</p>';
+  try{
+    const [lojasSnap, usersSnap] = await Promise.all([
+      db.collection(COLECAO).get(),
+      db.collection('users').get()
+    ]);
+    const emailPorUid = {};
+    usersSnap.docs.forEach(d=>{ emailPorUid[d.id] = d.data().email; });
+    const lojas = lojasSnap.docs.map(d=>d.data()).sort((a,b)=>(b.visitCount||0)-(a.visitCount||0));
+    const totalVisitas = lojas.reduce((s,l)=>s+(l.visitCount||0),0);
+    const totalMensagens = lojas.reduce((s,l)=>s+(l.messageCount||0),0);
+    box.innerHTML = `
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <div style="flex:1;background:#f7f5ff;border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#6d28d9">${totalVisitas}</div><div style="font-size:11px;color:var(--muted)">👁️ Visitas totais</div></div>
+        <div style="flex:1;background:#f7f5ff;border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#6d28d9">${totalMensagens}</div><div style="font-size:11px;color:var(--muted)">💬 Mensagens totais</div></div>
+        <div style="flex:1;background:#f7f5ff;border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#6d28d9">${lojas.length}</div><div style="font-size:11px;color:var(--muted)">🛍️ Lojas ativas</div></div>
+      </div>
+      <p style="font-weight:700;font-size:13px;margin:0 0 8px">Por loja (mais visitada primeiro):</p>
+      <div id="metricasLista" style="display:flex;flex-direction:column;gap:8px"></div>`;
+    const lista = $('#metricasLista');
+    if(!lojas.length){ lista.innerHTML = '<p class="empty-hint">Nenhuma loja cadastrada ainda.</p>'; return; }
+    lista.innerHTML = lojas.map(l=>{
+      const email = emailPorUid[l.ownerUid] || 'e-mail não encontrado';
+      return `<div style="border:1px solid #eee;border-radius:8px;padding:10px">
+        <b style="font-size:13px">${esc(l.brand||l.slug)}</b> <span style="font-size:11px;color:var(--muted)">(${esc(l.slug)}.${DOMINIO_BASE})</span><br>
+        <span style="font-size:11px;color:var(--muted)">Dono: ${esc(email)}</span><br>
+        <span style="font-size:12px;margin-top:4px;display:inline-block">👁️ ${l.visitCount||0} visitas · 💬 ${l.messageCount||0} mensagens</span>
+      </div>`;
+    }).join('');
+  }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar. Confira as regras do Firestore.</p>'; }
+}
 const COLECAO_CATALOGO_GERAL = 'catalogoGeral';
 async function mostrarAdminCatalogo(){
   const box = $('#adminConteudo');
@@ -793,8 +872,10 @@ async function mostrarAdminCatalogo(){
       if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum catálogo criado ainda.</p>'; return; }
       lista.innerHTML = snap.docs.map(d=>{
         const c = d.data();
-        return `<div style="display:flex;gap:10px;align-items:center;border:1px solid #eee;border-radius:8px;padding:10px">
-          <div style="flex:1;min-width:0"><b style="font-size:13px">${esc(c.nome)}</b><br><span style="font-size:11px;color:var(--muted)">${esc(c.linkAfiliacao||'sem link de afiliação')}</span></div>
+        const liberado = !!c.liberadoGratis;
+        return `<div style="display:flex;gap:10px;align-items:center;border:1px solid #eee;border-radius:8px;padding:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:120px"><b style="font-size:13px">${esc(c.nome)}</b><br><span style="font-size:11px;color:${liberado?'#16a34a':'var(--muted)'}">${liberado?'🔓 Liberado pro plano grátis':'🔒 Só assinantes'}</span></div>
+          <button class="btn" data-toggle="${d.id}" type="button" style="font-size:11px;white-space:nowrap">${liberado?'Bloquear pro grátis':'Liberar pro grátis'}</button>
           <button class="btn primary" data-ver="${d.id}" type="button" style="font-size:11px;white-space:nowrap">Produtos</button>
           <button class="btn" data-del="${d.id}" type="button" style="font-size:11px">🗑️</button>
         </div>`;
@@ -803,6 +884,13 @@ async function mostrarAdminCatalogo(){
         btn.onclick = ()=>{
           const c = snap.docs.find(d=>d.id===btn.dataset.ver).data();
           mostrarAdminCatalogoProdutos(btn.dataset.ver, c.nome);
+        };
+      });
+      lista.querySelectorAll('button[data-toggle]').forEach(btn=>{
+        btn.onclick = async ()=>{
+          const c = snap.docs.find(d=>d.id===btn.dataset.toggle).data();
+          try{ await db.collection(COLECAO_CATALOGOS).doc(btn.dataset.toggle).update({ liberadoGratis: !c.liberadoGratis }); toast(!c.liberadoGratis ? 'Catálogo liberado pro plano grátis!' : 'Catálogo bloqueado pro plano grátis.'); mostrarAdminCatalogo(); }
+          catch(e){ console.error(e); toast('Não foi possível alterar.'); }
         };
       });
       lista.querySelectorAll('button[data-del]').forEach(btn=>{
@@ -980,6 +1068,7 @@ $('#adminBtn').onclick = abrirAdmin;
 $('#adminTabUsuarios').onclick = mostrarAdminUsuarios;
 $('#adminTabIndicacoes').onclick = mostrarAdminIndicacoes;
 $('#adminTabDominios').onclick = mostrarAdminDominios;
+$('#adminTabMetricas').onclick = mostrarAdminMetricas;
 $('#adminTabCatalogo').onclick = mostrarAdminCatalogo;
 $('#adminTabVideos').onclick = mostrarAdminVideos;
 $('#fecharAdmin').onclick = ()=> $('#adminModal').style.display='none';
@@ -1098,6 +1187,18 @@ if(auth && !STOREFRONT_MODE){
    LOJA PUBLICADA — em nomedaloja.alibr.com.br, busca o documento
    cujo ID é o subdomínio e mostra diretamente o chatbot/vitrine.
    ============================================================ */
+function detectarVideoEmbed(url){
+  const u = String(url||'').trim();
+  if(!u) return null;
+  let m = u.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/);
+  if(m) return { tipo:'youtube', vertical:true, embedUrl:`https://www.youtube.com/embed/${m[1]}?autoplay=1&playsinline=1` };
+  m = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{6,})/);
+  if(m) return { tipo:'youtube', vertical:false, embedUrl:`https://www.youtube.com/embed/${m[1]}?autoplay=1&playsinline=1` };
+  m = u.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
+  if(m) return { tipo:'tiktok', vertical:true, embedUrl:`https://www.tiktok.com/embed/v2/${m[1]}` };
+  if(/facebook\.com|fb\.watch/i.test(u)) return { tipo:'facebook', vertical:false, embedUrl:`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(u)}&show_text=false&autoplay=true` };
+  return null;
+}
 function hex2rgba(hex, opacityPercent){
   const h = String(hex||'#ffffff').replace('#','');
   const r = parseInt(h.substring(0,2),16); const g = parseInt(h.substring(2,4),16); const b = parseInt(h.substring(4,6),16);
@@ -1147,8 +1248,10 @@ function renderPublishedStore(data, ref){
   document.documentElement.style.setProperty('--store-cat', categoryColor);
   const categoryTextColor = /^#[0-9a-f]{6}$/i.test(data.categoryTextColor||'') ? data.categoryTextColor : '#FFFFFF';
   document.documentElement.style.setProperty('--store-cat-text', categoryTextColor);
+  const videoInfo = detectarVideoEmbed(data.featuredVideo);
   root.innerHTML = `<div id="liveApp" style="background:var(--store-dark);position:relative;overflow:hidden">
     <div class="pub-feed" id="pubFeed"><div class="pub-swipe-hint">⬆️ deslize pra ver mais produtos</div></div>
+    ${videoInfo ? '<button class="pub-video-toggle" id="pubVideoToggle" type="button" title="Ver vídeo">🎬</button>' : ''}
     <button class="pub-chat-toggle" id="pubChatToggle" type="button" title="Abrir chat">💬</button>
     <div class="pub-chat-overlay" id="pubChatOverlay">
       <div class="pub-chat-panel">
@@ -1158,7 +1261,18 @@ function renderPublishedStore(data, ref){
         <div class="live-inputbar"><button id="pubMic" type="button" title="Gravar áudio" style="background:var(--store-main)">🎤</button><input id="pubInput" placeholder="Digite o que procura"><span class="rec-status" id="pubRecStatus">🔴 <span id="pubRecTime">00:00</span></span><button id="pubSend" type="button" style="background:var(--store-main)">➤</button></div>
       </div>
     </div>
+    ${videoInfo ? `<div class="pub-video-overlay" id="pubVideoOverlay">
+      <button class="pub-video-close" id="pubVideoClose" type="button">×</button>
+      <div class="pub-video-frame${videoInfo.vertical?'':' horizontal'}" id="pubVideoFrame"></div>
+    </div>` : ''}
   </div>`;
+  if(videoInfo){
+    $('#pubVideoToggle').onclick = ()=>{
+      $('#pubVideoFrame').innerHTML = `<iframe src="${storeEsc(videoInfo.embedUrl)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+      $('#pubVideoOverlay').classList.add('open');
+    };
+    $('#pubVideoClose').onclick = ()=>{ $('#pubVideoOverlay').classList.remove('open'); $('#pubVideoFrame').innerHTML=''; };
+  }
   $('#pubBrand').textContent = data.brand || 'Minha Loja';
   const pubLogo = storeSafeImage(data.logo);
   if(pubLogo){ $('#pubAvatar').innerHTML = `<img src="${storeEsc(pubLogo)}" alt="${storeEsc(data.brand||'')}">`; }
@@ -1529,7 +1643,7 @@ card.querySelector('.remove').onclick=()=>{card.remove();debounce()};
 card.querySelectorAll('input,textarea').forEach(i=>i.addEventListener('input',debounce));
 qnaListEl.appendChild(card)}
 function collectQnA(){return [...document.querySelectorAll('#qnaList .product')].map(card=>{const k=card.querySelector('[data-k="keywords"]').value.trim();const a=card.querySelector('[data-k="answer"]').value.trim();return{keywords:k.split(',').map(x=>x.trim()).filter(Boolean),answer:a}}).filter(q=>q.keywords.length && q.answer)}
-function collect(){return{brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',customDomain: myPlan!=='aprendiz' ? $('#customDomain').value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'') : '',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardOpacity:Number($('#cardOpacity').value),cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,showCategoryMenu:$('#showCategoryMenu').checked,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';const baseLink=card.dataset.catalogBaseLink||'';const affiliateParam=baseLink?g('affiliateParam'):'';const linkFinal=baseLink?combineAffiliateLink(baseLink,affiliateParam):(g('link')||'#');return{name:g('name')||'Produto',price:g('price')||'Consulte',link:linkFinal,catalogBaseLink:baseLink,affiliateParam,keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',image:card.dataset.upload||g('imageUrl')||'',promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
+function collect(){return{brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',featuredVideo:$('#featuredVideo').value.trim(),customDomain: myPlan!=='aprendiz' ? $('#customDomain').value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'') : '',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardOpacity:Number($('#cardOpacity').value),cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,showCategoryMenu:$('#showCategoryMenu').checked,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';const baseLink=card.dataset.catalogBaseLink||'';const affiliateParam=baseLink?g('affiliateParam'):'';const linkFinal=baseLink?combineAffiliateLink(baseLink,affiliateParam):(g('link')||'#');return{name:g('name')||'Produto',price:g('price')||'Consulte',link:linkFinal,catalogBaseLink:baseLink,affiliateParam,keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',image:card.dataset.upload||g('imageUrl')||'',promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
 function liveVisual(p,cls=''){if(!p.image)return `<div class="live-noimg">🛍️</div>`;return `<img src="${esc(p.image)}" alt="${esc(p.name)}">`}
 function liveCard(p,inside=false){return `<div class="${inside?'live-pcard':'live-card'}">${liveVisual(p)}<b>${esc(p.name)}</b><div class="live-price">${esc(p.price)}</div><a class="live-buy" href="${esc(p.link)}" target="_blank" rel="noopener">Comprar</a></div>`}
 function addLive(who,html){const row=document.createElement('div');row.className='live-row '+who;row.innerHTML=`<div class="live-bubble">${html}<span class="live-time">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;$('#liveMessages').appendChild(row);$('#liveMessages').scrollTop=$('#liveMessages').scrollHeight}
@@ -1584,13 +1698,16 @@ async function abrirCatalogoGeral(){
     lista.innerHTML = snap.docs.map(d=>{
       const c = d.data();
       const jaConfigurado = !!myCatalogAffiliateParams[d.id];
-      return `<button type="button" class="btn" data-id="${d.id}" style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center">
+      const bloqueado = myPlan === 'aprendiz' && !c.liberadoGratis;
+      const statusTxt = bloqueado ? '🔒 assine pra usar' : (jaConfigurado ? '✅ configurado' : 'configurar →');
+      return `<button type="button" class="btn" data-id="${d.id}" data-bloqueado="${bloqueado?'1':''}" style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;${bloqueado?'opacity:.6':''}">
         <span>📦 ${esc(c.nome)}</span>
-        <span style="font-size:11px;color:${jaConfigurado?'#16a34a':'var(--muted)'}">${jaConfigurado?'✅ configurado':'configurar →'}</span>
+        <span style="font-size:11px;color:${bloqueado?'#dc2626':(jaConfigurado?'#16a34a':'var(--muted)')}">${statusTxt}</span>
       </button>`;
     }).join('');
     lista.querySelectorAll('button[data-id]').forEach(btn=>{
       btn.onclick = ()=>{
+        if(btn.dataset.bloqueado){ $('#catalogoModal').style.display='none'; abrirPlanos(); return; }
         const c = snap.docs.find(d=>d.id===btn.dataset.id).data();
         abrirCatalogoDetalhe(btn.dataset.id, c.nome, c.linkAfiliacao||'');
       };
@@ -1650,7 +1767,7 @@ $('#salvarParametroBtn').onclick = async ()=>{
 };
 $('#fecharCatalogo').onclick = ()=> $('#catalogoModal').style.display='none';
 document.querySelector('#catalogoModal .plans-overlay')?.addEventListener('click', ()=> $('#catalogoModal').style.display='none');
-$('#addQnA').onclick=()=>{addQnA();renderLive()};$('#previewBtn').onclick=renderLive;$('#publishBtn').onclick=publish;$('#copyBtn').onclick=copyHTML;$('#downloadBtn').onclick=download;$('#saveBtn').onclick=save;$('#resetBtn').onclick=()=>{localStorage.removeItem('chatshop-v4');location.reload()};['brand','whatsapp','welcome','mainColor','darkColor','accentColor','chatBg','buyColor','priceColor','cardColor','cardTextColor','categoryColor','categoryTextColor'].forEach(id=>$('#'+id).addEventListener('input',debounce));
+$('#addQnA').onclick=()=>{addQnA();renderLive()};$('#previewBtn').onclick=renderLive;$('#publishBtn').onclick=publish;$('#copyBtn').onclick=copyHTML;$('#downloadBtn').onclick=download;$('#saveBtn').onclick=save;$('#resetBtn').onclick=()=>{localStorage.removeItem('chatshop-v4');location.reload()};['brand','whatsapp','welcome','featuredVideo','mainColor','darkColor','accentColor','chatBg','buyColor','priceColor','cardColor','cardTextColor','categoryColor','categoryTextColor'].forEach(id=>$('#'+id).addEventListener('input',debounce));
 $('#cardOpacity').addEventListener('input',()=>{$('#cardOpacityValue').textContent=$('#cardOpacity').value+'%';debounce()});
 $('#showCategoryMenu').addEventListener('change',debounce);
 renderPaletas();
