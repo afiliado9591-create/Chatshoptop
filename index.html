@@ -113,6 +113,7 @@
     <div class="field"><label>E-mail</label><input id="authEmail" type="email" placeholder="voce@email.com"></div>
     <div class="field"><label>Senha</label><input id="authPass" type="password" placeholder="Mínimo 6 caracteres"></div>
     <button class="btn primary" id="authSubmit" style="width:100%">Entrar</button>
+    <button type="button" id="esqueciSenhaBtn" style="border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:8px 0;text-decoration:underline;display:block;margin:0 auto">Esqueci minha senha</button>
     <div id="authError"></div>
   </div>
 </div>
@@ -426,10 +427,29 @@ $('#slug').addEventListener('focus', ()=>{ $('#slug').dataset.touched = '1'; });
    enxerga/edita a própria loja
    ============================================================ */
 let authMode = 'login';
-$('#tabLogin').onclick = ()=>{ authMode='login'; $('#tabLogin').classList.add('active'); $('#tabSignup').classList.remove('active'); $('#authSubmit').textContent='Entrar'; $('#authError').style.display='none'; };
-$('#tabSignup').onclick = ()=>{ authMode='signup'; $('#tabSignup').classList.add('active'); $('#tabLogin').classList.remove('active'); $('#authSubmit').textContent='Criar conta'; $('#authError').style.display='none'; };
+$('#tabLogin').onclick = ()=>{ authMode='login'; $('#tabLogin').classList.add('active'); $('#tabSignup').classList.remove('active'); $('#authSubmit').textContent='Entrar'; $('#authError').style.display='none'; $('#esqueciSenhaBtn').style.display='block'; };
+$('#tabSignup').onclick = ()=>{ authMode='signup'; $('#tabSignup').classList.add('active'); $('#tabLogin').classList.remove('active'); $('#authSubmit').textContent='Criar conta'; $('#authError').style.display='none'; $('#esqueciSenhaBtn').style.display='none'; };
 
-function showAuthError(msg){ const el=$('#authError'); el.textContent=msg; el.style.display='block'; }
+function showAuthError(msg, cor){ const el=$('#authError'); el.textContent=msg; el.style.display='block'; el.style.color = cor || ''; }
+
+$('#esqueciSenhaBtn').onclick = async ()=>{
+  if(!auth){ showAuthError('Firebase ainda não configurado neste arquivo.'); return; }
+  const email = $('#authEmail').value.trim();
+  if(!email){ showAuthError('Digite seu e-mail no campo acima primeiro, depois toque em "Esqueci minha senha".'); return; }
+  $('#esqueciSenhaBtn').disabled = true;
+  try{
+    await auth.sendPasswordResetEmail(email);
+    showAuthError('Enviamos um link pra redefinir sua senha em ' + email + '. Confira sua caixa de entrada (e o spam).', '#16a34a');
+  }catch(e){
+    const map = {
+      'auth/user-not-found':'Não existe conta com esse e-mail.',
+      'auth/invalid-email':'E-mail inválido.',
+      'auth/too-many-requests':'Muitas tentativas seguidas. Aguarde um pouco e tente de novo.'
+    };
+    showAuthError(map[e.code] || ('Erro: '+e.message));
+  }
+  $('#esqueciSenhaBtn').disabled = false;
+};
 
 $('#authSubmit').onclick = async ()=>{
   if(!auth){ showAuthError('Firebase ainda não configurado neste arquivo.'); return; }
