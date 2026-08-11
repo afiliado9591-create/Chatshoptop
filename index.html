@@ -1002,14 +1002,30 @@ async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
       <button id="ctgVoltarBtn" type="button" style="border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0;margin-bottom:10px">← Voltar aos catálogos</button>
       <p style="font-weight:700;font-size:14px;margin:0 0 10px">📦 ${esc(catalogoNome)}</p>
       <div class="field"><label>Nome do produto</label><input id="catNome" placeholder="Ex: Vestido Floral Midi"></div>
-      <div class="field"><label>Link da imagem</label><input id="catImagem" placeholder="https://site.com/foto.jpg"></div>
+      <div class="field"><label>Imagem do produto</label><small>O administrador pode colar um link ou enviar uma imagem do aparelho.</small></div>
+      <div class="tabs"><button type="button" class="tab active" id="catImgTabLink">Link da imagem</button><button type="button" class="tab" id="catImgTabUpload">Upload do aparelho</button></div>
+      <div id="catImgLinkBox"><div class="field"><input id="catImagem" placeholder="https://site.com/foto.jpg"></div></div>
+      <div id="catImgUploadBox" style="display:none"><div class="field"><input type="file" id="catImagemArquivo" accept="image/*"><small>JPG, PNG ou WebP. Máximo: 700 KB.</small></div></div>
+      <div class="image-preview" id="catImagemPreview"><span>Nenhuma imagem selecionada</span></div>
       <div class="field"><label>Categoria</label><input id="catCategoria" placeholder="Ex: Vestidos"></div>
       <div class="field"><label>Palavras-chave</label><input id="catKeywords" placeholder="vestido, floral, festa"></div>
       <div class="field"><label>Preço (R$)</label><input id="catPreco" placeholder="Ex: 129,90"></div>
+      <div class="grid2"><div class="field"><label>Texto do botão</label><input id="catButtonText" maxlength="40" value="Comprar agora" placeholder="Ex: Veja mais"></div><div class="field"><label>Cor do botão</label><input type="color" id="catButtonColor" value="#7A2E3B"></div></div>
       <div class="field"><label>Link do produto (sem o parâmetro do afiliado)</label><input id="catLink" placeholder="https://shopee.com.br/produto-xyz"><small>O lojista só vai poder colocar o parâmetro dele; esse link base fica travado.</small></div>
-      <button class="btn primary" id="catAdicionarBtn" type="button" style="width:100%;margin-bottom:16px">+ Adicionar produto</button>
+      <div class="actions" style="margin-bottom:16px"><button class="btn primary" id="catAdicionarBtn" type="button">+ Adicionar produto</button><button class="btn" id="catCancelarEdicaoBtn" type="button" style="display:none">Cancelar edição</button></div>
       <div id="catLista" style="display:flex;flex-direction:column;gap:10px"></div>`;
     $('#ctgVoltarBtn').onclick = mostrarAdminCatalogo;
+    let catImagemUpload = '', catEditandoId = '';
+    const atualizarCatImagemPreview = ()=>{
+      const src = catImagemUpload || $('#catImagem').value.trim();
+      $('#catImagemPreview').innerHTML = src ? `<img src="${esc(src)}" alt="Prévia">` : '<span>Nenhuma imagem selecionada</span>';
+    };
+    $('#catImgTabLink').onclick = ()=>{ $('#catImgTabLink').classList.add('active'); $('#catImgTabUpload').classList.remove('active'); $('#catImgLinkBox').style.display='block'; $('#catImgUploadBox').style.display='none'; };
+    $('#catImgTabUpload').onclick = ()=>{ $('#catImgTabUpload').classList.add('active'); $('#catImgTabLink').classList.remove('active'); $('#catImgUploadBox').style.display='block'; $('#catImgLinkBox').style.display='none'; };
+    $('#catImagem').addEventListener('input',()=>{ if($('#catImagem').value.trim()) catImagemUpload=''; atualizarCatImagemPreview(); });
+    $('#catImagemArquivo').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f)return; if(f.size>700*1024){toast('Use uma imagem menor que 700 KB');e.target.value='';return} const r=new FileReader(); r.onload=()=>{catImagemUpload=r.result;atualizarCatImagemPreview()}; r.readAsDataURL(f); });
+    const limparCatForm = ()=>{ catEditandoId='';catImagemUpload='';['catNome','catImagem','catCategoria','catKeywords','catPreco','catLink'].forEach(id=>$('#'+id).value='');$('#catButtonText').value='Comprar agora';$('#catButtonColor').value='#7A2E3B';$('#catImagemArquivo').value='';$('#catAdicionarBtn').textContent='+ Adicionar produto';$('#catCancelarEdicaoBtn').style.display='none';atualizarCatImagemPreview(); };
+    $('#catCancelarEdicaoBtn').onclick = limparCatForm;
     function renderLista(){
       const lista = $('#catLista');
       if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum produto neste catálogo ainda.</p>'; return; }
@@ -1019,12 +1035,16 @@ async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
         return `<div style="display:flex;gap:10px;align-items:center;border:1px solid #eee;border-radius:8px;padding:8px">
           ${p.image ? `<img src="${esc(p.image)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;flex-shrink:0">` : '<div style="width:48px;height:48px;background:#f3f4f6;border-radius:6px;flex-shrink:0"></div>'}
           <div style="flex:1;min-width:0"><b style="font-size:13px">${esc(p.name)}</b><br><span style="font-size:11px;color:var(--muted)">${esc(p.category||'sem categoria')} · R$ ${esc(p.price||'—')}</span></div>
+          <button class="btn" data-edit="${d.id}" type="button" style="font-size:11px">✏️ Editar</button>
           <button class="btn" data-qna="${d.id}" type="button" style="font-size:11px;white-space:nowrap">❓ Perguntas${numQna?` (${numQna})`:''}</button>
           <button class="btn" data-id="${d.id}" type="button" style="font-size:11px">🗑️</button>
         </div>`;
       }).join('');
       lista.querySelectorAll('button[data-qna]').forEach(btn=>{
         btn.onclick = ()=> mostrarAdminCatalogoProdutoQnA(catalogoId, catalogoNome, btn.dataset.qna);
+      });
+      lista.querySelectorAll('button[data-edit]').forEach(btn=>{
+        btn.onclick = ()=>{ const d=snap.docs.find(x=>x.id===btn.dataset.edit); if(!d)return; const p=d.data(); catEditandoId=d.id; catImagemUpload=(p.image||'').startsWith('data:')?p.image:''; $('#catNome').value=p.name||''; $('#catImagem').value=catImagemUpload?'':(p.image||''); $('#catCategoria').value=p.category||''; $('#catKeywords').value=(p.keywords||[]).join(', '); $('#catPreco').value=p.price||''; $('#catLink').value=p.baseLink||''; $('#catButtonText').value=p.buttonText||'Comprar agora'; $('#catButtonColor').value=p.buttonColor||'#7A2E3B'; $('#catAdicionarBtn').textContent='💾 Salvar alterações'; $('#catCancelarEdicaoBtn').style.display='block'; atualizarCatImagemPreview(); box.scrollTop=0; };
       });
       lista.querySelectorAll('button[data-id]').forEach(btn=>{
         btn.onclick = async ()=>{
@@ -1037,15 +1057,19 @@ async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
     renderLista();
     $('#catAdicionarBtn').onclick = async ()=>{
       const name = $('#catNome').value.trim();
-      const image = $('#catImagem').value.trim();
+      const image = catImagemUpload || $('#catImagem').value.trim();
       const category = $('#catCategoria').value.trim();
       const keywords = $('#catKeywords').value.split(',').map(x=>x.trim()).filter(Boolean);
       const price = $('#catPreco').value.trim();
       const baseLink = $('#catLink').value.trim();
-      if(!name || !image){ toast('Preencha pelo menos o nome e o link da imagem'); return; }
+      const buttonText = $('#catButtonText').value.trim() || 'Comprar agora';
+      const buttonColor = $('#catButtonColor').value || '#7A2E3B';
+      if(!name || !image){ toast('Preencha o nome e escolha uma imagem por link ou upload'); return; }
       try{
-        await db.collection(COLECAO_CATALOGO_GERAL).add({ name, image, category, keywords, price, baseLink, catalogoId, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-        toast('Produto adicionado!');
+        const dadosProduto={ name, image, category, keywords, price, baseLink, buttonText, buttonColor, catalogoId, updatedAt:firebase.firestore.FieldValue.serverTimestamp() };
+        if(catEditandoId) await db.collection(COLECAO_CATALOGO_GERAL).doc(catEditandoId).update(dadosProduto);
+        else await db.collection(COLECAO_CATALOGO_GERAL).add({ ...dadosProduto, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        toast(catEditandoId?'Produto atualizado!':'Produto adicionado!');
         mostrarAdminCatalogoProdutos(catalogoId, catalogoNome);
       }catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
     };
@@ -1828,7 +1852,7 @@ async function abrirCatalogoDetalhe(catalogoId, catalogoNome, linkAfiliacao){
         const atual = document.querySelectorAll('#products .product').length;
         if(atual >= myProductLimit){ $('#catalogoModal').style.display='none'; abrirPlanos(); return; }
         const meuParam = myCatalogAffiliateParams[catalogoId] || '';
-        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', catalogBaseLink:p.baseLink||'', affiliateParam:meuParam, qna:p.qna||[] });
+        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', catalogBaseLink:p.baseLink||'', affiliateParam:meuParam, qna:p.qna||[], buttonText:p.buttonText||'Comprar agora', buttonColor:p.buttonColor||'#7A2E3B' });
         renderLive(); atualizarAvisoLimite();
         $('#catalogoModal').style.display='none';
         toast(meuParam ? 'Produto adicionado com seu link de afiliado!' : 'Produto adicionado! Configure seu parâmetro de afiliado neste catálogo.');
