@@ -18,7 +18,7 @@
 .pub-slide{scroll-snap-align:start;height:100dvh;position:relative;display:flex;align-items:flex-end;background:#111;overflow:hidden}
 .pub-slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .pub-slide .pub-noimg{position:absolute;inset:0;display:grid;place-items:center;font-size:64px;background:#222;color:#555}
-.pub-slide-overlay{position:relative;z-index:1;width:100%;padding:26px 18px 100px;background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.25) 30%,rgba(0,0,0,.92) 100%)}
+.pub-slide-overlay{position:relative;z-index:1;width:100%;padding:26px 18px 100px;background:linear-gradient(180deg,transparent 0%,rgba(255,255,255,.08) 45%,rgba(255,255,255,.32) 100%)}
 .pub-slide-textbox{background:var(--store-card,rgba(255,255,255,.95));border-radius:14px;padding:12px 14px;display:inline-block;max-width:100%;box-shadow:0 2px 12px rgba(0,0,0,.3)}
 .pub-slide-textbox b{color:var(--store-card-text,#1a1a1a);text-shadow:none}
 .pub-slide-textbox .pub-slide-price{color:var(--store-price,var(--store-main,#7A2E3B));text-shadow:none}
@@ -503,7 +503,7 @@ async function populateForm(data){
   document.getElementById('logoField').dataset.upload = isUploadLogo ? data.logo : '';
   refreshLogo();
   productsEl.innerHTML=''; productCount=0;
-  (data.products||[]).forEach(p=>addProduct({name:p.name,price:p.price,link:p.link,keywords:(p.keywords||[]).join(', '),category:p.category||'',imageUrl:p.image||'',promo:p.promo||false,qna:p.qna||[],catalogBaseLink:p.catalogBaseLink||'',affiliateParam:p.affiliateParam||''}));
+  (data.products||[]).forEach(p=>addProduct({name:p.name,price:p.price,link:p.link,keywords:(p.keywords||[]).join(', '),category:p.category||'',imageUrl:p.image||'',promo:p.promo||false,qna:p.qna||[],catalogBaseLink:p.catalogBaseLink||'',affiliateParam:p.affiliateParam||'',buttonText:p.buttonText||'Comprar agora',buttonColor:p.buttonColor||data.buyColor||data.mainColor||'#7A2E3B'}));
   qnaListEl.innerHTML=''; qnaCount=0;
   (data.qna||[]).forEach(q=>addQnA(q));
 }
@@ -1382,14 +1382,18 @@ function renderPublishedStore(data, ref){
   }
   function card(p, inside){
     const link=storeSafeUrl(p.link);
-    return `<div class="${inside?'live-pcard':'live-card'}">${visual(p)}<b>${storeEsc(p.name)}</b><div class="live-price" style="color:var(--store-price,var(--store-main))">${storeEsc(formatPrice(p.price))}</div><a class="live-buy" style="background:var(--store-buy,var(--store-main))" href="${storeEsc(link)}" target="_blank" rel="noopener">Comprar</a></div>`;
+    const buttonText = String(p.buttonText||'Comprar agora').trim() || 'Comprar agora';
+    const buttonColor = /^#[0-9a-f]{6}$/i.test(p.buttonColor||'') ? p.buttonColor : 'var(--store-buy,var(--store-main))';
+    return `<div class="${inside?'live-pcard':'live-card'}">${visual(p)}<b>${storeEsc(p.name)}</b><div class="live-price" style="color:var(--store-price,var(--store-main))">${storeEsc(formatPrice(p.price))}</div><a class="live-buy" style="background:${buttonColor}" href="${storeEsc(link)}" target="_blank" rel="noopener">${storeEsc(buttonText)}</a></div>`;
   }
   function feedSlide(p){
     const image = storeSafeImage(p.image);
     const link = storeSafeUrl(p.link);
     const visualHtml = image ? `<img src="${storeEsc(image)}" alt="${storeEsc(p.name)}">` : '<div class="pub-noimg">🛍️</div>';
     const catHtml = p.category ? `<span class="pub-slide-cat">${storeEsc(p.category)}</span><br>` : '';
-    return `<div class="pub-slide">${visualHtml}<div class="pub-slide-overlay"><div class="pub-slide-textbox">${catHtml}<b>${storeEsc(p.name)}</b><div class="pub-slide-price">${storeEsc(formatPrice(p.price))}</div></div><br><a class="pub-slide-buy" href="${storeEsc(link)}" target="_blank" rel="noopener">Comprar agora</a></div></div>`;
+    const buttonText = String(p.buttonText||'Comprar agora').trim() || 'Comprar agora';
+    const buttonColor = /^#[0-9a-f]{6}$/i.test(p.buttonColor||'') ? p.buttonColor : 'var(--store-buy,var(--store-main))';
+    return `<div class="pub-slide">${visualHtml}<div class="pub-slide-overlay"><div class="pub-slide-textbox">${catHtml}<b>${storeEsc(p.name)}</b><div class="pub-slide-price">${storeEsc(formatPrice(p.price))}</div></div><br><a class="pub-slide-buy" style="background:${buttonColor}" href="${storeEsc(link)}" target="_blank" rel="noopener">${storeEsc(buttonText)}</a></div></div>`;
   }
   function renderFeed(filterCat){
     const list = filterCat ? products.filter(p=>mesmaCategoria(p.category,filterCat)) : products;
@@ -1664,6 +1668,7 @@ function debounce(){clearTimeout(debounceTimer);debounceTimer=setTimeout(renderL
 function addProduct(p={}){productCount++;const card=document.createElement('div');card.className='product';card.dataset.upload=p.upload||p.imageData||'';card.dataset.catalogBaseLink=p.catalogBaseLink||'';card.innerHTML=`
 <div class="product-head"><b>Produto ${productCount}</b><button type="button" class="remove">Excluir</button></div>
 <div class="grid2"><div class="field"><label>Nome</label><input data-k="name" value="${esc(p.name||'')}"></div><div class="field"><label>Preço</label><input data-k="price" value="${esc(p.price||'')}"></div></div>
+<div class="grid2"><div class="field"><label>Texto do botão</label><input data-k="buttonText" maxlength="40" value="${esc(p.buttonText||'Comprar agora')}" placeholder="Ex: Veja mais, Compre aqui"><small>Você pode escrever Comprar, Veja mais, Clique aqui ou outro texto.</small></div><div class="field"><label>Cor deste botão</label><input type="color" data-k="buttonColor" value="${esc(p.buttonColor||$('#buyColor').value||'#7A2E3B')}"><small>Esta cor vale somente para este produto.</small></div></div>
 ${p.catalogBaseLink ? `<div class="field" style="background:#f7f5ff;border:1px solid #e0d9f7;border-radius:8px;padding:10px">
   <label>🔒 Link do catálogo Alibr (travado pelo admin)</label>
   <input value="${esc(p.catalogBaseLink)}" disabled style="opacity:.7">
@@ -1721,9 +1726,9 @@ card.querySelector('.remove').onclick=()=>{card.remove();debounce()};
 card.querySelectorAll('input,textarea').forEach(i=>i.addEventListener('input',debounce));
 qnaListEl.appendChild(card)}
 function collectQnA(){return [...document.querySelectorAll('#qnaList .product')].map(card=>{const k=card.querySelector('[data-k="keywords"]').value.trim();const a=card.querySelector('[data-k="answer"]').value.trim();return{keywords:k.split(',').map(x=>x.trim()).filter(Boolean),answer:a}}).filter(q=>q.keywords.length && q.answer)}
-function collect(){return{brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',featuredVideo:$('#featuredVideo').value.trim(),customDomain: myPlan!=='aprendiz' ? $('#customDomain').value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'') : '',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardOpacity:Number($('#cardOpacity').value),cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,showCategoryMenu:$('#showCategoryMenu').checked,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';const baseLink=card.dataset.catalogBaseLink||'';const affiliateParam=baseLink?g('affiliateParam'):'';const linkFinal=baseLink?combineAffiliateLink(baseLink,affiliateParam):(g('link')||'#');return{name:g('name')||'Produto',price:g('price')||'Consulte',link:linkFinal,catalogBaseLink:baseLink,affiliateParam,keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',image:card.dataset.upload||g('imageUrl')||'',promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
+function collect(){return{brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',featuredVideo:$('#featuredVideo').value.trim(),customDomain: myPlan!=='aprendiz' ? $('#customDomain').value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'') : '',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardOpacity:Number($('#cardOpacity').value),cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,showCategoryMenu:$('#showCategoryMenu').checked,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';const baseLink=card.dataset.catalogBaseLink||'';const affiliateParam=baseLink?g('affiliateParam'):'';const linkFinal=baseLink?combineAffiliateLink(baseLink,affiliateParam):(g('link')||'#');return{name:g('name')||'Produto',price:g('price')||'Consulte',link:linkFinal,catalogBaseLink:baseLink,affiliateParam,buttonText:g('buttonText')||'Comprar agora',buttonColor:g('buttonColor')||$('#buyColor').value,keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',image:card.dataset.upload||g('imageUrl')||'',promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
 function liveVisual(p,cls=''){if(!p.image)return `<div class="live-noimg">🛍️</div>`;return `<img src="${esc(p.image)}" alt="${esc(p.name)}">`}
-function liveCard(p,inside=false){return `<div class="${inside?'live-pcard':'live-card'}">${liveVisual(p)}<b>${esc(p.name)}</b><div class="live-price">${esc(p.price)}</div><a class="live-buy" href="${esc(p.link)}" target="_blank" rel="noopener">Comprar</a></div>`}
+function liveCard(p,inside=false){return `<div class="${inside?'live-pcard':'live-card'}">${liveVisual(p)}<b>${esc(p.name)}</b><div class="live-price">${esc(p.price)}</div><a class="live-buy" style="background:${esc(p.buttonColor||'var(--store-buy,var(--store-main))')}" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.buttonText||'Comprar agora')}</a></div>`}
 function addLive(who,html){const row=document.createElement('div');row.className='live-row '+who;row.innerHTML=`<div class="live-bubble">${html}<span class="live-time">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;$('#liveMessages').appendChild(row);$('#liveMessages').scrollTop=$('#liveMessages').scrollHeight}
 function liveCategories(d){const list=[];d.products.forEach(p=>{if(p.category&&!list.includes(p.category))list.push(p.category)});return list}
 function catButtonsHTML(cats){return '<div class="cat-row">'+cats.map(c=>'<button type="button" class="cat-chip" data-cat="'+esc(c)+'">'+esc(c)+'</button>').join('')+'</div>'}
