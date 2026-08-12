@@ -120,6 +120,12 @@ function injectShareMeta(html, { title, description, image, url }) {
   return html;
 }
 
+function injectEditorUpgrade(html) {
+  if (html.includes('catalog-editor-upgrade.js')) return html;
+  const tag = '<script src="/catalog-editor-upgrade.js?v=20260812-1" defer></script>';
+  return html.replace(/<\/body>/i, `${tag}\n</body>`);
+}
+
 module.exports = async function handler(request, response) {
   try {
     const forwardedHost = request.headers['x-forwarded-host'];
@@ -130,6 +136,7 @@ module.exports = async function handler(request, response) {
     const staticUrl = `${proto}://${rawHost}/index.html`;
     const staticResponse = await fetch(staticUrl, { headers: { accept: 'text/html' } });
     let html = await staticResponse.text();
+    html = injectEditorUpgrade(html);
 
     const isBase = host === BASE_DOMAIN || host === `www.${BASE_DOMAIN}`;
     const isVercelHost = host.endsWith('.vercel.app');
