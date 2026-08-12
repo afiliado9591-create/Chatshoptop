@@ -121,12 +121,19 @@ function injectShareMeta(html, { title, description, image, url }) {
 }
 
 function injectEditorUpgrade(html) {
-  if (html.includes('catalog-editor-upgrade.js')) return html;
-  const tag = '<script src="/catalog-editor-upgrade.js?v=20260812-2" defer></script>';
+  const tags = [];
+  if (!html.includes('catalog-editor-upgrade.js')) {
+    tags.push('<script src="/catalog-editor-upgrade.js?v=20260812-3" defer></script>');
+  }
+  if (!html.includes('store-layout-upgrade.js')) {
+    tags.push('<script src="/store-layout-upgrade.js?v=20260812-1" defer></script>');
+  }
+  if (!tags.length) return html;
+  const injection = tags.join('\n');
   const lower = html.toLowerCase();
   const index = lower.lastIndexOf('</body>');
-  if (index < 0) return html + '\n' + tag;
-  return html.slice(0, index) + tag + '\n' + html.slice(index);
+  if (index < 0) return html + '\n' + injection;
+  return html.slice(0, index) + injection + '\n' + html.slice(index);
 }
 
 module.exports = async function handler(request, response) {
