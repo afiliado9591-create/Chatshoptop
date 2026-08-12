@@ -113,7 +113,7 @@ function forceScript(html, filename, version) {
 }
 
 function injectUpgrades(html, storefrontMode, layout) {
-  const version = '20260812-13';
+  const version = '20260812-14';
   const scripts = [
     'catalog-editor-upgrade.js',
     'store-layout-upgrade.js',
