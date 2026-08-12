@@ -8,8 +8,6 @@
 
   ready(function(){
     // Na loja publicada, transforma a bolinha do chat em uma chamada clara de venda.
-    // O botão é criado depois que os dados da loja carregam, então observamos o DOM
-    // para aplicar a mudança assim que ele aparecer.
     const sellerStyle = document.createElement('style');
     sellerStyle.id = 'sellerCtaStyle';
     sellerStyle.textContent = `
@@ -51,8 +49,6 @@
     const list = document.getElementById('catalogoLista');
     if (!openCatalogBtn || !modal || !detailView || !pickerView || !list) return;
 
-    // Catálogo vira uma janela fixa. Assim ele abre na tela atual,
-    // sem o lojista precisar descer até onde o modal está no HTML.
     const style = document.createElement('style');
     style.textContent = `
       #catalogoModal{
@@ -90,26 +86,21 @@
     `;
     document.head.appendChild(style);
 
-    // Deixa o cabeçalho da seção mais simples: Produtos | Catálogos.
     const section = openCatalogBtn.closest('.section');
     const sectionHeader = section && section.querySelector(':scope > div');
     const title = sectionHeader && sectionHeader.querySelector('h2');
     const oldActions = openCatalogBtn.parentElement;
+    let productsTab = null;
+
     if (sectionHeader && title && oldActions && !document.querySelector('.catalog-editor-tabs')) {
       title.style.display = 'none';
       const tabs = document.createElement('div');
       tabs.className = 'catalog-editor-tabs';
 
-      const productsTab = document.createElement('button');
+      productsTab = document.createElement('button');
       productsTab.type = 'button';
       productsTab.className = 'catalog-editor-tab active';
       productsTab.textContent = '🛍️ Produtos';
-      productsTab.onclick = function(){
-        modal.style.display = 'none';
-        productsTab.classList.add('active');
-        openCatalogBtn.classList.remove('active');
-        section.scrollIntoView({ behavior:'smooth', block:'start' });
-      };
 
       openCatalogBtn.textContent = '📦 Catálogos';
       openCatalogBtn.className = 'catalog-editor-tab';
@@ -118,10 +109,46 @@
       tabs.appendChild(productsTab);
       tabs.appendChild(openCatalogBtn);
       sectionHeader.insertBefore(tabs, sectionHeader.firstChild);
+    } else {
+      productsTab = document.querySelector('.catalog-editor-tab:not(#usarCatalogoBtn)');
     }
 
     const selectedIds = new Set();
     let addedThisSession = 0;
+    let catalogSessionOpen = false;
+    let closeRequested = false;
+
+    function setProductsTabActive(){
+      openCatalogBtn.classList.remove('active');
+      productsTab?.classList.add('active');
+    }
+
+    function closeCatalog(scrollToProducts){
+      catalogSessionOpen = false;
+      closeRequested = true;
+      modal.style.display = 'none';
+      setProductsTabActive();
+
+      // Proteção contra qualquer callback atrasado que tente reabrir o modal.
+      requestAnimationFrame(function(){
+        if (closeRequested) modal.style.display = 'none';
+      });
+      setTimeout(function(){
+        if (closeRequested) modal.style.display = 'none';
+        closeRequested = false;
+      }, 120);
+
+      if (scrollToProducts && section) {
+        setTimeout(function(){ section.scrollIntoView({ behavior:'smooth', block:'start' }); }, 0);
+      }
+    }
+
+    if (productsTab) {
+      productsTab.onclick = function(e){
+        e?.preventDefault?.();
+        closeCatalog(true);
+      };
+    }
 
     function ensureMultiBar(){
       let bar = document.getElementById('catalogMultiBar');
@@ -131,7 +158,11 @@
       bar.className = 'catalog-multi-bar';
       bar.innerHTML = '<small><b>Escolha vários produtos.</b> Toque no botão azul de cada produto. O catálogo continuará aberto para você escolher o próximo.</small><span class="catalog-multi-count" id="catalogMultiCount">0 adicionados</span><button type="button" class="catalog-done-btn" id="catalogDoneBtn">Concluir</button>';
       detailView.insertBefore(bar, detailView.firstChild);
-      bar.querySelector('#catalogDoneBtn').onclick = function(){ modal.style.display = 'none'; };
+      bar.querySelector('#catalogDoneBtn').onclick = function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        closeCatalog(true);
+      };
       return bar;
     }
 
@@ -144,24 +175,30 @@
       list.querySelectorAll('button[data-id]').forEach(function(btn){
         const id = btn.dataset.id;
         if (selectedIds.has(id)) {
-          btn.disabled = true;
-          btn.textContent = '✅ Adicionado';
-          btn.classList.add('catalog-added');
+          // Só altera o DOM quando realmente mudou. Isso evita um ciclo infinito
+          // do MutationObserver ao selecionar muitos produtos.
+          if (!btn.disabled) btn.disabled = true;
+          if (btn.textContent !== '✅ Adicionado') btn.textContent = '✅ Adicionado';
+          if (!btn.classList.contains('catalog-added')) btn.classList.add('catalog-added');
         } else if (!btn.disabled) {
-          btn.textContent = '+ Adicionar';
+          if (btn.textContent !== '+ Adicionar') btn.textContent = '+ Adicionar';
+          if (btn.classList.contains('catalog-added')) btn.classList.remove('catalog-added');
         }
       });
     }
 
-    // Sempre que a lista de produtos for recriada, mantém os produtos
-    // já selecionados marcados e deixa o texto do botão mais claro.
+    let observerQueued = false;
     const observer = new MutationObserver(function(){
-      ensureMultiBar();
-      markButtons();
+      if (observerQueued) return;
+      observerQueued = true;
+      requestAnimationFrame(function(){
+        observerQueued = false;
+        ensureMultiBar();
+        markButtons();
+      });
     });
     observer.observe(list, { childList:true, subtree:true });
 
-    // Antes do clique, salva a posição e quantos produtos já existiam.
     document.addEventListener('click', function(e){
       const btn = e.target.closest('#catalogoLista button[data-id]');
       if (!btn) return;
@@ -169,8 +206,6 @@
       btn.dataset.catalogScrollTop = String(list.scrollTop);
     }, true);
 
-    // O código original adiciona o produto e fecha o catálogo.
-    // Aqui reabrimos imediatamente a mesma tela quando a adição deu certo.
     document.addEventListener('click', function(e){
       const btn = e.target.closest('#catalogoLista button[data-id]');
       if (!btn) return;
@@ -185,12 +220,12 @@
         selectedIds.add(btn.dataset.id);
         addedThisSession += (after - before);
         updateCount();
-        btn.disabled = true;
-        btn.textContent = '✅ Adicionado';
-        btn.classList.add('catalog-added');
+        if (!btn.disabled) btn.disabled = true;
+        if (btn.textContent !== '✅ Adicionado') btn.textContent = '✅ Adicionado';
+        if (!btn.classList.contains('catalog-added')) btn.classList.add('catalog-added');
 
-        // Se o limite do plano não abriu a tela de planos, continua no catálogo.
-        if (!plansOpen) {
+        // Só reabre automaticamente enquanto a sessão do catálogo estiver ativa.
+        if (!plansOpen && catalogSessionOpen && !closeRequested) {
           modal.style.display = 'flex';
           pickerView.style.display = 'none';
           detailView.style.display = 'block';
@@ -200,24 +235,40 @@
       }
     }, false);
 
-    // Quando clicar em Catálogos, destaca a aba e zera só o contador visual
-    // da nova sessão. Os itens já escolhidos nesta abertura continuam marcados.
     openCatalogBtn.addEventListener('click', function(){
+      catalogSessionOpen = true;
+      closeRequested = false;
       addedThisSession = 0;
       updateCount();
       document.querySelectorAll('.catalog-editor-tab').forEach(b => b.classList.remove('active'));
       openCatalogBtn.classList.add('active');
-      // O onclick original abre a lista de catálogos.
       setTimeout(function(){
+        if (!catalogSessionOpen || closeRequested) return;
         modal.style.display = 'flex';
         ensureMultiBar();
         markButtons();
       }, 0);
     });
 
-    document.getElementById('fecharCatalogo')?.addEventListener('click', function(){
-      openCatalogBtn.classList.remove('active');
-      document.querySelector('.catalog-editor-tab')?.classList.add('active');
+    const closeBtn = document.getElementById('fecharCatalogo');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function(){
+        closeCatalog(true);
+      }, true);
+    }
+
+    const overlay = document.querySelector('#catalogoModal .plans-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', function(){
+        closeCatalog(true);
+      }, true);
+    }
+
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && getComputedStyle(modal).display !== 'none') {
+        e.preventDefault();
+        closeCatalog(true);
+      }
     });
 
     ensureMultiBar();
