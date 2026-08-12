@@ -22,6 +22,8 @@
       }
       #pubChatToggle.seller-cta .seller-cta-icon{font-size:21px;line-height:1}
       #pubChatToggle.seller-cta .seller-cta-text{font-size:14px;line-height:1}
+      #pubMic,#pubRecStatus{display:none!important}
+      #pubInput{min-width:0!important}
       @media(max-width:390px){
         #pubChatToggle.seller-cta{min-width:156px!important;height:50px!important;padding:0 13px!important;right:10px!important;bottom:18px!important}
         #pubChatToggle.seller-cta .seller-cta-text{font-size:13px}
