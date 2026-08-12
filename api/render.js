@@ -32,11 +32,8 @@ function decodeFirestoreFields(fields) {
 }
 
 function prettySlug(slug) {
-  return String(slug || 'Loja online')
-    .split('-')
-    .filter(Boolean)
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+  return String(slug || 'Loja online').split('-').filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
 function publicHttpsImage(value) {
@@ -45,11 +42,8 @@ function publicHttpsImage(value) {
 }
 
 function chooseImage(store) {
-  const candidates = [
-    store?.shareImage,
-    store?.logo,
-    ...(Array.isArray(store?.products) ? store.products.map(p => p && p.image) : [])
-  ];
+  const candidates = [store?.shareImage, store?.logo,
+    ...(Array.isArray(store?.products) ? store.products.map(p => p && p.image) : [])];
   for (const item of candidates) {
     const url = publicHttpsImage(item);
     if (url) return url;
@@ -58,35 +52,19 @@ function chooseImage(store) {
 }
 
 async function getStoreBySlug(slug) {
-  const endpoint =
-    `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION}/${encodeURIComponent(slug)}?key=${API_KEY}`;
-  const r = await fetch(endpoint, { headers: { accept: 'application/json' } });
+  const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION}/${encodeURIComponent(slug)}?key=${API_KEY}`;
+  const r = await fetch(url, { headers: { accept: 'application/json' } });
   if (!r.ok) return null;
   const doc = await r.json();
   return decodeFirestoreFields(doc.fields || {});
 }
 
 async function getStoreByCustomDomain(host) {
-  const endpoint =
-    `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery?key=${API_KEY}`;
-  const body = {
-    structuredQuery: {
-      from: [{ collectionId: COLLECTION }],
-      where: {
-        fieldFilter: {
-          field: { fieldPath: 'customDomain' },
-          op: 'EQUAL',
-          value: { stringValue: host }
-        }
-      },
-      limit: 1
-    }
-  };
-  const r = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'application/json' },
-    body: JSON.stringify(body)
-  });
+  const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery?key=${API_KEY}`;
+  const body = { structuredQuery: { from: [{ collectionId: COLLECTION }], where: { fieldFilter: {
+    field: { fieldPath: 'customDomain' }, op: 'EQUAL', value: { stringValue: host }
+  }}, limit: 1 }};
+  const r = await fetch(url, { method:'POST', headers:{'content-type':'application/json',accept:'application/json'}, body:JSON.stringify(body) });
   if (!r.ok) return null;
   const rows = await r.json();
   const doc = Array.isArray(rows) ? rows.find(x => x.document)?.document : null;
@@ -98,13 +76,11 @@ function upsertMeta(html, attr, key, content) {
   const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = new RegExp(`<meta\\s+[^>]*${attr}=[\"']${escapedKey}[\"'][^>]*>`, 'i');
   const tag = `<meta ${attr}=\"${htmlEscape(key)}\" content=\"${safe}\">`;
-  if (re.test(html)) return html.replace(re, tag);
-  return html.replace(/<\/head>/i, `${tag}\n</head>`);
+  return re.test(html) ? html.replace(re, tag) : html.replace(/<\/head>/i, `${tag}\n</head>`);
 }
 
 function injectShareMeta(html, { title, description, image, url }) {
-  const safeTitle = htmlEscape(title);
-  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${safeTitle}</title>`);
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${htmlEscape(title)}</title>`);
   html = upsertMeta(html, 'name', 'description', description);
   html = upsertMeta(html, 'property', 'og:type', 'website');
   html = upsertMeta(html, 'property', 'og:title', title);
@@ -120,26 +96,21 @@ function injectShareMeta(html, { title, description, image, url }) {
   return html;
 }
 
-function injectEditorUpgrade(html) {
-  const tags = [];
-  if (!html.includes('catalog-editor-upgrade.js')) {
-    tags.push('<script src="/catalog-editor-upgrade.js?v=20260812-3" defer></script>');
-  }
-  if (!html.includes('store-layout-upgrade.js')) {
-    tags.push('<script src="/store-layout-upgrade.js?v=20260812-4" defer></script>');
-  }
-  if (!html.includes('marketplace-grid-fix.js')) {
-    tags.push('<script src="/marketplace-grid-fix.js?v=20260812-1" defer></script>');
-  }
-  if (!html.includes('marketplace-image-fix.js')) {
-    tags.push('<script src="/marketplace-image-fix.js?v=20260812-1" defer></script>');
-  }
-  if (!tags.length) return html;
-  const injection = tags.join('\n');
-  const lower = html.toLowerCase();
-  const index = lower.lastIndexOf('</body>');
-  if (index < 0) return html + '\n' + injection;
-  return html.slice(0, index) + injection + '\n' + html.slice(index);
+function forceScript(html, filename, version) {
+  const escaped = filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`<script\\s+src=[\"']/${escaped}(?:\\?[^\"']*)?[\"']\\s+defer><\\/script>`, 'ig');
+  html = html.replace(re, '');
+  const tag = `<script src=\"/${filename}?v=${version}\" defer></script>`;
+  const pos = html.toLowerCase().lastIndexOf('</body>');
+  return pos >= 0 ? html.slice(0,pos) + tag + '\n' + html.slice(pos) : html + '\n' + tag;
+}
+
+function injectUpgrades(html) {
+  html = forceScript(html, 'catalog-editor-upgrade.js', '20260812-5');
+  html = forceScript(html, 'store-layout-upgrade.js', '20260812-5');
+  html = forceScript(html, 'marketplace-grid-fix.js', '20260812-5');
+  html = forceScript(html, 'marketplace-image-fix.js', '20260812-5');
+  return html;
 }
 
 module.exports = async function handler(request, response) {
@@ -147,50 +118,41 @@ module.exports = async function handler(request, response) {
     const forwardedHost = request.headers['x-forwarded-host'];
     const rawHost = Array.isArray(forwardedHost) ? forwardedHost[0] : (forwardedHost || request.headers.host || '');
     const host = String(rawHost).toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '');
-
     const proto = String(request.headers['x-forwarded-proto'] || 'https').split(',')[0].trim() || 'https';
-    const staticUrl = `${proto}://${rawHost}/index.html`;
-    const staticResponse = await fetch(staticUrl, { headers: { accept: 'text/html' } });
-    let html = await staticResponse.text();
-    html = injectEditorUpgrade(html);
+
+    const staticResponse = await fetch(`${proto}://${rawHost}/index.html`, { headers:{accept:'text/html'} });
+    let html = injectUpgrades(await staticResponse.text());
 
     const isBase = host === BASE_DOMAIN || host === `www.${BASE_DOMAIN}`;
     const isVercelHost = host.endsWith('.vercel.app');
-
     if (isBase || isVercelHost || !host) {
-      response.setHeader('Content-Type', 'text/html; charset=utf-8');
-      response.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60');
+      response.setHeader('Content-Type','text/html; charset=utf-8');
+      response.setHeader('Cache-Control','public, max-age=0, s-maxage=30');
       return response.status(200).send(html);
     }
 
     let slug = '';
     let store = null;
-
     if (host.endsWith(`.${BASE_DOMAIN}`)) {
       slug = host.slice(0, -(`.${BASE_DOMAIN}`.length));
-      try { store = await getStoreBySlug(slug); } catch (e) { console.warn('OG Firestore slug lookup failed:', e); }
+      try { store = await getStoreBySlug(slug); } catch(e) { console.warn('store lookup failed',e); }
     } else {
-      try { store = await getStoreByCustomDomain(host); } catch (e) { console.warn('OG custom-domain lookup failed:', e); }
+      try { store = await getStoreByCustomDomain(host); } catch(e) { console.warn('custom domain lookup failed',e); }
     }
 
     const fallbackTitle = slug ? prettySlug(slug) : 'Loja online';
     const title = String(store?.shareTitle || store?.brand || fallbackTitle).trim() || fallbackTitle;
-    const description = String(
-      store?.shareDescription ||
-      store?.welcome ||
-      `Conheça os produtos da ${title} e fale com nosso atendimento.`
-    ).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const description = String(store?.shareDescription || store?.welcome || `Conheça os produtos da ${title} e fale com nosso atendimento.`)
+      .replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
     const image = chooseImage(store);
-    const canonicalUrl = `${proto}://${rawHost}/`;
+    html = injectShareMeta(html, { title, description, image, url:`${proto}://${rawHost}/` });
 
-    html = injectShareMeta(html, { title, description, image, url: canonicalUrl });
-
-    response.setHeader('Content-Type', 'text/html; charset=utf-8');
-    response.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+    response.setHeader('Content-Type','text/html; charset=utf-8');
+    response.setHeader('Cache-Control','public, max-age=0, s-maxage=30, stale-while-revalidate=60');
     return response.status(200).send(html);
-  } catch (error) {
-    console.error('Erro ao montar metadados da loja:', error);
-    response.setHeader('Content-Type', 'text/html; charset=utf-8');
+  } catch(error) {
+    console.error('Erro ao montar loja:', error);
+    response.setHeader('Content-Type','text/html; charset=utf-8');
     return response.status(500).send('<!doctype html><html><head><title>Loja online</title></head><body>Não foi possível abrir a loja agora.</body></html>');
   }
 };
