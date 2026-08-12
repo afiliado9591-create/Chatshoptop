@@ -113,20 +113,22 @@ function forceScript(html, filename, version) {
 }
 
 function injectUpgrades(html, storefrontMode) {
-  const version = '20260812-6';
+  const version = '20260812-7';
+  const scripts = [
+    'catalog-editor-upgrade.js',
+    'store-layout-upgrade.js',
+    'marketplace-grid-fix.js',
+    'marketplace-image-fix.js',
+    'storefront-grid-final.js'
+  ];
+  scripts.forEach(name => { html = removeScript(html, name); });
 
-  // O editor precisa do controle de escolha de layout.
-  // A loja publicada NÃO carrega store-layout-upgrade.js, porque ele possui
-  // um renderizador antigo de grade que disputava com o card final e escondia
-  // nome, descrição, preço e botão, deixando só a foto.
+  // Loja publicada: um único renderizador para evitar diferenças entre subdomínios.
   if (storefrontMode) {
-    html = removeScript(html, 'store-layout-upgrade.js');
     html = forceScript(html, 'catalog-editor-upgrade.js', version);
-    html = forceScript(html, 'marketplace-grid-fix.js', version);
-    html = forceScript(html, 'marketplace-image-fix.js', version);
+    html = forceScript(html, 'storefront-grid-final.js', version);
   } else {
-    html = removeScript(html, 'marketplace-grid-fix.js');
-    html = removeScript(html, 'marketplace-image-fix.js');
+    // Editor: mantém apenas o controle de escolha do formato.
     html = forceScript(html, 'catalog-editor-upgrade.js', version);
     html = forceScript(html, 'store-layout-upgrade.js', version);
   }
