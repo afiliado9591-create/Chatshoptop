@@ -113,14 +113,15 @@ function forceScript(html, filename, version) {
 }
 
 function injectUpgrades(html, storefrontMode, layout) {
-  const version = '20260812-14';
+  const version = '20260812-15';
   const scripts = [
     'catalog-editor-upgrade.js',
     'store-layout-upgrade.js',
     'marketplace-grid-fix.js',
     'marketplace-image-fix.js',
     'storefront-grid-final.js',
-    'storefront-grid-direct.js'
+    'storefront-grid-direct.js',
+    'admin-content-pages.js'
   ];
   scripts.forEach(name => { html = removeScript(html, name); });
 
@@ -133,6 +134,7 @@ function injectUpgrades(html, storefrontMode, layout) {
   } else {
     html = forceScript(html, 'catalog-editor-upgrade.js', version);
     html = forceScript(html, 'store-layout-upgrade.js', version);
+    html = forceScript(html, 'admin-content-pages.js', version);
   }
   return html;
 }
