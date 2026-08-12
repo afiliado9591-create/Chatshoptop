@@ -7,6 +7,41 @@
   };
 
   ready(function(){
+    // Na loja publicada, transforma a bolinha do chat em uma chamada clara de venda.
+    // O botão é criado depois que os dados da loja carregam, então observamos o DOM
+    // para aplicar a mudança assim que ele aparecer.
+    const sellerStyle = document.createElement('style');
+    sellerStyle.id = 'sellerCtaStyle';
+    sellerStyle.textContent = `
+      #pubChatToggle.seller-cta{
+        width:auto!important;min-width:168px!important;height:52px!important;
+        border-radius:999px!important;padding:0 16px!important;
+        display:flex!important;align-items:center!important;justify-content:center!important;
+        gap:8px!important;font-size:14px!important;font-weight:900!important;
+        white-space:nowrap!important;line-height:1!important;
+      }
+      #pubChatToggle.seller-cta .seller-cta-icon{font-size:21px;line-height:1}
+      #pubChatToggle.seller-cta .seller-cta-text{font-size:14px;line-height:1}
+      @media(max-width:390px){
+        #pubChatToggle.seller-cta{min-width:156px!important;height:50px!important;padding:0 13px!important;right:10px!important;bottom:18px!important}
+        #pubChatToggle.seller-cta .seller-cta-text{font-size:13px}
+      }
+    `;
+    document.head.appendChild(sellerStyle);
+
+    function upgradeSellerButton(){
+      const btn = document.getElementById('pubChatToggle');
+      if(!btn || btn.dataset.sellerCta === '1') return;
+      btn.dataset.sellerCta = '1';
+      btn.classList.add('seller-cta');
+      btn.innerHTML = '<span class="seller-cta-icon">💬</span><span class="seller-cta-text">Fale com o vendedor</span>';
+      btn.title = 'Fale com o vendedor';
+      btn.setAttribute('aria-label','Fale com o vendedor');
+    }
+    upgradeSellerButton();
+    const sellerObserver = new MutationObserver(upgradeSellerButton);
+    sellerObserver.observe(document.body, { childList:true, subtree:true });
+
     const openCatalogBtn = document.getElementById('usarCatalogoBtn');
     const modal = document.getElementById('catalogoModal');
     const detailView = document.getElementById('catalogoDetalheView');
