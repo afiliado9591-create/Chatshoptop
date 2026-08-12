@@ -122,8 +122,11 @@ function injectShareMeta(html, { title, description, image, url }) {
 
 function injectEditorUpgrade(html) {
   if (html.includes('catalog-editor-upgrade.js')) return html;
-  const tag = '<script src="/catalog-editor-upgrade.js?v=20260812-1" defer></script>';
-  return html.replace(/<\/body>/i, `${tag}\n</body>`);
+  const tag = '<script src="/catalog-editor-upgrade.js?v=20260812-2" defer></script>';
+  const lower = html.toLowerCase();
+  const index = lower.lastIndexOf('</body>');
+  if (index < 0) return html + '\n' + tag;
+  return html.slice(0, index) + tag + '\n' + html.slice(index);
 }
 
 module.exports = async function handler(request, response) {
