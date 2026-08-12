@@ -126,7 +126,10 @@ function injectEditorUpgrade(html) {
     tags.push('<script src="/catalog-editor-upgrade.js?v=20260812-3" defer></script>');
   }
   if (!html.includes('store-layout-upgrade.js')) {
-    tags.push('<script src="/store-layout-upgrade.js?v=20260812-1" defer></script>');
+    tags.push('<script src="/store-layout-upgrade.js?v=20260812-4" defer></script>');
+  }
+  if (!html.includes('marketplace-grid-fix.js')) {
+    tags.push('<script src="/marketplace-grid-fix.js?v=20260812-1" defer></script>');
   }
   if (!tags.length) return html;
   const injection = tags.join('\n');
