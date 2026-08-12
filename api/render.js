@@ -113,7 +113,7 @@ function forceScript(html, filename, version) {
 }
 
 function injectUpgrades(html, storefrontMode, layout) {
-  const version = '20260812-9';
+  const version = '20260812-10';
   const scripts = [
     'catalog-editor-upgrade.js',
     'store-layout-upgrade.js',
@@ -126,14 +126,11 @@ function injectUpgrades(html, storefrontMode, layout) {
 
   if (storefrontMode) {
     if (layout === 'grid') {
-      // Grade: um único renderizador próprio. Não carrega o sistema de página única.
       html = forceScript(html, 'storefront-grid-direct.js', version);
     } else {
-      // Página única: mantém o comportamento antigo e apenas a chamada do vendedor.
       html = forceScript(html, 'catalog-editor-upgrade.js', version);
     }
   } else {
-    // Editor: controles de catálogo e escolha do formato.
     html = forceScript(html, 'catalog-editor-upgrade.js', version);
     html = forceScript(html, 'store-layout-upgrade.js', version);
   }
@@ -147,10 +144,16 @@ function safeJsonForScript(value) {
     .replace(/&/g, '\\u0026');
 }
 
+function disableLegacyStoreAutoload(html) {
+  const marker = 'if(STOREFRONT_MODE || CUSTOM_DOMAIN_MODE) loadPublishedStore();';
+  const replacement = 'if(!window.__CHATSHOP_GRID_DIRECT_ACTIVE && (STOREFRONT_MODE || CUSTOM_DOMAIN_MODE)) loadPublishedStore();';
+  return html.includes(marker) ? html.replace(marker, replacement) : html;
+}
+
 function injectGridBootstrap(html, store) {
   if (!store || store.homeLayout !== 'grid') return html;
   const payload = safeJsonForScript(store);
-  const bootstrap = `<style id=\"chatshopGridBootstrapStyle\">html.chatshop-grid-pending body{background:#f5f5f5!important}html.chatshop-grid-pending #storefrontScreen{visibility:hidden!important}</style>\n<script id=\"chatshopGridBootstrap\">document.documentElement.classList.add('chatshop-grid-pending');window.__CHATSHOP_HOME_LAYOUT='grid';window.__CHATSHOP_STORE_DATA=${payload};</script>`;
+  const bootstrap = `<style id=\"chatshopGridBootstrapStyle\">html.chatshop-grid-pending body{background:#f5f5f5!important}html.chatshop-grid-pending #storefrontScreen{visibility:hidden!important}</style>\n<script id=\"chatshopGridBootstrap\">document.documentElement.classList.add('chatshop-grid-pending');window.__CHATSHOP_GRID_DIRECT_ACTIVE=true;window.__CHATSHOP_HOME_LAYOUT='grid';window.__CHATSHOP_STORE_DATA=${payload};</script>`;
   return html.replace(/<\/head>/i, `${bootstrap}\n</head>`);
 }
 
@@ -163,7 +166,6 @@ module.exports = async function handler(request, response) {
 
     const isBase = host === BASE_DOMAIN || host === `www.${BASE_DOMAIN}`;
     const isVercelHost = host.endsWith('.vercel.app');
-    const storefrontMode = !!host && !isBase && !isVercelHost;
 
     const staticResponse = await fetch(`${proto}://${rawHost}/index.html`, { headers:{accept:'text/html'} });
     let html = await staticResponse.text();
@@ -186,7 +188,10 @@ module.exports = async function handler(request, response) {
 
     const layout = store?.homeLayout === 'grid' ? 'grid' : 'single';
     html = injectUpgrades(html, true, layout);
-    if (layout === 'grid') html = injectGridBootstrap(html, store);
+    if (layout === 'grid') {
+      html = disableLegacyStoreAutoload(html);
+      html = injectGridBootstrap(html, store);
+    }
 
     const fallbackTitle = slug ? prettySlug(slug) : 'Loja online';
     const title = String(store?.shareTitle || store?.brand || fallbackTitle).trim() || fallbackTitle;
