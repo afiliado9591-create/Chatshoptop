@@ -96,20 +96,40 @@ function injectShareMeta(html, { title, description, image, url }) {
   return html;
 }
 
-function forceScript(html, filename, version) {
+function scriptRegex(filename) {
   const escaped = filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`<script\\s+src=[\"']/${escaped}(?:\\?[^\"']*)?[\"']\\s+defer><\\/script>`, 'ig');
-  html = html.replace(re, '');
+  return new RegExp(`<script\\s+src=[\"']/${escaped}(?:\\?[^\"']*)?[\"']\\s+defer><\\/script>`, 'ig');
+}
+
+function removeScript(html, filename) {
+  return html.replace(scriptRegex(filename), '');
+}
+
+function forceScript(html, filename, version) {
+  html = removeScript(html, filename);
   const tag = `<script src=\"/${filename}?v=${version}\" defer></script>`;
   const pos = html.toLowerCase().lastIndexOf('</body>');
   return pos >= 0 ? html.slice(0,pos) + tag + '\n' + html.slice(pos) : html + '\n' + tag;
 }
 
-function injectUpgrades(html) {
-  html = forceScript(html, 'catalog-editor-upgrade.js', '20260812-5');
-  html = forceScript(html, 'store-layout-upgrade.js', '20260812-5');
-  html = forceScript(html, 'marketplace-grid-fix.js', '20260812-5');
-  html = forceScript(html, 'marketplace-image-fix.js', '20260812-5');
+function injectUpgrades(html, storefrontMode) {
+  const version = '20260812-6';
+
+  // O editor precisa do controle de escolha de layout.
+  // A loja publicada NÃO carrega store-layout-upgrade.js, porque ele possui
+  // um renderizador antigo de grade que disputava com o card final e escondia
+  // nome, descrição, preço e botão, deixando só a foto.
+  if (storefrontMode) {
+    html = removeScript(html, 'store-layout-upgrade.js');
+    html = forceScript(html, 'catalog-editor-upgrade.js', version);
+    html = forceScript(html, 'marketplace-grid-fix.js', version);
+    html = forceScript(html, 'marketplace-image-fix.js', version);
+  } else {
+    html = removeScript(html, 'marketplace-grid-fix.js');
+    html = removeScript(html, 'marketplace-image-fix.js');
+    html = forceScript(html, 'catalog-editor-upgrade.js', version);
+    html = forceScript(html, 'store-layout-upgrade.js', version);
+  }
   return html;
 }
 
@@ -120,14 +140,16 @@ module.exports = async function handler(request, response) {
     const host = String(rawHost).toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '');
     const proto = String(request.headers['x-forwarded-proto'] || 'https').split(',')[0].trim() || 'https';
 
-    const staticResponse = await fetch(`${proto}://${rawHost}/index.html`, { headers:{accept:'text/html'} });
-    let html = injectUpgrades(await staticResponse.text());
-
     const isBase = host === BASE_DOMAIN || host === `www.${BASE_DOMAIN}`;
     const isVercelHost = host.endsWith('.vercel.app');
+    const storefrontMode = !!host && !isBase && !isVercelHost;
+
+    const staticResponse = await fetch(`${proto}://${rawHost}/index.html`, { headers:{accept:'text/html'} });
+    let html = injectUpgrades(await staticResponse.text(), storefrontMode);
+
     if (isBase || isVercelHost || !host) {
       response.setHeader('Content-Type','text/html; charset=utf-8');
-      response.setHeader('Cache-Control','public, max-age=0, s-maxage=30');
+      response.setHeader('Cache-Control','public, max-age=0, s-maxage=20');
       return response.status(200).send(html);
     }
 
@@ -148,7 +170,7 @@ module.exports = async function handler(request, response) {
     html = injectShareMeta(html, { title, description, image, url:`${proto}://${rawHost}/` });
 
     response.setHeader('Content-Type','text/html; charset=utf-8');
-    response.setHeader('Cache-Control','public, max-age=0, s-maxage=30, stale-while-revalidate=60');
+    response.setHeader('Cache-Control','public, max-age=0, s-maxage=20, stale-while-revalidate=30');
     return response.status(200).send(html);
   } catch(error) {
     console.error('Erro ao montar loja:', error);
