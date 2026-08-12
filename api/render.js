@@ -112,27 +112,46 @@ function forceScript(html, filename, version) {
   return pos >= 0 ? html.slice(0,pos) + tag + '\n' + html.slice(pos) : html + '\n' + tag;
 }
 
-function injectUpgrades(html, storefrontMode) {
-  const version = '20260812-7';
+function injectUpgrades(html, storefrontMode, layout) {
+  const version = '20260812-9';
   const scripts = [
     'catalog-editor-upgrade.js',
     'store-layout-upgrade.js',
     'marketplace-grid-fix.js',
     'marketplace-image-fix.js',
-    'storefront-grid-final.js'
+    'storefront-grid-final.js',
+    'storefront-grid-direct.js'
   ];
   scripts.forEach(name => { html = removeScript(html, name); });
 
-  // Loja publicada: um único renderizador para evitar diferenças entre subdomínios.
   if (storefrontMode) {
-    html = forceScript(html, 'catalog-editor-upgrade.js', version);
-    html = forceScript(html, 'storefront-grid-final.js', version);
+    if (layout === 'grid') {
+      // Grade: um único renderizador próprio. Não carrega o sistema de página única.
+      html = forceScript(html, 'storefront-grid-direct.js', version);
+    } else {
+      // Página única: mantém o comportamento antigo e apenas a chamada do vendedor.
+      html = forceScript(html, 'catalog-editor-upgrade.js', version);
+    }
   } else {
-    // Editor: mantém apenas o controle de escolha do formato.
+    // Editor: controles de catálogo e escolha do formato.
     html = forceScript(html, 'catalog-editor-upgrade.js', version);
     html = forceScript(html, 'store-layout-upgrade.js', version);
   }
   return html;
+}
+
+function safeJsonForScript(value) {
+  return JSON.stringify(value ?? null)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}
+
+function injectGridBootstrap(html, store) {
+  if (!store || store.homeLayout !== 'grid') return html;
+  const payload = safeJsonForScript(store);
+  const bootstrap = `<style id=\"chatshopGridBootstrapStyle\">html.chatshop-grid-pending body{background:#f5f5f5!important}html.chatshop-grid-pending #storefrontScreen{visibility:hidden!important}</style>\n<script id=\"chatshopGridBootstrap\">document.documentElement.classList.add('chatshop-grid-pending');window.__CHATSHOP_HOME_LAYOUT='grid';window.__CHATSHOP_STORE_DATA=${payload};</script>`;
+  return html.replace(/<\/head>/i, `${bootstrap}\n</head>`);
 }
 
 module.exports = async function handler(request, response) {
@@ -147,9 +166,10 @@ module.exports = async function handler(request, response) {
     const storefrontMode = !!host && !isBase && !isVercelHost;
 
     const staticResponse = await fetch(`${proto}://${rawHost}/index.html`, { headers:{accept:'text/html'} });
-    let html = injectUpgrades(await staticResponse.text(), storefrontMode);
+    let html = await staticResponse.text();
 
     if (isBase || isVercelHost || !host) {
+      html = injectUpgrades(html, false, 'editor');
       response.setHeader('Content-Type','text/html; charset=utf-8');
       response.setHeader('Cache-Control','public, max-age=0, s-maxage=20');
       return response.status(200).send(html);
@@ -164,6 +184,10 @@ module.exports = async function handler(request, response) {
       try { store = await getStoreByCustomDomain(host); } catch(e) { console.warn('custom domain lookup failed',e); }
     }
 
+    const layout = store?.homeLayout === 'grid' ? 'grid' : 'single';
+    html = injectUpgrades(html, true, layout);
+    if (layout === 'grid') html = injectGridBootstrap(html, store);
+
     const fallbackTitle = slug ? prettySlug(slug) : 'Loja online';
     const title = String(store?.shareTitle || store?.brand || fallbackTitle).trim() || fallbackTitle;
     const description = String(store?.shareDescription || store?.welcome || `Conheça os produtos da ${title} e fale com nosso atendimento.`)
@@ -172,7 +196,7 @@ module.exports = async function handler(request, response) {
     html = injectShareMeta(html, { title, description, image, url:`${proto}://${rawHost}/` });
 
     response.setHeader('Content-Type','text/html; charset=utf-8');
-    response.setHeader('Cache-Control','public, max-age=0, s-maxage=20, stale-while-revalidate=30');
+    response.setHeader('Cache-Control','public, max-age=0, s-maxage=10, stale-while-revalidate=20');
     return response.status(200).send(html);
   } catch(error) {
     console.error('Erro ao montar loja:', error);
