@@ -7,11 +7,11 @@
     },
     {
       "src": "/produto/([^/]+)/?",
-      "dest": "/api/render.js?product=$1"
+      "dest": "/api/app.js?product=$1"
     },
     {
       "src": "/",
-      "dest": "/api/render.js"
+      "dest": "/api/app.js"
     },
     {
       "handle": "filesystem"
