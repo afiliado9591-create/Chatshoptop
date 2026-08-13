@@ -6,6 +6,10 @@
       "dest": "/api/content.js?slug=$1"
     },
     {
+      "src": "/produto/([^/]+)/?",
+      "dest": "/api/render.js?product=$1"
+    },
+    {
       "src": "/",
       "dest": "/api/render.js"
     },
