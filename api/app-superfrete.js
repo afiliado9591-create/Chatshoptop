@@ -14,9 +14,11 @@ module.exports = async function handler(request, response) {
     let html = await upstream.text();
     const virtualTag = '<script src="/virtual-shipping-upgrade.js?v=20260813-1707"></script>';
     const superfreteTag = '<script src="/superfrete-upgrade.js?v=20260813-1908"></script>';
+    const virtualChatTag = '<script src="/virtual-chat-description-fix.js?v=20260813-2047"></script>';
     let inject = '';
     if (!html.includes('/virtual-shipping-upgrade.js')) inject += virtualTag + '\n';
     if (!html.includes('/superfrete-upgrade.js')) inject += superfreteTag + '\n';
+    if (!html.includes('/virtual-chat-description-fix.js')) inject += virtualChatTag + '\n';
     if (inject) {
       const pos = html.toLowerCase().lastIndexOf('</body>');
       html = pos >= 0 ? html.slice(0, pos) + inject + html.slice(pos) : html + '\n' + inject;
