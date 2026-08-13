@@ -105,3 +105,13 @@ const timer=setInterval(()=>{
 },150);
 install();
 })();
+
+/* Carrega a atualização de cupons tanto no editor quanto nas lojas publicadas. */
+(function(){
+  if(document.querySelector('script[data-chatshop-coupons]'))return;
+  const script=document.createElement('script');
+  script.src='/coupon-upgrade.js?v=20260813-2027';
+  script.defer=true;
+  script.dataset.chatshopCoupons='1';
+  document.head.appendChild(script);
+})();
