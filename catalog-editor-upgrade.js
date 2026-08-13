@@ -76,6 +76,72 @@
       }
     }catch(e){ console.warn('headerColor clear:',e); }
 
+    // Descrição completa do produto: aparece inteira na página individual.
+    function ensureProductDescriptionFields(){
+      const cards = [...document.querySelectorAll('#products .product')];
+      cards.forEach(card=>{
+        if(card.querySelector('[data-k="cardDescription"]')) return;
+        const field = document.createElement('div');
+        field.className = 'field product-page-description-field';
+        field.style.cssText = 'margin-top:10px;border:1px solid #e9d5ff;background:#faf5ff;border-radius:12px;padding:11px';
+        field.innerHTML = '<label>📝 Descrição do produto (página do produto)</label><textarea data-k="cardDescription" rows="5" maxlength="3000" placeholder="Ex: Blusa feminina em malha canelada, gola alta, toque macio, ótima para cultos, trabalho e ocasiões especiais. Informe tecido, modelagem, tamanhos, medidas, cuidados e outros detalhes."></textarea><small>Este texto aparece completo quando o cliente abre a página do produto. No catálogo de 2 colunas aparece apenas um resumo.</small>';
+        const promo = card.querySelector('[data-k="promo"]')?.closest('label');
+        if(promo) promo.insertAdjacentElement('beforebegin', field);
+        else card.appendChild(field);
+        field.querySelector('textarea').addEventListener('input', ()=>{
+          try{ if(typeof debounce === 'function') debounce(); }catch(e){}
+        });
+      });
+    }
+
+    function fillProductDescriptions(products){
+      ensureProductDescriptionFields();
+      const cards = [...document.querySelectorAll('#products .product')];
+      cards.forEach((card,i)=>{
+        const input = card.querySelector('[data-k="cardDescription"]');
+        if(input) input.value = String(products?.[i]?.cardDescription || '');
+      });
+    }
+
+    ensureProductDescriptionFields();
+    const productsRoot = document.getElementById('products');
+    if(productsRoot){
+      const descriptionObserver = new MutationObserver(()=>ensureProductDescriptionFields());
+      descriptionObserver.observe(productsRoot,{childList:true,subtree:false});
+    }
+
+    try{
+      if(typeof collect === 'function' && !collect.__productDescriptionWrapped){
+        const originalCollect = collect;
+        const wrappedCollect = function(){
+          ensureProductDescriptionFields();
+          const data = originalCollect();
+          const cards = [...document.querySelectorAll('#products .product')];
+          if(Array.isArray(data.products)){
+            data.products.forEach((p,i)=>{
+              p.cardDescription = cards[i]?.querySelector('[data-k="cardDescription"]')?.value.trim() || '';
+            });
+          }
+          return data;
+        };
+        wrappedCollect.__productDescriptionWrapped = true;
+        collect = wrappedCollect;
+      }
+    }catch(e){ console.warn('productDescription collect:',e); }
+
+    try{
+      if(typeof populateForm === 'function' && !populateForm.__productDescriptionWrapped){
+        const originalPopulateForm = populateForm;
+        const wrappedPopulateForm = async function(data){
+          const result = await originalPopulateForm(data);
+          requestAnimationFrame(()=>fillProductDescriptions(Array.isArray(data?.products) ? data.products : []));
+          return result;
+        };
+        wrappedPopulateForm.__productDescriptionWrapped = true;
+        populateForm = wrappedPopulateForm;
+      }
+    }catch(e){ console.warn('productDescription populate:',e); }
+
     // Na loja publicada, transforma a bolinha do chat em uma chamada clara de venda.
     const sellerStyle = document.createElement('style');
     sellerStyle.id = 'sellerCtaStyle';
