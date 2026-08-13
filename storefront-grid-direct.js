@@ -10,19 +10,22 @@ const link=v=>{try{const u=new URL(String(v||''),location.origin);return /^https
 const money=v=>{const s=String(v||'').trim();return !s?'Consulte':/r\$/i.test(s)?s:'R$ '+s};
 const desc=p=>{for(const v of [p?.cardDescription,p?.displayText,p?.voiceText]){const s=String(v||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();if(s)return s}return Array.isArray(p?.keywords)&&p.keywords.length?p.keywords.filter(Boolean).slice(0,5).join(' • '):'Confira os detalhes deste produto.'};
 const color=p=>/^#[0-9a-f]{6}$/i.test(String(p?.buttonColor||''))?p.buttonColor:'var(--store-buy,var(--store-main,#c2185b))';
+const headerColor=/^#[0-9a-f]{6}$/i.test(String(data.headerColor||''))?data.headerColor:'#FFFFFF';
+function headerContrast(hex){const h=String(hex||'#ffffff').replace('#','');const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);const lum=(r*299+g*587+b*114)/1000;return lum<150?{text:'#FFFFFF',sub:'rgba(255,255,255,.82)'}:{text:'#222222',sub:'#777777'}}
+const hc=headerContrast(headerColor);document.documentElement.style.setProperty('--store-header',headerColor);document.documentElement.style.setProperty('--store-header-text',hc.text);document.documentElement.style.setProperty('--store-header-sub',hc.sub);
 const cats=[];const seen=new Set();products.forEach(p=>{const c=String(p?.category||'').trim(),n=norm(c);if(c&&n&&!seen.has(n)){seen.add(n);cats.push(c)}});
 let active='',detail=-1,feed=null;
-const st=document.createElement('style');st.id='chatshopGridCleanV13';st.textContent=`
+const st=document.createElement('style');st.id='chatshopGridCleanV16';st.textContent=`
 html.chatshop-grid-pending #storefrontScreen{visibility:hidden!important}
 body.chatshop-grid-clean{margin:0!important;background:#f5f5f5!important;overflow:hidden!important}
 body.chatshop-grid-clean .promo-badge,body.chatshop-grid-clean .pub-cat-menu,body.chatshop-grid-clean .pub-swipe-hint{display:none!important}
 #chatshopGridTop{position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:85!important;background:#fff!important;border-bottom:1px solid #ececec!important;box-shadow:0 3px 12px rgba(0,0,0,.08)!important;pointer-events:auto!important}
-#chatshopGridBrand{height:62px!important;display:flex!important;align-items:center!important;gap:11px!important;padding:9px 14px!important;background:#fff!important}
+#chatshopGridBrand{height:62px!important;display:flex!important;align-items:center!important;gap:11px!important;padding:9px 14px!important;background:var(--store-header,#fff)!important}
 .cgc-logo{width:43px!important;height:43px!important;border-radius:12px!important;object-fit:cover!important;background:#f3f4f6!important;border:1px solid #ececec!important;flex:0 0 auto!important}
 .cgc-logo-fallback{width:43px!important;height:43px!important;border-radius:12px!important;display:grid!important;place-items:center!important;background:var(--store-main,#c2185b)!important;color:#fff!important;font-size:21px!important;font-weight:900!important;flex:0 0 auto!important}
 .cgc-brand-text{min-width:0!important;display:flex!important;flex-direction:column!important;gap:2px!important}
-.cgc-brand-name{font-size:17px!important;line-height:1.15!important;font-weight:900!important;color:#222!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
-.cgc-brand-sub{font-size:10px!important;line-height:1.2!important;font-weight:700!important;color:#777!important;text-transform:uppercase!important;letter-spacing:.35px!important}
+.cgc-brand-name{font-size:17px!important;line-height:1.15!important;font-weight:900!important;color:var(--store-header-text,#222)!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.cgc-brand-sub{font-size:10px!important;line-height:1.2!important;font-weight:700!important;color:var(--store-header-sub,#777)!important;text-transform:uppercase!important;letter-spacing:.35px!important}
 #chatshopGridMenu{display:flex!important;gap:8px!important;align-items:center!important;overflow-x:auto!important;overflow-y:hidden!important;padding:9px 10px 11px!important;background:#fafafa!important;border-top:1px solid #f2f2f2!important;white-space:nowrap!important;pointer-events:auto!important;scrollbar-width:none!important}
 #chatshopGridMenu::-webkit-scrollbar{display:none!important}
 .cgc-menu{flex:0 0 auto!important;border:1px solid #eee!important;border-radius:999px!important;padding:9px 15px!important;background:#fff!important;color:var(--store-cat,var(--store-main,#c2185b))!important;font-size:12px!important;font-weight:900!important;box-shadow:0 2px 6px rgba(0,0,0,.08)!important;pointer-events:auto!important}
