@@ -151,7 +151,7 @@ function forceScript(html, filename, version) {
 }
 
 function injectUpgrades(html, storefrontMode, layout) {
-  const version = '20260812-16';
+  const version = '20260813-17';
   const scripts = [
     'catalog-editor-upgrade.js',
     'store-layout-upgrade.js',
@@ -160,7 +160,8 @@ function injectUpgrades(html, storefrontMode, layout) {
     'storefront-grid-final.js',
     'storefront-grid-direct.js',
     'product-url-upgrade.js',
-    'admin-content-pages.js'
+    'admin-content-pages.js',
+    'seller-audio-admin-controls.js'
   ];
   scripts.forEach(name => { html = removeScript(html, name); });
 
@@ -168,13 +169,16 @@ function injectUpgrades(html, storefrontMode, layout) {
     if (layout === 'grid') {
       html = forceScript(html, 'storefront-grid-direct.js', version);
       html = forceScript(html, 'product-url-upgrade.js', version);
+      html = forceScript(html, 'seller-audio-admin-controls.js', version);
     } else {
       html = forceScript(html, 'catalog-editor-upgrade.js', version);
+      html = forceScript(html, 'seller-audio-admin-controls.js', version);
     }
   } else {
     html = forceScript(html, 'catalog-editor-upgrade.js', version);
     html = forceScript(html, 'store-layout-upgrade.js', version);
     html = forceScript(html, 'admin-content-pages.js', version);
+    html = forceScript(html, 'seller-audio-admin-controls.js', version);
   }
   return html;
 }
@@ -197,6 +201,22 @@ function injectGridBootstrap(html, store, productSlug='') {
   const payload = safeJsonForScript(store);
   const requested = safeJsonForScript(productSlug || '');
   const bootstrap = `<style id=\"chatshopGridBootstrapStyle\">html.chatshop-grid-pending body{background:#f5f5f5!important}html.chatshop-grid-pending #storefrontScreen{visibility:hidden!important}</style>\n<script id=\"chatshopGridBootstrap\">document.documentElement.classList.add('chatshop-grid-pending');window.__CHATSHOP_GRID_DIRECT_ACTIVE=true;window.__CHATSHOP_HOME_LAYOUT='grid';window.__CHATSHOP_STORE_DATA=${payload};window.__CHATSHOP_PRODUCT_SLUG=${requested};</script>`;
+  return html.replace(/<\/head>/i, `${bootstrap}\n</head>`);
+}
+
+function injectStoreFeatureBootstrap(html, store) {
+  if (!store) return html;
+  const products = (Array.isArray(store.products) ? store.products : []).map(p => ({
+    name: p?.name || '',
+    sellerAudioMode: p?.sellerAudioMode || 'off',
+    sellerAudioText: p?.sellerAudioText || '',
+    sellerAudioUrl: p?.sellerAudioUrl || ''
+  }));
+  const payload = safeJsonForScript({
+    adminControl: store.adminControl || {},
+    products
+  });
+  const bootstrap = `<script id=\"chatshopStoreFeatureBootstrap\">window.__CHATSHOP_STORE_FEATURE_DATA=${payload};</script>`;
   return html.replace(/<\/head>/i, `${bootstrap}\n</head>`);
 }
 
@@ -235,6 +255,7 @@ module.exports = async function handler(request, response) {
     const productIndex = requestedProductSlug ? productSlugs.indexOf(requestedProductSlug) : -1;
     const requestedProduct = productIndex >= 0 && Array.isArray(store?.products) ? store.products[productIndex] : null;
     const layout = store?.homeLayout === 'grid' ? 'grid' : 'single';
+    html = injectStoreFeatureBootstrap(html, store);
     html = injectUpgrades(html, true, layout);
     if (layout === 'grid') {
       html = disableLegacyStoreAutoload(html);
