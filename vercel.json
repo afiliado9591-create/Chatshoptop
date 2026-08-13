@@ -7,11 +7,11 @@
     },
     {
       "src": "/produto/([^/]+)/?",
-      "dest": "/api/app.js?product=$1"
+      "dest": "/api/app-superfrete.js?product=$1"
     },
     {
       "src": "/",
-      "dest": "/api/app.js"
+      "dest": "/api/app-superfrete.js"
     },
     {
       "handle": "filesystem"
