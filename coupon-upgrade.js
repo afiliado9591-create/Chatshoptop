@@ -1,0 +1,18 @@
+/* ChatShop - cupons da Loja Virtual */
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+function code(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,30)}
+function number(v){let s=String(v||'').replace(/[^0-9,.-]/g,'');if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');const n=Number(s);return Number.isFinite(n)?n:0}
+function couponRow(c={}){
+ const el=document.createElement('div');el.className='cs-coupon-row';el.style.cssText='border:1px solid #ddd6fe;background:#faf5ff;border-radius:12px;padding:10px;margin:9px 0';
+ el.innerHTML='<div style="display:flex;justify-content:space-between"><b>🎟️ Cupom</b><button type="button" class="cs-coupon-remove">Excluir</button></div><div class="grid2"><div class="field"><label>Código</label><input data-c="code" placeholder="BEMVINDO10"></div><div class="field"><label>Tipo</label><select data-c="type"><option value="percent">Percentual (%)</option><option value="fixed">Valor (R$)</option></select></div></div><div class="grid2"><div class="field"><label>Valor</label><input data-c="value" inputmode="decimal"></div><div class="field"><label>Compra mínima</label><input data-c="min" inputmode="decimal"></div></div><div class="field"><label>Status</label><select data-c="active"><option value="1">Ativo</option><option value="0">Pausado</option></select></div>';
+ el.querySelector('[data-c="code"]').value=c.code||'';el.querySelector('[data-c="type"]').value=c.type||'percent';el.querySelector('[data-c="value"]').value=c.value||'';el.querySelector('[data-c="min"]').value=c.minSubtotal||'';el.querySelector('[data-c="active"]').value=c.active===false?'0':'1';el.querySelector('.cs-coupon-remove').onclick=()=>el.remove();return el;
+}
+function read(){return $$('.cs-coupon-row').map(el=>({code:code(el.querySelector('[data-c="code"]').value),type:el.querySelector('[data-c="type"]').value==='fixed'?'fixed':'percent',value:number(el.querySelector('[data-c="value"]').value),minSubtotal:number(el.querySelector('[data-c="min"]').value),active:el.querySelector('[data-c="active"]').value!=='0'})).filter(x=>x.code&&x.value>0)}
+function fill(list){const b=$('#csCouponList');if(!b)return;b.innerHTML='';(Array.isArray(list)?list:[]).forEach(c=>b.appendChild(couponRow(c)))}
+function ensure(){if($('#csCouponSettings')||!$('#storeType'))return;const sec=document.createElement('div');sec.className='section';sec.id='csCouponSettings';sec.innerHTML='<h2>🎟️ Cupons de desconto</h2><div id="csCouponList"></div><button type="button" class="btn" id="csAddCoupon">+ Criar cupom</button><div class="notice" style="margin-top:10px">O cupom pode ser enviado no link como <b>?cupom=CODIGO</b>. Exemplo: sua-loja.alibr.com.br/?cupom=BEMVINDO10</div>';const pub=Array.from(document.querySelectorAll('.section')).find(x=>(x.querySelector('h2')?.textContent||'').includes('Publicar'));if(pub)pub.parentNode.insertBefore(sec,pub);else $('.panel')?.appendChild(sec);$('#csAddCoupon').onclick=()=>$('#csCouponList').appendChild(couponRow({active:true}))}
+function wrap(){if(typeof window.collect==='function'&&!window.collect.__coupons){const old=window.collect;const fn=function(){const d=old();d.coupons=read();return d};fn.__coupons=true;window.collect=fn}if(typeof window.populateForm==='function'&&!window.populateForm.__coupons){const old=window.populateForm;const fn=async function(d){const r=await old(d);ensure();fill(d?.coupons||[]);return r};fn.__coupons=true;window.populateForm=fn}}
+let tries=0;const timer=setInterval(()=>{tries++;if($('#storeType')){clearInterval(timer);ensure();wrap()}else if(tries>60)clearInterval(timer)},100);
+})();
