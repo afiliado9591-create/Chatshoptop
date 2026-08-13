@@ -7,6 +7,75 @@
   };
 
   ready(function(){
+    // Cor do cabeçalho do catálogo em 2 colunas.
+    function installHeaderColorControl(){
+      if(document.getElementById('headerColor')) return;
+      const categoryColor = document.getElementById('categoryColor');
+      const grid = categoryColor?.closest('.grid2');
+      if(!grid) return;
+      const field = document.createElement('div');
+      field.className = 'field';
+      field.id = 'headerColorField';
+      field.innerHTML = '<label>Cor do cabeçalho (catálogo 2 colunas)</label><input type="color" id="headerColor" value="#FFFFFF"><small>Altera somente a barra com logo e nome da loja no modo 2 colunas.</small>';
+      grid.appendChild(field);
+      const input = document.getElementById('headerColor');
+      input.addEventListener('input', ()=>{ try{ if(typeof debounce==='function') debounce(); }catch(e){} });
+
+      // As paletas prontas também passam a definir a cor do cabeçalho.
+      document.querySelectorAll('.paleta-btn').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          setTimeout(()=>{
+            const main = document.getElementById('mainColor');
+            if(main && input) input.value = main.value || '#FFFFFF';
+          },0);
+        });
+      });
+    }
+    installHeaderColorControl();
+
+    try{
+      if(typeof collect === 'function' && !collect.__headerColorWrapped){
+        const originalCollect = collect;
+        const wrappedCollect = function(){
+          const data = originalCollect();
+          data.headerColor = document.getElementById('headerColor')?.value || '#FFFFFF';
+          return data;
+        };
+        wrappedCollect.__headerColorWrapped = true;
+        collect = wrappedCollect;
+      }
+    }catch(e){ console.warn('headerColor collect:',e); }
+
+    try{
+      if(typeof populateForm === 'function' && !populateForm.__headerColorWrapped){
+        const originalPopulateForm = populateForm;
+        const wrappedPopulateForm = async function(data){
+          const result = await originalPopulateForm(data);
+          installHeaderColorControl();
+          const input = document.getElementById('headerColor');
+          if(input) input.value = /^#[0-9a-f]{6}$/i.test(String(data?.headerColor||'')) ? data.headerColor : '#FFFFFF';
+          return result;
+        };
+        wrappedPopulateForm.__headerColorWrapped = true;
+        populateForm = wrappedPopulateForm;
+      }
+    }catch(e){ console.warn('headerColor populate:',e); }
+
+    try{
+      if(typeof clearForm === 'function' && !clearForm.__headerColorWrapped){
+        const originalClearForm = clearForm;
+        const wrappedClearForm = function(){
+          const result = originalClearForm();
+          installHeaderColorControl();
+          const input = document.getElementById('headerColor');
+          if(input) input.value = '#FFFFFF';
+          return result;
+        };
+        wrappedClearForm.__headerColorWrapped = true;
+        clearForm = wrappedClearForm;
+      }
+    }catch(e){ console.warn('headerColor clear:',e); }
+
     // Na loja publicada, transforma a bolinha do chat em uma chamada clara de venda.
     const sellerStyle = document.createElement('style');
     sellerStyle.id = 'sellerCtaStyle';
@@ -129,7 +198,6 @@
       modal.style.display = 'none';
       setProductsTabActive();
 
-      // Proteção contra qualquer callback atrasado que tente reabrir o modal.
       requestAnimationFrame(function(){
         if (closeRequested) modal.style.display = 'none';
       });
@@ -175,8 +243,6 @@
       list.querySelectorAll('button[data-id]').forEach(function(btn){
         const id = btn.dataset.id;
         if (selectedIds.has(id)) {
-          // Só altera o DOM quando realmente mudou. Isso evita um ciclo infinito
-          // do MutationObserver ao selecionar muitos produtos.
           if (!btn.disabled) btn.disabled = true;
           if (btn.textContent !== '✅ Adicionado') btn.textContent = '✅ Adicionado';
           if (!btn.classList.contains('catalog-added')) btn.classList.add('catalog-added');
@@ -224,7 +290,6 @@
         if (btn.textContent !== '✅ Adicionado') btn.textContent = '✅ Adicionado';
         if (!btn.classList.contains('catalog-added')) btn.classList.add('catalog-added');
 
-        // Só reabre automaticamente enquanto a sessão do catálogo estiver ativa.
         if (!plansOpen && catalogSessionOpen && !closeRequested) {
           modal.style.display = 'flex';
           pickerView.style.display = 'none';
