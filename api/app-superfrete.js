@@ -1,15 +1,78 @@
 /* Proxy ChatShop com Loja Virtual, frete por km e SuperFrete. */
+const PROJECT_ID = 'chatshop-97ea3';
+const API_KEY = 'AIzaSyBZlCM-6l_iV_GTirvTwUumKM3ZGRvgxt8';
+const COLLECTION = 'chatshops';
+const BASE_DOMAIN = 'alibr.com.br';
+
+function normalizeHost(value) {
+  return String(value || '').split(',')[0].trim().toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '');
+}
+
+async function findSlugForCustomDomain(host) {
+  const clean = normalizeHost(host);
+  if (!clean) return '';
+  const candidates = clean.startsWith('www.')
+    ? [clean, clean.slice(4)]
+    : [clean, `www.${clean}`];
+  const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery?key=${API_KEY}`;
+
+  for (const candidate of [...new Set(candidates)]) {
+    try {
+      const body = {
+        structuredQuery: {
+          from: [{ collectionId: COLLECTION }],
+          where: {
+            fieldFilter: {
+              field: { fieldPath: 'customDomain' },
+              op: 'EQUAL',
+              value: { stringValue: candidate }
+            }
+          },
+          limit: 1
+        }
+      };
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!r.ok) continue;
+      const rows = await r.json();
+      const doc = Array.isArray(rows) ? rows.find(x => x && x.document)?.document : null;
+      if (!doc) continue;
+      const fieldSlug = doc.fields?.slug?.stringValue;
+      if (fieldSlug) return String(fieldSlug).trim();
+      const name = String(doc.name || '');
+      const fallback = name.split('/').pop();
+      if (fallback) return fallback;
+    } catch (e) {
+      console.warn('Falha ao procurar domínio próprio:', candidate, e);
+    }
+  }
+  return '';
+}
+
 module.exports = async function handler(request, response) {
   try {
     const forwardedHost = request.headers['x-forwarded-host'];
     const rawHost = Array.isArray(forwardedHost) ? forwardedHost[0] : (forwardedHost || request.headers.host || '');
+    const host = normalizeHost(rawHost);
     const proto = String(request.headers['x-forwarded-proto'] || 'https').split(',')[0].trim() || 'https';
     const query = new URLSearchParams();
     if (request.query && request.query.product) {
       const product = Array.isArray(request.query.product) ? request.query.product[0] : request.query.product;
       if (product) query.set('product', String(product));
     }
-    const target = `${proto}://${rawHost}/api/render.js${query.toString() ? '?' + query.toString() : ''}`;
+
+    let renderHost = rawHost;
+    const isAlibr = host === BASE_DOMAIN || host === `www.${BASE_DOMAIN}` || host.endsWith(`.${BASE_DOMAIN}`);
+    const isVercel = host.endsWith('.vercel.app');
+    if (host && !isAlibr && !isVercel) {
+      const customSlug = await findSlugForCustomDomain(host);
+      if (customSlug) renderHost = `${customSlug}.${BASE_DOMAIN}`;
+    }
+
+    const target = `${proto}://${renderHost}/api/render.js${query.toString() ? '?' + query.toString() : ''}`;
     const upstream = await fetch(target, { headers: { accept: 'text/html', 'x-chatshop-proxy': 'superfrete' } });
     let html = await upstream.text();
     const virtualTag = '<script src="/virtual-shipping-upgrade.js?v=20260813-1707"></script>';
@@ -20,7 +83,7 @@ module.exports = async function handler(request, response) {
     const ownerMetricsTag = '<script src="/store-owner-metrics.js?v=20260814-0500"></script>';
     const virtualCategoryMenuTag = '<script src="/virtual-category-menu.js?v=20260814-0523"></script>';
     const virtualThemeFooterTag = '<script src="/virtual-store-theme-footer.js?v=20260814-0613"></script>';
-    const customDomainChatTag = '<script src="/custom-domain-chat.js?v=20260814-0748"></script>';
+    const customDomainChatTag = '<script src="/custom-domain-chat.js?v=20260814-0754"></script>';
     let inject = '';
     if (!html.includes('/virtual-shipping-upgrade.js')) inject += virtualTag + '\n';
     if (!html.includes('/superfrete-upgrade.js')) inject += superfreteTag + '\n';
@@ -36,7 +99,7 @@ module.exports = async function handler(request, response) {
       html = pos >= 0 ? html.slice(0, pos) + inject + html.slice(pos) : html + '\n' + inject;
     }
     response.setHeader('Content-Type', 'text/html; charset=utf-8');
-    response.setHeader('Cache-Control', 'public, max-age=0, s-maxage=10, stale-while-revalidate=20');
+    response.setHeader('Cache-Control', 'public, max-age=0, s-maxage=5, stale-while-revalidate=10');
     return response.status(upstream.status || 200).send(html);
   } catch (error) {
     console.error('Erro no proxy ChatShop SuperFrete:', error);
