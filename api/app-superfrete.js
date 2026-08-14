@@ -16,7 +16,7 @@ module.exports = async function handler(request, response) {
     const superfreteTag = '<script src="/superfrete-upgrade.js?v=20260813-1908"></script>';
     const virtualChatTag = '<script src="/virtual-chat-description-fix.js?v=20260813-2102"></script>';
     const virtualScrollTag = '<script src="/virtual-scroll-fix.js?v=20260813-2147"></script>';
-    const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260813-2219"></script>';
+    const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260813-2235"></script>';
     let inject = '';
     if (!html.includes('/virtual-shipping-upgrade.js')) inject += virtualTag + '\n';
     if (!html.includes('/superfrete-upgrade.js')) inject += superfreteTag + '\n';
