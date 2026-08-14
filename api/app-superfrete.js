@@ -17,12 +17,14 @@ module.exports = async function handler(request, response) {
     const virtualChatTag = '<script src="/virtual-chat-description-fix.js?v=20260813-2102"></script>';
     const virtualScrollTag = '<script src="/virtual-scroll-fix.js?v=20260813-2147"></script>';
     const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260813-2302"></script>';
+    const ownerMetricsTag = '<script src="/store-owner-metrics.js?v=20260814-0450"></script>';
     let inject = '';
     if (!html.includes('/virtual-shipping-upgrade.js')) inject += virtualTag + '\n';
     if (!html.includes('/superfrete-upgrade.js')) inject += superfreteTag + '\n';
     if (!html.includes('/virtual-chat-description-fix.js')) inject += virtualChatTag + '\n';
     if (!html.includes('/virtual-scroll-fix.js')) inject += virtualScrollTag + '\n';
     if (!html.includes('/virtual-seller-audio.js')) inject += virtualSellerAudioTag + '\n';
+    if (!html.includes('/store-owner-metrics.js')) inject += ownerMetricsTag + '\n';
     if (inject) {
       const pos = html.toLowerCase().lastIndexOf('</body>');
       html = pos >= 0 ? html.slice(0, pos) + inject + html.slice(pos) : html + '\n' + inject;
