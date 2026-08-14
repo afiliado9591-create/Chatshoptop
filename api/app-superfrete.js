@@ -82,11 +82,10 @@ module.exports = async function handler(request, response) {
     const upstream = await fetch(target, { headers: { accept: 'text/html', 'x-chatshop-proxy': 'superfrete' } });
     let html = await upstream.text();
 
-    /* A correção precisa carregar antes do SuperFrete. Removemos versões antigas
-       desses dois scripts e recolocamos na ordem correta no fim do body. */
     html = removeScript(html, 'superfrete-domain-fix.js');
     html = removeScript(html, 'superfrete-upgrade.js');
     html = removeScript(html, 'plan-access-control.js');
+    html = removeScript(html, 'store-affiliate-program.js');
 
     const virtualTag = '<script src="/virtual-shipping-upgrade.js?v=20260813-1707"></script>';
     const superfreteDomainFixTag = '<script src="/superfrete-domain-fix.js?v=20260814-1058"></script>';
@@ -100,6 +99,7 @@ module.exports = async function handler(request, response) {
     const customDomainChatTag = '<script src="/custom-domain-chat.js?v=20260814-0754"></script>';
     const adminPublicPagesTag = '<script src="/admin-public-pages.js?v=20260814-1350"></script>';
     const planAccessTag = '<script src="/plan-access-control.js?v=20260814-1615"></script>';
+    const storeAffiliateProgramTag = '<script src="/store-affiliate-program.js?v=20260814-1640"></script>';
     let inject = '';
     if (!html.includes('/virtual-shipping-upgrade.js')) inject += virtualTag + '\n';
     inject += superfreteDomainFixTag + '\n';
@@ -113,6 +113,7 @@ module.exports = async function handler(request, response) {
     if (!html.includes('/custom-domain-chat.js')) inject += customDomainChatTag + '\n';
     if (!html.includes('/admin-public-pages.js')) inject += adminPublicPagesTag + '\n';
     inject += planAccessTag + '\n';
+    inject += storeAffiliateProgramTag + '\n';
     if (inject) {
       const pos = html.toLowerCase().lastIndexOf('</body>');
       html = pos >= 0 ? html.slice(0, pos) + inject + html.slice(pos) : html + '\n' + inject;
