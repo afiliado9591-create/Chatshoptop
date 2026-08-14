@@ -52,6 +52,12 @@ async function findSlugForCustomDomain(host) {
   return '';
 }
 
+function removeScript(html, filename) {
+  const escaped = filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`<script\\s+[^>]*src=["']/${escaped}(?:\\?[^"']*)?["'][^>]*><\\/script>`, 'ig');
+  return html.replace(re, '');
+}
+
 module.exports = async function handler(request, response) {
   try {
     const forwardedHost = request.headers['x-forwarded-host'];
@@ -75,8 +81,15 @@ module.exports = async function handler(request, response) {
     const target = `${proto}://${renderHost}/api/render.js${query.toString() ? '?' + query.toString() : ''}`;
     const upstream = await fetch(target, { headers: { accept: 'text/html', 'x-chatshop-proxy': 'superfrete' } });
     let html = await upstream.text();
+
+    /* A correção precisa carregar antes do SuperFrete. Removemos versões antigas
+       desses dois scripts e recolocamos na ordem correta no fim do body. */
+    html = removeScript(html, 'superfrete-domain-fix.js');
+    html = removeScript(html, 'superfrete-upgrade.js');
+
     const virtualTag = '<script src="/virtual-shipping-upgrade.js?v=20260813-1707"></script>';
-    const superfreteTag = '<script src="/superfrete-upgrade.js?v=20260813-1908"></script>';
+    const superfreteDomainFixTag = '<script src="/superfrete-domain-fix.js?v=20260814-1058"></script>';
+    const superfreteTag = '<script src="/superfrete-upgrade.js?v=20260814-1058"></script>';
     const virtualChatTag = '<script src="/virtual-chat-description-fix.js?v=20260813-2102"></script>';
     const virtualScrollTag = '<script src="/virtual-scroll-fix.js?v=20260813-2147"></script>';
     const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260813-2302"></script>';
@@ -86,7 +99,8 @@ module.exports = async function handler(request, response) {
     const customDomainChatTag = '<script src="/custom-domain-chat.js?v=20260814-0754"></script>';
     let inject = '';
     if (!html.includes('/virtual-shipping-upgrade.js')) inject += virtualTag + '\n';
-    if (!html.includes('/superfrete-upgrade.js')) inject += superfreteTag + '\n';
+    inject += superfreteDomainFixTag + '\n';
+    inject += superfreteTag + '\n';
     if (!html.includes('/virtual-chat-description-fix.js')) inject += virtualChatTag + '\n';
     if (!html.includes('/virtual-scroll-fix.js')) inject += virtualScrollTag + '\n';
     if (!html.includes('/virtual-seller-audio.js')) inject += virtualSellerAudioTag + '\n';
