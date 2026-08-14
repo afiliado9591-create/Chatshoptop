@@ -19,6 +19,7 @@ module.exports = async function handler(request, response) {
     const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260813-2302"></script>';
     const ownerMetricsTag = '<script src="/store-owner-metrics.js?v=20260814-0500"></script>';
     const virtualCategoryMenuTag = '<script src="/virtual-category-menu.js?v=20260814-0523"></script>';
+    const virtualThemeFooterTag = '<script src="/virtual-store-theme-footer.js?v=20260814-0613"></script>';
     let inject = '';
     if (!html.includes('/virtual-shipping-upgrade.js')) inject += virtualTag + '\n';
     if (!html.includes('/superfrete-upgrade.js')) inject += superfreteTag + '\n';
@@ -27,6 +28,7 @@ module.exports = async function handler(request, response) {
     if (!html.includes('/virtual-seller-audio.js')) inject += virtualSellerAudioTag + '\n';
     if (!html.includes('/store-owner-metrics.js')) inject += ownerMetricsTag + '\n';
     if (!html.includes('/virtual-category-menu.js')) inject += virtualCategoryMenuTag + '\n';
+    if (!html.includes('/virtual-store-theme-footer.js')) inject += virtualThemeFooterTag + '\n';
     if (inject) {
       const pos = html.toLowerCase().lastIndexOf('</body>');
       html = pos >= 0 ? html.slice(0, pos) + inject + html.slice(pos) : html + '\n' + inject;
