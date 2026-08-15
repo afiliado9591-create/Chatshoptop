@@ -2,7 +2,7 @@ const {
   platformReady,
   verifyFirebaseUser,
   loadOwnedProfessionalStore,
-} = require('./_lib');
+} = require('../../lib/mercadopago');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
