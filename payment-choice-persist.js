@@ -29,4 +29,29 @@ function tick(){bind();adjustSeller()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{installStyle();tick()});else{installStyle();tick()}
 let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(tick,40)}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
 document.addEventListener('click',e=>{if(e.target.closest('#csvBag,[data-close="cart"]'))setTimeout(adjustSeller,20)},true);
+
+/* Regrava a escolha depois da publicação, quando o slug da nova loja já existe.
+   Isso evita a loja publicada voltar para o fallback "whatsapp". */
+let pendingPaymentChoice='';
+function selectedPaymentChoice(){
+  const checked=document.querySelector('input[name="paymentMethodChoice"]:checked');
+  return ['whatsapp','mercadopago','ambos'].includes(checked?.value)?checked.value:pendingPaymentChoice;
+}
+function persistAfterPublish(){
+  const choice=selectedPaymentChoice();
+  if(!choice)return;
+  pendingPaymentChoice=choice;
+  [0,350,1000,2500,5000].forEach(delay=>setTimeout(()=>{
+    const current=selectedPaymentChoice()||pendingPaymentChoice;
+    if(current)persist(current);
+  },delay));
+}
+document.addEventListener('change',e=>{
+  const radio=e.target.closest?.('input[name="paymentMethodChoice"]');
+  if(radio?.checked)pendingPaymentChoice=radio.value;
+},true);
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('#publishBtn'))persistAfterPublish();
+},true);
+
 })();
