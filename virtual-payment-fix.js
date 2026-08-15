@@ -43,7 +43,7 @@ function cartItems(){
   }).filter(x=>x.name);
 }
 async function payMercadoPago(btn){
-  const address=$('#csvAddress')?.value?.trim()||'';const km=$('#csvKm')?.value||'';const err=$('#csvShipError');
+  const address=$('#sfAddress')?.value?.trim()||$('#csvAddress')?.value?.trim()||'';const km=$('#csvKm')?.value||'';const err=$('#sfCalcStatus')||$('#csvShipError');
   if(!address){if(err){err.style.display='block';err.textContent='Digite o endereço de entrega antes de pagar.'}else alert('Digite o endereço de entrega.');return}
   const items=cartItems();if(!items.length){alert('Sua sacola está vazia.');return}
   const old=btn.textContent;btn.disabled=true;btn.textContent='Abrindo Mercado Pago...';

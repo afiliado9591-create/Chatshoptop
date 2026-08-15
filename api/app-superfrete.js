@@ -105,7 +105,7 @@ module.exports = async function handler(request, response) {
     const storeAffiliateProgramTag = '<script src="/store-affiliate-program.js?v=20260814-1640"></script>';
     const mercadoPagoOauthTag = '<script src="/mercadopago-oauth-ui.js?v=20260814-1825"></script>';
     const paymentChoicePersistTag = '<script src="/payment-choice-persist.js?v=20260815-0930"></script>';
-    const virtualPaymentFixTag = '<script src="/virtual-payment-fix.js?v=20260815-0930"></script>';
+    const virtualPaymentFixTag = '<script src="/virtual-payment-fix.js?v=20260815-0945"></script>';
     let inject = '';
     if (!html.includes('/virtual-shipping-upgrade.js')) inject += virtualTag + '\n';
     inject += superfreteDomainFixTag + '\n';
