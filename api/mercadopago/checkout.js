@@ -1,4 +1,4 @@
-const { firestoreGet, decryptMerchantTokens, parseJsonSafe, publicStoreUrl } = require('./_lib');
+const { firestoreGet, decryptMerchantTokens, parseJsonSafe, publicStoreUrl, env } = require('./_lib');
 
 const PROJECT_ID='chatshop-97ea3';
 const FIREBASE_API_KEY='AIzaSyBZlCM-6l_iV_GTirvTwUumKM3ZGRvgxt8';
@@ -32,7 +32,8 @@ async function refreshAccessToken(vault){
   if(!vault.refreshToken) return vault;
   const exp=vault.expiresAt?Date.parse(vault.expiresAt):0;
   if(exp && exp-Date.now()>5*60*1000) return vault;
-  const body=new URLSearchParams({grant_type:'refresh_token',refresh_token:vault.refreshToken});
+  const cfg=env();
+  const body=new URLSearchParams({grant_type:'refresh_token',refresh_token:vault.refreshToken,client_id:cfg.clientId,client_secret:cfg.clientSecret});
   const r=await fetch('https://api.mercadopago.com/oauth/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded','accept':'application/json'},body:body.toString()});
   const j=await parseJsonSafe(r);
   if(!r.ok||!j.access_token) return vault;
