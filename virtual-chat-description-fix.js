@@ -203,6 +203,14 @@ function installOriginalChat(){
   }
   function reply(text){
     const query=norm(text);
+    const purchaseIntent=/como comprar|quero comprar|onde comprar|comprar (?:esse|este|essa|esta)|vou levar|adicionar (?:na|ao) (?:sacola|carrinho)|colocar (?:na|no) (?:sacola|carrinho)/.test(query);
+    if(purchaseIntent&&lastProduct){
+      const i=products.indexOf(lastProduct);activeProduct=i;
+      const name=String(lastProduct?.name||'este produto');
+      const written='Para comprar '+esc(name)+', toque em <b>Ver produto</b>. Na página você escolhe a cor e a quantidade, adiciona à sacola e finaliza o pedido.';
+      const voice='Para comprar '+name+', toque no botão Ver produto. Depois escolha a cor e a quantidade, adicione à sacola e finalize o pedido.';
+      add('bot',written+productCard(lastProduct,i),voice);return;
+    }
     const pq=productQna(text,lastProduct?products.indexOf(lastProduct):-1);
     if(pq){lastProduct=pq.p;activeProduct=pq.i;add('bot',esc(pq.answer));return}
     const g=generalQna(text);if(g){add('bot',esc(g));return}
