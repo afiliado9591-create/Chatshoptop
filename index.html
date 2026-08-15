@@ -1868,8 +1868,19 @@ function combineAffiliateLink(baseLink, param){
 }
 function normalize(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
 function debounce(){clearTimeout(debounceTimer);debounceTimer=setTimeout(renderLive,250)}
-function addProduct(p={}){productCount++;const card=document.createElement('div');card.className='product';card.dataset.upload=p.upload||p.imageData||'';card.dataset.upload2=p.upload2||'';card.dataset.upload3=p.upload3||'';card.dataset.upload4=p.upload4||'';card.dataset.catalogBaseLink=p.catalogBaseLink||'';card.innerHTML=`
-<div class="product-head"><b>Produto ${productCount}</b><button type="button" class="remove">Excluir</button></div>
+function updateProductPositions(){
+  const cards=[...document.querySelectorAll('#products .product')];
+  cards.forEach((item,index)=>{
+    const title=item.querySelector('[data-product-position]');
+    if(title)title.textContent='Produto '+(index+1)+(index<4?' · ⭐ Frente':'');
+    const up=item.querySelector('.product-move-up'),down=item.querySelector('.product-move-down');
+    if(up)up.disabled=index===0;
+    if(down)down.disabled=index===cards.length-1;
+  });
+}
+function addProduct(p={},options={}){productCount++;const card=document.createElement('div');card.className='product';card.dataset.upload=p.upload||p.imageData||'';card.dataset.upload2=p.upload2||'';card.dataset.upload3=p.upload3||'';card.dataset.upload4=p.upload4||'';card.dataset.catalogBaseLink=p.catalogBaseLink||'';card.innerHTML=`
+<div class="product-head"><b data-product-position>Produto ${productCount}</b><div style="display:flex;gap:6px;align-items:center"><button type="button" class="btn product-move-up" title="Mover para cima" style="padding:6px 9px">↑</button><button type="button" class="btn product-move-down" title="Mover para baixo" style="padding:6px 9px">↓</button><button type="button" class="remove">Excluir</button></div></div>
+<div style="font-size:11px;color:var(--muted);margin:5px 0 10px">Use ↑ e ↓ para organizar. Os quatro primeiros ficam na frente da loja.</div>
 <div class="grid2"><div class="field"><label>Nome</label><input data-k="name" value="${esc(p.name||'')}"></div><div class="field"><label>Preço</label><input data-k="price" value="${esc(p.price||'')}"></div></div>
 <div class="grid2"><div class="field"><label>Texto do botão</label><input data-k="buttonText" maxlength="40" value="${esc(p.buttonText||'Comprar agora')}" placeholder="Ex: Veja mais, Compre aqui"><small>Você pode escrever Comprar, Veja mais, Clique aqui ou outro texto.</small></div><div class="field"><label>Cor deste botão</label><input type="color" data-k="buttonColor" value="${esc(p.buttonColor||$('#buyColor').value||'#7A2E3B')}"><small>Esta cor vale somente para este produto.</small></div></div>
 ${p.catalogBaseLink ? `<div class="field affiliate-link-field" style="background:#f7f5ff;border:1px solid #e0d9f7;border-radius:8px;padding:10px">
@@ -1920,7 +1931,9 @@ function addProdQnA(qa={}){
 card.querySelector('.add-prod-qna').onclick=()=>{addProdQnA();renderLive();debounce()};
 card.querySelector('[data-k="promo"]').addEventListener('change',()=>{renderLive();debounce()});
 const tabs=card.querySelectorAll('.tab'),boxes=card.querySelectorAll('.upload-box');tabs.forEach(tab=>tab.onclick=()=>{tabs.forEach(x=>x.classList.remove('active'));boxes.forEach(x=>x.classList.remove('active'));tab.classList.add('active');card.querySelector(`[data-box="${tab.dataset.mode}"]`).classList.add('active')});
-card.querySelector('.remove').onclick=()=>{card.remove();renderLive();atualizarAvisoLimite()};
+card.querySelector('.remove').onclick=()=>{card.remove();updateProductPositions();renderLive();atualizarAvisoLimite()};
+card.querySelector('.product-move-up').onclick=()=>{const prev=card.previousElementSibling;if(prev){productsEl.insertBefore(card,prev);updateProductPositions();renderLive();debounce()}};
+card.querySelector('.product-move-down').onclick=()=>{const next=card.nextElementSibling;if(next){productsEl.insertBefore(next,card);updateProductPositions();renderLive();debounce()}};
 card.querySelectorAll('input:not([type=file]):not([data-k="promo"]):not(.pq-question)').forEach(i=>i.addEventListener('input',()=>{refreshImage(card);debounce()}));
 card.querySelectorAll('textarea[data-k]').forEach(i=>i.addEventListener('input',()=>{renderLive();debounce()}));
 const affInput = card.querySelector('[data-k="affiliateParam"]');
@@ -1928,7 +1941,9 @@ if(affInput){ affInput.addEventListener('input',()=>{ const preview = card.query
 card.querySelector('[data-k="file"]').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;if(f.size>2.5*1024*1024){toast('Use uma imagem menor que 2,5 MB');e.target.value='';return}const r=new FileReader();r.onload=()=>{card.dataset.upload=r.result;refreshImage(card);renderLive()};r.readAsDataURL(f)});
 card.querySelectorAll('[data-extra-file]').forEach(inp=>inp.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;if(f.size>2.5*1024*1024){toast('Use uma imagem menor que 2,5 MB');e.target.value='';return}const slot=e.target.dataset.extraFile;const r=new FileReader();r.onload=()=>{card.dataset['upload'+slot]=r.result;refreshExtraImage(card,slot);renderLive()};r.readAsDataURL(f)}));
 card.querySelectorAll('[data-k="imageUrl2"],[data-k="imageUrl3"],[data-k="imageUrl4"]').forEach(inp=>inp.addEventListener('input',()=>{const slot=inp.dataset.k.slice(-1);refreshExtraImage(card,slot)}));
-productsEl.appendChild(card);refreshImage(card);['2','3','4'].forEach(slot=>refreshExtraImage(card,slot));updateStoreTypeUI()}
+if(options.prepend&&productsEl.firstElementChild)productsEl.insertBefore(card,productsEl.firstElementChild);else productsEl.appendChild(card);
+updateProductPositions();refreshImage(card);['2','3','4'].forEach(slot=>refreshExtraImage(card,slot));updateStoreTypeUI();
+if(options.focus){requestAnimationFrame(()=>{card.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>card.querySelector('[data-k="name"]')?.focus(),350)})}}
 function refreshImage(card){const img=card.dataset.upload||card.querySelector('[data-k="imageUrl"]').value.trim();const box=card.querySelector('.image-preview');box.innerHTML='';if(!img){box.innerHTML='<span>Nenhuma imagem selecionada</span>';return}const im=document.createElement('img');im.src=img;im.alt='Prévia';im.onerror=()=>box.innerHTML='<span>Não foi possível abrir a imagem</span>';box.appendChild(im)}
 function refreshExtraImage(card,slot){const input=card.querySelector(`[data-k="imageUrl${slot}"]`);const img=card.dataset['upload'+slot]||(input?input.value.trim():'');const box=card.querySelector(`[data-preview-slot="${slot}"]`);if(!box)return;box.innerHTML='';if(!img){box.innerHTML='<span>Nenhuma imagem '+slot+'</span>';return}const im=document.createElement('img');im.src=img;im.alt='Prévia '+slot;im.onerror=()=>box.innerHTML='<span>Não foi possível abrir a imagem</span>';box.appendChild(im)}
 (function(){
@@ -2002,7 +2017,7 @@ function save(){try{localStorage.setItem('chatshop-v4',JSON.stringify(collect())
 $('#addProduct').onclick=()=>{
   const atual = document.querySelectorAll('#products .product').length;
   if(atual >= myProductLimit){ abrirPlanos(); return; }
-  addProduct();renderLive();atualizarAvisoLimite();
+  addProduct({}, {prepend:true,focus:true});renderLive();atualizarAvisoLimite();
 };
 let catalogoAtualId = null, catalogoAtualNome = '', catalogoAtualLink = '';
 async function abrirCatalogoGeral(){
@@ -2065,7 +2080,7 @@ async function abrirCatalogoDetalhe(catalogoId, catalogoNome, linkAfiliacao){
         const atual = document.querySelectorAll('#products .product').length;
         if(atual >= myProductLimit){ $('#catalogoModal').style.display='none'; abrirPlanos(); return; }
         const meuParam = myCatalogAffiliateParams[catalogoId] || '';
-        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', catalogBaseLink:p.baseLink||'', affiliateParam:meuParam, qna:p.qna||[], buttonText:p.buttonText||'Comprar agora', buttonColor:p.buttonColor||'#7A2E3B', displayText:p.displayText||'', voiceText:p.voiceText||'' });
+        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', catalogBaseLink:p.baseLink||'', affiliateParam:meuParam, qna:p.qna||[], buttonText:p.buttonText||'Comprar agora', buttonColor:p.buttonColor||'#7A2E3B', displayText:p.displayText||'', voiceText:p.voiceText||'' }, {prepend:true,focus:true});
         renderLive(); atualizarAvisoLimite();
         $('#catalogoModal').style.display='none';
         toast(meuParam ? 'Produto adicionado com seu link de afiliado!' : 'Produto adicionado! Configure seu parâmetro de afiliado neste catálogo.');
