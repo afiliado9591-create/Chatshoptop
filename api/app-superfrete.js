@@ -103,7 +103,7 @@ module.exports = async function handler(request, response) {
     const storePagesTag = '<script src="/store-pages-ui.js?v=20260815-1315"></script>';
     const adminPublicPagesTag = '<script src="/admin-public-pages.js?v=20260814-1350"></script>';
     const planAccessTag = '<script src="/plan-access-control.js?v=20260814-1615"></script>';
-    const storeAffiliateProgramTag = '<script src="/store-affiliate-program.js?v=20260815-1525"></script>';
+    const storeAffiliateProgramTag = '<script src="/store-affiliate-program.js?v=20260815-1745"></script>';
     const mercadoPagoOauthTag = '<script src="/mercadopago-oauth-ui.js?v=20260814-1825"></script>';
     const paymentChoicePersistTag = '<script src="/payment-choice-persist.js?v=20260815-0930"></script>';
     const virtualPaymentFixTag = '<script src="/virtual-payment-fix.js?v=20260815-1525"></script>';
