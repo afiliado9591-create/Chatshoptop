@@ -100,6 +100,7 @@ module.exports = async function handler(request, response) {
     const virtualCategoryMenuTag = '<script src="/virtual-category-menu.js?v=20260814-0523"></script>';
     const virtualThemeFooterTag = '<script src="/virtual-store-theme-footer.js?v=20260814-0613"></script>';
     const customDomainChatTag = '<script src="/custom-domain-chat.js?v=20260815-0955"></script>';
+    const storePagesTag = '<script src="/store-pages-ui.js?v=20260815-1315"></script>';
     const adminPublicPagesTag = '<script src="/admin-public-pages.js?v=20260814-1350"></script>';
     const planAccessTag = '<script src="/plan-access-control.js?v=20260814-1615"></script>';
     const storeAffiliateProgramTag = '<script src="/store-affiliate-program.js?v=20260814-1640"></script>';
@@ -117,6 +118,7 @@ module.exports = async function handler(request, response) {
     if (!html.includes('/virtual-category-menu.js')) inject += virtualCategoryMenuTag + '\n';
     if (!html.includes('/virtual-store-theme-footer.js')) inject += virtualThemeFooterTag + '\n';
     if (!html.includes('/custom-domain-chat.js')) inject += customDomainChatTag + '\n';
+    if (!html.includes('/store-pages-ui.js')) inject += storePagesTag + '\n';
     if (!html.includes('/admin-public-pages.js')) inject += adminPublicPagesTag + '\n';
     inject += planAccessTag + '\n';
     inject += storeAffiliateProgramTag + '\n';
