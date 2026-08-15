@@ -1,4 +1,4 @@
-const { firestoreGet, parseJsonSafe } = require('./_lib');
+const { firestoreGet, parseJsonSafe } = require('../../lib/mercadopago');
 
 const PROJECT_ID = 'chatshop-97ea3';
 const FIREBASE_API_KEY = 'AIzaSyBZlCM-6l_iV_GTirvTwUumKM3ZGRvgxt8';
