@@ -387,7 +387,7 @@ function renderPaletas(){
     };
   });
 }
-const PLANO_MINIMO_AFILIADO = 'basico'; // plano mínimo pra poder virar afiliado do ChatShop
+const PLANO_MINIMO_AFILIADO = 'profissional'; // gerador de link exclusivo do plano Profissional
 const PERCENTUAL_COMISSAO = 0.5; // 50% de comissão recorrente por indicado pagante
 function calcularComissao(planoKey){
   const p = PLANOS[planoKey];
@@ -694,7 +694,7 @@ $('#fecharTutoriais').onclick = ()=>{ $('#tutoriaisModal').style.display='none';
 document.querySelector('#tutoriaisModal .plans-overlay')?.addEventListener('click', ()=>{ $('#tutoriaisModal').style.display='none'; $('#tutorialFrame').src=''; });
 
 /* ============================================================
-   AFILIADO DO CHATSHOP — quem assina o plano básico (ou maior)
+   AFILIADO DO CHATSHOP — somente o plano Profissional
    pode gerar um link próprio para indicar novos assinantes.
    IMPORTANTE: aqui só geramos e mostramos o link + guardamos quem
    indicou quem (campo "referredBy" no cadastro). O crédito automático
@@ -712,7 +712,7 @@ async function abrirAfiliado(){
   $('#afiliadoModal').style.display='flex';
   const planAtual = PLANOS[myPlan] || PLANOS.aprendiz;
   const planMinimo = PLANOS[PLANO_MINIMO_AFILIADO];
-  const temPlanoValido = myPlan !== 'aprendiz';
+  const temPlanoValido = myPlan === 'profissional';
 
   if(!temPlanoValido){
     box.innerHTML = `
