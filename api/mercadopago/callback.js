@@ -7,7 +7,7 @@ const {
   pkceVerifier,
   firestoreGet,
   parseJsonSafe,
-} = require('./_lib');
+} = require('../../lib/mercadopago');
 
 function esc(value) {
   return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
