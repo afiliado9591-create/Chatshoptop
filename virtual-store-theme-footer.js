@@ -42,6 +42,9 @@ function installStyle(){
   .vst-footer-logo img{width:100%;height:100%;object-fit:cover}
   .vst-footer-brand{font-size:20px;line-height:1.15;font-weight:900;letter-spacing:.15px}
   .vst-footer-sub{font-size:12px;font-weight:700;opacity:.86}
+  .vst-footer-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin:7px 0 4px}
+  .vst-footer-links a{color:inherit!important;text-decoration:underline!important;text-underline-offset:3px;font-size:13px;font-weight:800;opacity:.96}
+  .vst-footer-links a:hover,.vst-footer-links a:focus{opacity:.76}
   .vst-footer-line{width:min(86%,420px);height:1px;background:currentColor;opacity:.22;margin:8px 0 2px}
   .vst-footer-note{font-size:11px;opacity:.72;line-height:1.45}
   @media(max-width:520px){.csv-head,.vs-head{padding:9px 10px!important;gap:8px!important}.csv-title b,.vs-head-title b{font-size:16px!important}.csv-bag,.vs-bag{padding:9px 11px!important;font-size:12px!important}.vst-footer{margin-top:18px;padding:28px 14px 92px}.vst-footer-brand{font-size:18px}}
@@ -49,8 +52,16 @@ function installStyle(){
   document.head.appendChild(s);
 }
 
+function affiliateFooterLink(){
+  const plan=String(data.plan||data.planId||data.subscriptionPlan||'').toLowerCase();
+  const professional=['profissional','professional','pro','premium'].includes(plan);
+  const enabled=Boolean(data.affiliateProgram&&data.affiliateProgram.enabled);
+  return professional&&enabled?'<a href="/afiliados">Ganhe dinheiro com esta loja</a>':'';
+}
+
 function footerHtml(){
-  return `<footer class="vst-footer"><div class="vst-footer-inner"><div class="vst-footer-logo">${logo?`<img src="${esc(logo)}" alt="${esc(brand)}">`:esc(brand.charAt(0).toUpperCase())}</div><div class="vst-footer-brand">${esc(brand)}</div><div class="vst-footer-sub">Loja virtual · Atendimento online</div><div class="vst-footer-line"></div><div class="vst-footer-note">Compre seus produtos com praticidade pelo ChatShop.</div></div></footer>`;
+  const affiliateLink=affiliateFooterLink();
+  return `<footer class="vst-footer"><div class="vst-footer-inner"><div class="vst-footer-logo">${logo?`<img src="${esc(logo)}" alt="${esc(brand)}">`:esc(brand.charAt(0).toUpperCase())}</div><div class="vst-footer-brand">${esc(brand)}</div><div class="vst-footer-sub">Loja virtual · Atendimento online</div><nav class="vst-footer-links" aria-label="Informações da loja"><a href="/quem-somos">Quem somos</a><a href="/politica-de-privacidade">Política de privacidade</a>${affiliateLink}</nav><div class="vst-footer-line"></div><div class="vst-footer-note">Compre seus produtos com praticidade pelo ChatShop.</div></div></footer>`;
 }
 
 function install(){
