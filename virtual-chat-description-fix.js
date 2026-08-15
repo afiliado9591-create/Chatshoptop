@@ -131,7 +131,7 @@ function installOriginalChat(){
     </div>`);
 
   const overlay=$('#pubChatOverlay'),messages=$('#pubMessages'),input=$('#pubInput');
-  let lastProduct=null,conversationMode=false,conversationSpeaking=false,conversationRestartTimer=null,pubRecognition=null,pubListening=false;
+  let lastProduct=null,conversationMode=false,conversationSpeaking=false,conversationRestartTimer=null,conversationSpeechTimer=null,pubRecognition=null,pubListening=false;
 
   function productWrittenText(p){return String(p?.displayText||p?.cardDescription||'').trim()}
   function productVoiceText(p){return String(p?.voiceText||`${p?.name||'Produto'}, ${money(p?.price)}.`).trim()}
@@ -148,11 +148,21 @@ function installOriginalChat(){
   }
   function speak(text){
     try{
-      clearTimeout(conversationRestartTimer);conversationSpeaking=true;
+      clearTimeout(conversationRestartTimer);clearTimeout(conversationSpeechTimer);conversationSpeaking=true;
       if(pubListening&&pubRecognition){try{pubRecognition.stop()}catch(e){}}
       speechSynthesis.cancel();
-      const u=new SpeechSynthesisUtterance(String(text));u.lang='pt-BR';
-      const finish=()=>{conversationSpeaking=false;if(conversationMode)scheduleConversationListen(350)};u.onend=finish;u.onerror=finish;speechSynthesis.speak(u);
+      const parts=String(text).split('[[pausa]]').map(x=>x.trim()).filter(Boolean);
+      let partIndex=0,finished=false;
+      const finish=()=>{if(finished)return;finished=true;conversationSpeaking=false;if(conversationMode)scheduleConversationListen(450)};
+      const next=()=>{
+        if(partIndex>=parts.length){finish();return}
+        const u=new SpeechSynthesisUtterance(parts[partIndex++]);
+        u.lang='pt-BR';u.rate=.88;u.pitch=1;
+        u.onend=()=>{conversationSpeechTimer=setTimeout(next,650)};
+        u.onerror=finish;
+        speechSynthesis.speak(u);
+      };
+      if(parts.length)next();else finish();
     }catch(e){conversationSpeaking=false;if(conversationMode)scheduleConversationListen(400)}
   }
   function add(who,html,voiceText=''){
@@ -166,15 +176,30 @@ function installOriginalChat(){
     if(who==='bot'&&conversationMode&&spoken)setTimeout(()=>speak(spoken),120);
   }
   function showLeadForm(){add('bot','Deixe seu WhatsApp e a loja pode entrar em contato com você:<div class="lead-form"><input class="lead-input" inputmode="tel" placeholder="DDD + número"><button type="button" class="lead-submit">Enviar</button></div>')}
+  function catalogVoiceText(list){
+    const shown=list.slice(0,12);
+    const parts=['Vou apresentar nosso catálogo, produto por produto.'];
+    shown.forEach((p,i)=>{
+      parts.push(i===0?'Primeiro produto.':'Temos também.');
+      parts.push(String(p?.name||'Produto')+'.');
+      const description=String(p?.voiceText||p?.cardDescription||p?.displayText||'').trim();
+      if(description)parts.push(description);
+      parts.push('O valor é '+money(p?.price)+'.');
+      parts.push('Para comprar, toque no botão Ver produto.');
+    });
+    if(list.length>shown.length)parts.push('Há mais produtos disponíveis. Você pode continuar navegando pelo catálogo.');
+    return parts.join(' [[pausa]] ');
+  }
   function showAllProducts(){
     if(!products.length){add('bot','Nenhum produto cadastrado ainda.');return}
-    add('bot','Veja os produtos disponíveis:'+products.slice(0,12).map(productResultHtml).join(''));
+    const shown=products.slice(0,12);
+    add('bot','Veja os produtos disponíveis:'+shown.map(productResultHtml).join(''),catalogVoiceText(products));
   }
   function showCategory(cat,skipEcho=false){
     if(!skipEcho)add('user',esc(cat));
     const list=products.filter(p=>sameCategory(p.category,cat));
     if(!list.length){add('bot','Não encontrei produtos nessa categoria.');return}
-    add('bot','Aqui estão as opções de '+esc(cat)+':'+list.map(productResultHtml).join(''));
+    add('bot','Aqui estão as opções de '+esc(cat)+':'+list.map(productResultHtml).join(''),catalogVoiceText(list));
   }
   function reply(text){
     const query=norm(text);
@@ -183,6 +208,7 @@ function installOriginalChat(){
     const g=generalQna(text);if(g){add('bot',esc(g));return}
     const cat=categories().find(c=>{const cn=norm(c);return query.includes(cn)||cn.includes(query)||query.includes(cn.replace(/s$/,''))});
     if(cat){showCategory(cat,true);return}
+    if(/catalogo|ver todos|todos os produtos|mostrar produtos|quais produtos|produtos disponiveis/.test(query)){showAllProducts();return}
     const found=matchProduct(text);
     if(found){lastProduct=found.p;activeProduct=found.i;const written=productWrittenText(found.p);add('bot',(written?esc(written):'Encontrei este produto para você:')+productCard(found.p,found.i),productVoiceText(found.p));return}
     if(/oi|ola|bom dia|boa tarde|boa noite/.test(query)){add('bot',esc(store.welcome||'Olá! Como posso ajudar?'));return}
