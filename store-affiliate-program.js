@@ -110,6 +110,36 @@ async function openAffiliateList(slug,base){
     list.innerHTML=cards+rows.map(a=>{const link=base+'/?ref='+encodeURIComponent(a.affiliateCode||''),conversion=a.clicks?((a.orders/a.clicks)*100).toFixed(1).replace('.',','):'0';return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:9px 0"><b>${safe(a.affiliateName||'Afiliado')}</b><div style="font-size:12px;color:#6b7280">${safe(a.affiliateEmail||'')} · ${safe(a.affiliateWhatsapp||'')}</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:9px 0;font-size:12px"><span>👆 Cliques: <b>${a.clicks}</b></span><span>🛒 Pedidos: <b>${a.orders}</b></span><span>📈 Conversão: <b>${conversion}%</b></span><span>💰 Comissão estimada: <b>${brl(a.value*rate/100)}</b></span></div><div style="font-size:11px;word-break:break-all">${safe(link)}</div></div>`}).join('');
   }catch(e){console.error(e);list.innerHTML='<p style="color:#b91c1c">Não foi possível carregar as métricas. Verifique as permissões do Firestore.</p>'}
 }
+function adminAccess(){try{return typeof isAdmin!=='undefined'&&isAdmin===true}catch(e){return false}}
+async function renderAdminAffiliateMetrics(){
+  const box=$('#adminConteudo'),d=getDb();if(!box||!d||!adminAccess())return;
+  box.innerHTML='<p class="empty-hint">Carregando métricas de afiliados de todas as lojas...</p>';
+  try{
+    const storesSnap=await d.collection('chatshops').get();
+    const stores=storesSnap.docs.map(doc=>({slug:doc.id,...(doc.data()||{})})).filter(s=>s.planTier==='profissional'&&s.affiliateProgram?.enabled===true);
+    const summaries=await Promise.all(stores.map(async s=>{
+      const [leads,metrics]=await Promise.all([
+        d.collection('chatshops').doc(s.slug).collection('leads').get(),
+        d.collection('chatshops').doc(s.slug).collection('affiliateMetrics').get()
+      ]);
+      const affiliates=leads.docs.filter(x=>x.data()?.type==='affiliate_application').length;
+      let clicks=0,orders=0,value=0;metrics.docs.forEach(x=>{const m=x.data()||{};clicks+=Number(m.clickCount||0);orders+=Number(m.orderCount||0);value+=Number(m.orderValue||0)});
+      const rate=Math.max(0,Math.min(100,Number(s.affiliateProgram?.commissionPercent||0)));
+      return {...s,affiliates,clicks,orders,value,rate,commission:value*rate/100};
+    }));
+    summaries.sort((a,b)=>b.orders-a.orders||b.clicks-a.clicks);
+    const totals=summaries.reduce((t,s)=>({affiliates:t.affiliates+s.affiliates,clicks:t.clicks+s.clicks,orders:t.orders+s.orders,value:t.value+s.value,commission:t.commission+s.commission}),{affiliates:0,clicks:0,orders:0,value:0,commission:0});
+    const cards=`<div style="font-weight:900;margin-bottom:10px">🤝 Afiliados das lojas</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:14px"><div style="padding:11px;border-radius:10px;background:#f3f4f6"><small>Lojas com programa</small><b style="display:block;font-size:21px">${summaries.length}</b></div><div style="padding:11px;border-radius:10px;background:#f5f3ff"><small>Afiliados cadastrados</small><b style="display:block;font-size:21px">${totals.affiliates}</b></div><div style="padding:11px;border-radius:10px;background:#eff6ff"><small>Cliques totais</small><b style="display:block;font-size:21px">${totals.clicks}</b></div><div style="padding:11px;border-radius:10px;background:#ecfdf5"><small>Pedidos atribuídos</small><b style="display:block;font-size:21px">${totals.orders}</b></div><div style="padding:11px;border-radius:10px;background:#fff7ed"><small>Valor atribuído</small><b style="display:block;font-size:17px">${brl(totals.value)}</b></div><div style="padding:11px;border-radius:10px;background:#fef2f2"><small>Comissão estimada</small><b style="display:block;font-size:17px">${brl(totals.commission)}</b></div></div><p style="font-size:11px;color:#6b7280">Os pedidos precisam ser confirmados pelo lojista antes do pagamento das comissões.</p>`;
+    if(!summaries.length){box.innerHTML=cards+'<p class="empty-hint">Nenhuma loja está com o programa de afiliados ativado.</p>';return}
+    box.innerHTML=cards+summaries.map(s=>{const conversion=s.clicks?((s.orders/s.clicks)*100).toFixed(1).replace('.',','):'0',base=publicBase(s.slug,s);return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:9px 0"><div style="display:flex;justify-content:space-between;gap:8px;align-items:start"><div><b>${safe(s.brand||s.slug)}</b><div style="font-size:11px;color:#6b7280">${safe(s.slug)} · comissão configurada: ${s.rate}%</div></div><button type="button" class="som-btn admin-store-affiliate-detail" data-slug="${safe(s.slug)}">Ver afiliados</button></div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:9px;font-size:12px"><span>👥 Afiliados: <b>${s.affiliates}</b></span><span>👆 Cliques: <b>${s.clicks}</b></span><span>🛒 Pedidos: <b>${s.orders}</b></span><span>📈 Conversão: <b>${conversion}%</b></span><span>💵 Valor: <b>${brl(s.value)}</b></span><span>💰 Comissão: <b>${brl(s.commission)}</b></span></div></div>`}).join('');
+    box.querySelectorAll('.admin-store-affiliate-detail').forEach(btn=>{btn.onclick=()=>{const s=summaries.find(x=>x.slug===btn.dataset.slug);if(s)openAffiliateList(s.slug,publicBase(s.slug,s))}});
+  }catch(e){console.error(e);box.innerHTML='<p class="empty-hint" style="color:#b91c1c">Não foi possível carregar as métricas dos afiliados.<br><small>'+safe(e.message||String(e))+'</small></p>'}
+}
+function installAdminAffiliateMetrics(){
+  const metric=$('#adminTabMetricas');if(!metric||$('#adminTabAfiliadosLojas'))return;
+  const b=document.createElement('button');b.className='btn';b.id='adminTabAfiliadosLojas';b.type='button';b.textContent='🤝 Afiliados das lojas';b.onclick=renderAdminAffiliateMetrics;metric.insertAdjacentElement('afterend',b);
+}
+
 async function decorateDashboard(){
   if(!$('#storeGrid')||typeof db==='undefined'||!db)return;
   for(const card of document.querySelectorAll('#storeGrid .storecard')){
@@ -119,6 +149,6 @@ async function decorateDashboard(){
   }
 }
 function mentionInPlans(){document.querySelectorAll('#plansCols .plan-card').forEach(c=>{if(String(c.querySelector('h3')?.textContent||'').includes('Profissional')&&!String(c.textContent).includes('Programa de afiliados')){const lim=c.querySelector('.lim');if(lim)lim.insertAdjacentHTML('beforeend','<br>✅ Programa de afiliados por loja')}})}
-function install(){ensureEditor();wrapCollect();wrapPopulate();wrapClear();updateAccess();decorateDashboard();referralTracking();installReferralMetrics();mentionInPlans();const body=document.body;if(body&&!body.dataset.affProgramObs){body.dataset.affProgramObs='1';let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>{ensureEditor();wrapCollect();wrapPopulate();wrapClear();updateAccess();decorateDashboard();referralTracking();mentionInPlans()},120)}).observe(body,{childList:true,subtree:true})}}
+function install(){ensureEditor();wrapCollect();wrapPopulate();wrapClear();updateAccess();decorateDashboard();referralTracking();installReferralMetrics();installAdminAffiliateMetrics();mentionInPlans();const body=document.body;if(body&&!body.dataset.affProgramObs){body.dataset.affProgramObs='1';let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>{ensureEditor();wrapCollect();wrapPopulate();wrapClear();updateAccess();decorateDashboard();referralTracking();mentionInPlans()},120)}).observe(body,{childList:true,subtree:true})}}
 let n=0;(function wait(){n++;if(document.body){install();return}if(n<80)setTimeout(wait,100)})();
 })();
