@@ -35,8 +35,9 @@ function fixDescription(){
     if(price.nextElementSibling!==box)price.insertAdjacentElement('afterend',box);
   }
 }
+function numericPrice(v){let s=String(v??'').replace(/[^0-9,.-]/g,'');if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');const n=Number(s);return Number.isFinite(n)?n:0}
 function cartItems(){
-  return $$('.csv-item').map(row=>{
+  return $('.csv-item').map(row=>{
     const name=$('b',row)?.textContent?.trim()||'';const detail=$('small',row)?.textContent||'';
     const q=detail.match(/Qtd:\s*(\d+)/i);const c=detail.match(/Cor:\s*([^·]+?)(?:\s*·|$)/i);
     return {name,qty:q?Number(q[1]):1,color:c?c[1].trim():''};
@@ -46,10 +47,13 @@ async function payMercadoPago(btn){
   const address=$('#sfAddress')?.value?.trim()||$('#csvAddress')?.value?.trim()||'';const km=$('#csvKm')?.value||'';const err=$('#sfCalcStatus')||$('#csvShipError');
   if(!address){if(err){err.style.display='block';err.textContent='Digite o endereço de entrega antes de pagar.'}else alert('Digite o endereço de entrega.');return}
   const items=cartItems();if(!items.length){alert('Sua sacola está vazia.');return}
+  const affiliateRef=String(window.__CHATSHOP_AFFILIATE_REF||'').trim();
+  const attributedValue=items.reduce((sum,item)=>{const p=(cfg?.products||[]).find(x=>String(x?.name||'').trim()===item.name);return sum+numericPrice(p?.price)*item.qty},0);
   const old=btn.textContent;btn.disabled=true;btn.textContent='Abrindo Mercado Pago...';
   try{
-    const r=await fetch('/api/mercadopago/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({slug:cfg?.slug||'',host:host(),items,address,km})});
+    const r=await fetch('/api/mercadopago/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({slug:cfg?.slug||'',host:host(),items,address,km,affiliateRef})});
     const j=await r.json();if(!r.ok||!j.checkoutUrl)throw new Error(j.message||'Não foi possível abrir o Mercado Pago.');
+    window.dispatchEvent(new CustomEvent('chatshop:mercadopago-checkout',{detail:{affiliateRef,value:attributedValue}}));
     location.href=j.checkoutUrl;
   }catch(e){console.error(e);alert(e.message||'Não foi possível iniciar o pagamento.');btn.disabled=false;btn.textContent=old}
 }

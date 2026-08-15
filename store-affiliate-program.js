@@ -10,6 +10,9 @@ function publicBase(slug,data){
   const custom=String(data?.customDomain||$('#customDomain')?.value||'').trim().replace(/^https?:\/\//,'').replace(/\/$/,'');
   return custom?'https://'+custom:'https://'+slug+'.alibr.com.br';
 }
+function getDb(){try{return (typeof db!=='undefined'&&db)||window.firebase?.firestore?.()||null}catch(e){return null}}
+function fv(){try{return window.firebase?.firestore?.FieldValue||firebase.firestore.FieldValue}catch(e){return null}}
+function brl(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
 function updatePreview(){
   const el=$('#affiliatePagePreview');if(!el)return;const slug=currentSlug()||'sua-loja';const base=publicBase(slug);el.textContent=base+'/afiliados';
 }
@@ -45,10 +48,67 @@ function wrapClear(){
 function referralTracking(){
   try{const data=window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA;if(!data||data.planTier!=='profissional'||data.affiliateProgram?.enabled!==true)return;const p=new URLSearchParams(location.search),ref=String(p.get('ref')||'').trim();const key='chatshop_aff_ref_'+String(data.slug||location.hostname);if(ref){localStorage.setItem(key,ref);localStorage.setItem('chatshop_aff_ref',ref);window.__CHATSHOP_AFFILIATE_REF=ref}else{window.__CHATSHOP_AFFILIATE_REF=localStorage.getItem(key)||localStorage.getItem('chatshop_aff_ref')||''}}catch(e){}
 }
+function referralContext(){
+  try{
+    const data=window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||{};
+    const slug=String(data.slug||'').trim();
+    const ref=String(window.__CHATSHOP_AFFILIATE_REF||localStorage.getItem('chatshop_aff_ref_'+(slug||location.hostname))||'').trim();
+    return {data,slug,ref:/^af_[a-z0-9]+$/i.test(ref)?ref:''};
+  }catch(e){return{data:{},slug:'',ref:''}}
+}
+async function recordAffiliateMetric(kind,value=0){
+  const {data,slug,ref}=referralContext(),d=getDb(),F=fv();
+  if(!slug||!ref||!d||data.planTier!=='profissional'||data.affiliateProgram?.enabled!==true)return;
+  try{
+    if(window.firebase?.auth&&!firebase.auth().currentUser)await firebase.auth().signInAnonymously();
+    const patch={affiliateCode:ref,lastActivityAt:F?.serverTimestamp?F.serverTimestamp():new Date()};
+    if(kind==='click')patch.clickCount=F?.increment?F.increment(1):1;
+    if(kind==='order'){patch.orderCount=F?.increment?F.increment(1):1;patch.orderValue=F?.increment?F.increment(Math.max(0,Number(value)||0)):Math.max(0,Number(value)||0)}
+    await d.collection('chatshops').doc(slug).collection('affiliateMetrics').doc(ref).set(patch,{merge:true});
+  }catch(e){console.warn('Métrica de afiliado não registrada',e)}
+}
+function cartAttributedValue(){
+  const root=$('#csvCartBody')||$('#vsCartBody')||document.body,text=String(root?.textContent||'');
+  const values=[...text.matchAll(/Total(?:\s+com\s+frete)?\s*R\$\s*([\d.]+,\d{2})/gi)].map(m=>Number(m[1].replace(/\./g,'').replace(',','.')));
+  return values.length?values[values.length-1]:0;
+}
+function installReferralMetrics(){
+  const {slug,ref}=referralContext();
+  if(slug&&ref){const key='chatshop_aff_click_'+slug+'_'+ref;if(!sessionStorage.getItem(key)){sessionStorage.setItem(key,'1');recordAffiliateMetric('click')}}
+  if(document.body?.dataset.affiliateMetricsBound==='1')return;
+  if(document.body)document.body.dataset.affiliateMetricsBound='1';
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest?.('#csvCheckout,#vsCheckout,.csv-checkout,.vs-checkout');
+    if(!btn||btn.id==='csvCheckoutMp')return;
+    const c=referralContext();if(!c.slug||!c.ref)return;
+    const signature=c.slug+'_'+c.ref+'_'+Math.round(cartAttributedValue()*100);
+    const key='chatshop_aff_order_'+signature;if(sessionStorage.getItem(key))return;
+    sessionStorage.setItem(key,'1');setTimeout(()=>recordAffiliateMetric('order',cartAttributedValue()),50);
+  },true);
+  window.addEventListener('chatshop:mercadopago-checkout',e=>{
+    const c=referralContext();if(!c.slug||!c.ref)return;
+    const value=Number(e.detail?.value||cartAttributedValue()||0),key='chatshop_aff_mp_order_'+c.slug+'_'+c.ref+'_'+Math.round(value*100);
+    if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');recordAffiliateMetric('order',value);
+  });
+}
 async function openAffiliateList(slug,base){
-  if(!window.db)return;let modal=$('#storeAffiliateModal');if(!modal){modal=document.createElement('div');modal.id='storeAffiliateModal';modal.style.cssText='position:fixed;inset:0;z-index:200;background:#0008;display:none;align-items:center;justify-content:center;padding:16px';modal.innerHTML='<div style="background:#fff;border-radius:16px;max-width:640px;width:100%;max-height:86vh;overflow:auto;padding:18px"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">🤝 Afiliados cadastrados</h2><button id="closeStoreAffiliateModal" style="border:0;background:none;font-size:24px">×</button></div><div id="storeAffiliateList" style="margin-top:14px"></div></div>';document.body.appendChild(modal);$('#closeStoreAffiliateModal').onclick=()=>modal.style.display='none'}
-  modal.style.display='flex';const list=$('#storeAffiliateList');list.innerHTML='<p>Carregando...</p>';
-  try{const snap=await db.collection('chatshops').doc(slug).collection('leads').orderBy('data','desc').limit(200).get();const docs=snap.docs.map(d=>d.data()).filter(x=>x.type==='affiliate_application');if(!docs.length){list.innerHTML='<p style="color:#6b7280">Nenhum afiliado cadastrado ainda.</p>';return}list.innerHTML=docs.map(a=>{const link=base+'/?ref='+encodeURIComponent(a.affiliateCode||'');return `<div style="border-bottom:1px solid #eee;padding:10px 0"><b>${safe(a.affiliateName||'Afiliado')}</b><div style="font-size:12px;color:#6b7280">${safe(a.affiliateEmail||'')} · ${safe(a.affiliateWhatsapp||'')}</div><div style="font-size:11px;word-break:break-all;margin-top:5px">${safe(link)}</div></div>`}).join('')}catch(e){console.error(e);list.innerHTML='<p style="color:#b91c1c">Não foi possível carregar os afiliados.</p>'}
+  const d=getDb();if(!d)return;let modal=$('#storeAffiliateModal');if(!modal){modal=document.createElement('div');modal.id='storeAffiliateModal';modal.style.cssText='position:fixed;inset:0;z-index:200;background:#0008;display:none;align-items:center;justify-content:center;padding:16px';modal.innerHTML='<div style="background:#fff;border-radius:16px;max-width:760px;width:100%;max-height:88vh;overflow:auto;padding:18px"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">📊 Métricas dos afiliados</h2><button id="closeStoreAffiliateModal" style="border:0;background:none;font-size:24px">×</button></div><div id="storeAffiliateList" style="margin-top:14px"></div></div>';document.body.appendChild(modal);$('#closeStoreAffiliateModal').onclick=()=>modal.style.display='none'}
+  modal.style.display='flex';const list=$('#storeAffiliateList');list.innerHTML='<p>Carregando métricas...</p>';
+  try{
+    const [leadSnap,metricSnap,storeSnap]=await Promise.all([
+      d.collection('chatshops').doc(slug).collection('leads').orderBy('data','desc').limit(300).get(),
+      d.collection('chatshops').doc(slug).collection('affiliateMetrics').get(),
+      d.collection('chatshops').doc(slug).get()
+    ]);
+    const docs=leadSnap.docs.map(x=>x.data()||{}).filter(x=>x.type==='affiliate_application');
+    const metrics={};metricSnap.docs.forEach(x=>metrics[x.id]=x.data()||{});
+    const rate=Math.max(0,Math.min(100,Number(storeSnap.data()?.affiliateProgram?.commissionPercent||0)));
+    const rows=docs.map(a=>{const m=metrics[a.affiliateCode]||{};return{...a,clicks:Number(m.clickCount||0),orders:Number(m.orderCount||0),value:Number(m.orderValue||0)}});
+    const totals=rows.reduce((t,a)=>({clicks:t.clicks+a.clicks,orders:t.orders+a.orders,value:t.value+a.value}),{clicks:0,orders:0,value:0});
+    const cards=`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:14px"><div style="padding:11px;border-radius:11px;background:#f3f4f6"><small>Afiliados</small><b style="display:block;font-size:21px">${rows.length}</b></div><div style="padding:11px;border-radius:11px;background:#eff6ff"><small>Cliques</small><b style="display:block;font-size:21px">${totals.clicks}</b></div><div style="padding:11px;border-radius:11px;background:#ecfdf5"><small>Pedidos atribuídos</small><b style="display:block;font-size:21px">${totals.orders}</b></div><div style="padding:11px;border-radius:11px;background:#fff7ed"><small>Comissão estimada</small><b style="display:block;font-size:18px">${brl(totals.value*rate/100)}</b></div></div><p style="font-size:11px;color:#6b7280">Pedidos pelo WhatsApp ou enviados ao Mercado Pago. Confirme o pagamento antes de liberar a comissão.</p>`;
+    if(!rows.length){list.innerHTML=cards+'<p style="color:#6b7280">Nenhum afiliado cadastrado ainda.</p>';return}
+    list.innerHTML=cards+rows.map(a=>{const link=base+'/?ref='+encodeURIComponent(a.affiliateCode||''),conversion=a.clicks?((a.orders/a.clicks)*100).toFixed(1).replace('.',','):'0';return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:9px 0"><b>${safe(a.affiliateName||'Afiliado')}</b><div style="font-size:12px;color:#6b7280">${safe(a.affiliateEmail||'')} · ${safe(a.affiliateWhatsapp||'')}</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:9px 0;font-size:12px"><span>👆 Cliques: <b>${a.clicks}</b></span><span>🛒 Pedidos: <b>${a.orders}</b></span><span>📈 Conversão: <b>${conversion}%</b></span><span>💰 Comissão estimada: <b>${brl(a.value*rate/100)}</b></span></div><div style="font-size:11px;word-break:break-all">${safe(link)}</div></div>`}).join('');
+  }catch(e){console.error(e);list.innerHTML='<p style="color:#b91c1c">Não foi possível carregar as métricas. Verifique as permissões do Firestore.</p>'}
 }
 async function decorateDashboard(){
   if(!$('#storeGrid')||typeof db==='undefined'||!db)return;
@@ -59,6 +119,6 @@ async function decorateDashboard(){
   }
 }
 function mentionInPlans(){document.querySelectorAll('#plansCols .plan-card').forEach(c=>{if(String(c.querySelector('h3')?.textContent||'').includes('Profissional')&&!String(c.textContent).includes('Programa de afiliados')){const lim=c.querySelector('.lim');if(lim)lim.insertAdjacentHTML('beforeend','<br>✅ Programa de afiliados por loja')}})}
-function install(){ensureEditor();wrapCollect();wrapPopulate();wrapClear();updateAccess();decorateDashboard();referralTracking();mentionInPlans();const body=document.body;if(body&&!body.dataset.affProgramObs){body.dataset.affProgramObs='1';let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>{ensureEditor();wrapCollect();wrapPopulate();wrapClear();updateAccess();decorateDashboard();referralTracking();mentionInPlans()},120)}).observe(body,{childList:true,subtree:true})}}
+function install(){ensureEditor();wrapCollect();wrapPopulate();wrapClear();updateAccess();decorateDashboard();referralTracking();installReferralMetrics();mentionInPlans();const body=document.body;if(body&&!body.dataset.affProgramObs){body.dataset.affProgramObs='1';let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>{ensureEditor();wrapCollect();wrapPopulate();wrapClear();updateAccess();decorateDashboard();referralTracking();mentionInPlans()},120)}).observe(body,{childList:true,subtree:true})}}
 let n=0;(function wait(){n++;if(document.body){install();return}if(n<80)setTimeout(wait,100)})();
 })();
