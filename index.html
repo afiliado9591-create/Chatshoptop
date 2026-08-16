@@ -285,12 +285,9 @@
       <button id="voltarCatalogos" type="button" style="border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0;margin-top:4px">← Voltar aos catálogos</button>
       <p style="color:var(--muted);font-size:13px;margin-top:6px">Escolha um produto pronto pra usar na sua loja. O link de venda já vem pronto.</p>
       <div id="afiliadoParamBox" style="border:1px solid #e0d9f7;background:#f7f5ff;border-radius:8px;padding:12px;margin-top:12px">
-        <label style="font-weight:700;font-size:13px" id="afiliadoParamLabel">🔗 Seu parâmetro de afiliado</label>
-        <p style="font-size:12px;color:var(--muted);margin:4px 0 8px">Cadastre uma vez só pra este catálogo. Todo produto que você pegar dele já vai sair com esse parâmetro, sem precisar preencher de novo.</p>
-        <a href="#" target="_blank" rel="noopener" id="linkAfiliacaoParceiro" class="btn" style="display:inline-block;text-decoration:none;font-size:12px;margin-bottom:8px">🔗 Abrir conta no parceiro</a>
-        <div class="field"><input id="meuParametroAfiliado" placeholder="Cole aqui seu parâmetro (ex: af_id=SEUCODIGO)"></div>
-        <button class="btn primary" id="salvarParametroBtn" type="button" style="font-size:12px">Salvar parâmetro</button>
-        <span id="parametroSalvoMsg" style="font-size:12px;color:#16a34a;margin-left:8px;display:none">✅ Salvo!</span>
+        <label style="font-weight:700;font-size:13px">🔗 Um link completo para cada produto</label>
+        <p style="font-size:12px;color:var(--muted);margin:4px 0 8px">Escolha o produto. No editor, cole o link completo de compra ou de afiliado daquele produto. Funciona com qualquer programa.</p>
+        <a href="#" target="_blank" rel="noopener" id="linkAfiliacaoParceiro" class="btn" style="display:inline-block;text-decoration:none;font-size:12px;margin-bottom:0">🔗 Abrir conta no parceiro</a>
       </div>
       <div id="catalogoLista" style="margin-top:12px;max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px"></div>
     </div>
@@ -514,7 +511,7 @@ async function populateForm(data){
   document.getElementById('logoField').dataset.upload = isUploadLogo ? data.logo : '';
   refreshLogo();
   productsEl.innerHTML=''; productCount=0;
-  (data.products||[]).forEach(p=>addProduct({id:p.id||p.productId||'',name:p.name,price:p.price,link:p.link,keywords:(p.keywords||[]).join(', '),category:p.category||'',imageUrl:(p.images&&p.images[0])||p.image||'',imageUrl2:(p.images&&p.images[1])||'',imageUrl3:(p.images&&p.images[2])||'',imageUrl4:(p.images&&p.images[3])||'',colors:Array.isArray(p.colors)?p.colors.join(', '):(p.colors||''),promo:p.promo||false,qna:p.qna||[],catalogBaseLink:p.catalogBaseLink||'',affiliateParam:p.affiliateParam||'',buttonText:p.buttonText||'Comprar agora',buttonColor:p.buttonColor||data.buyColor||data.mainColor||'#7A2E3B',displayText:p.displayText||'',voiceText:p.voiceText||''}));
+  (data.products||[]).forEach(p=>addProduct({id:p.id||p.productId||'',name:p.name,price:p.price,link:p.link||combineAffiliateLink(p.catalogBaseLink||'',p.affiliateParam||''),keywords:(p.keywords||[]).join(', '),category:p.category||'',imageUrl:(p.images&&p.images[0])||p.image||'',imageUrl2:(p.images&&p.images[1])||'',imageUrl3:(p.images&&p.images[2])||'',imageUrl4:(p.images&&p.images[3])||'',colors:Array.isArray(p.colors)?p.colors.join(', '):(p.colors||''),promo:p.promo||false,qna:p.qna||[],buttonText:p.buttonText||'Comprar agora',buttonColor:p.buttonColor||data.buyColor||data.mainColor||'#7A2E3B',displayText:p.displayText||'',voiceText:p.voiceText||''}));
   updateStoreTypeUI();
   qnaListEl.innerHTML=''; qnaCount=0;
   (data.qna||[]).forEach(q=>addQnA(q));
@@ -1901,13 +1898,11 @@ function addProduct(p={},options={}){productCount++;const card=document.createEl
 <div style="font-size:11px;color:var(--muted);margin:5px 0 10px">Use ↑ e ↓ para organizar. Os quatro primeiros ficam na frente da loja.</div>
 <div class="grid2"><div class="field"><label>Nome</label><input data-k="name" value="${esc(p.name||'')}"></div><div class="field"><label>Preço</label><input data-k="price" value="${esc(p.price||'')}"></div></div>
 <div class="grid2"><div class="field"><label>Texto do botão</label><input data-k="buttonText" maxlength="40" value="${esc(p.buttonText||'Comprar agora')}" placeholder="Ex: Veja mais, Compre aqui"><small>Você pode escrever Comprar, Veja mais, Clique aqui ou outro texto.</small></div><div class="field"><label>Cor deste botão</label><input type="color" data-k="buttonColor" value="${esc(p.buttonColor||$('#buyColor').value||'#7A2E3B')}"><small>Esta cor vale somente para este produto.</small></div></div>
-${p.catalogBaseLink ? `<div class="field affiliate-link-field" style="background:#f7f5ff;border:1px solid #e0d9f7;border-radius:8px;padding:10px">
-  <label>🔒 Link do catálogo Alibr (travado pelo admin)</label>
-  <input value="${esc(p.catalogBaseLink)}" disabled style="opacity:.7">
-  <label style="margin-top:8px;display:block">Seu parâmetro de afiliado</label>
-  <input data-k="affiliateParam" value="${esc(p.affiliateParam||'')}" placeholder="Ex: af_id=SEUCODIGO">
-  <small>Link final que vai pro botão "Comprar": <b class="link-preview">${esc(combineAffiliateLink(p.catalogBaseLink, p.affiliateParam))}</b></small>
-</div>` : `<div class="field affiliate-link-field"><label>Link de compra</label><input data-k="link" value="${esc(p.link||'https://')}"></div>`}
+${`<div class="field affiliate-link-field" style="${p.fromCatalog?'background:#f7f5ff;border:1px solid #e0d9f7;border-radius:8px;padding:10px':''}">
+  <label>${p.fromCatalog?'🔗 Link completo de compra ou afiliado deste produto':'Link de compra'}</label>
+  <input data-k="link" type="url" inputmode="url" value="${esc(p.link||'https://')}" placeholder="https://...">
+  ${p.fromCatalog?'<small>Cole o link completo deste produto. Pode ser Shopee, Mercado Livre, Amazon, Hotmart ou outro programa.</small>':''}
+</div>`}
 <div class="field"><label>Palavras-chave</label><input data-k="keywords" value="${esc(Array.isArray(p.keywords)?p.keywords.join(', '):(p.keywords||''))}"><small>Exemplo: vestido, longo, festa, azul</small></div>
 <div class="field"><label>Categoria</label><input data-k="category" value="${esc(p.category||'')}" placeholder="Ex: Vestidos"><small>Aparece como botão de menu no chat. Use o mesmo nome em produtos do mesmo tipo.</small></div>
 <div class="virtual-product-options" style="display:none;border:1px solid #dcfce7;background:#f0fdf4;border-radius:12px;padding:11px;margin:10px 0">
@@ -1954,8 +1949,6 @@ card.querySelector('.product-move-up').onclick=()=>{const prev=card.previousElem
 card.querySelector('.product-move-down').onclick=()=>{const next=card.nextElementSibling;if(next){productsEl.insertBefore(next,card);updateProductPositions();renderLive();debounce()}};
 card.querySelectorAll('input:not([type=file]):not([data-k="promo"]):not(.pq-question)').forEach(i=>i.addEventListener('input',()=>{refreshImage(card);debounce()}));
 card.querySelectorAll('textarea[data-k]').forEach(i=>i.addEventListener('input',()=>{renderLive();debounce()}));
-const affInput = card.querySelector('[data-k="affiliateParam"]');
-if(affInput){ affInput.addEventListener('input',()=>{ const preview = card.querySelector('.link-preview'); if(preview) preview.textContent = combineAffiliateLink(card.dataset.catalogBaseLink, affInput.value); }); }
 card.querySelector('[data-k="file"]').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;if(f.size>2.5*1024*1024){toast('Use uma imagem menor que 2,5 MB');e.target.value='';return}const r=new FileReader();r.onload=()=>{card.dataset.upload=r.result;refreshImage(card);renderLive()};r.readAsDataURL(f)});
 card.querySelectorAll('[data-extra-file]').forEach(inp=>inp.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;if(f.size>2.5*1024*1024){toast('Use uma imagem menor que 2,5 MB');e.target.value='';return}const slot=e.target.dataset.extraFile;const r=new FileReader();r.onload=()=>{card.dataset['upload'+slot]=r.result;refreshExtraImage(card,slot);renderLive()};r.readAsDataURL(f)}));
 card.querySelectorAll('[data-k="imageUrl2"],[data-k="imageUrl3"],[data-k="imageUrl4"]').forEach(inp=>inp.addEventListener('input',()=>{const slot=inp.dataset.k.slice(-1);refreshExtraImage(card,slot)}));
@@ -1982,7 +1975,7 @@ card.querySelector('.remove').onclick=()=>{card.remove();debounce()};
 card.querySelectorAll('input,textarea').forEach(i=>i.addEventListener('input',debounce));
 qnaListEl.appendChild(card)}
 function collectQnA(){return [...document.querySelectorAll('#qnaList .product')].map(card=>{const k=card.querySelector('[data-k="keywords"]').value.trim();const a=card.querySelector('[data-k="answer"]').value.trim();return{keywords:k.split(',').map(x=>x.trim()).filter(Boolean),answer:a}}).filter(q=>q.keywords.length && q.answer)}
-function collect(){return{storeType:$('#storeType').value||'affiliate',brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',featuredVideo:$('#featuredVideo').value.trim(),customDomain: myPlan!=='aprendiz' ? $('#customDomain').value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'') : '',googleAnalyticsId:($('#googleAnalyticsId').value.trim().toUpperCase().match(/^G-[A-Z0-9]+$/)||[''])[0],googleSearchConsoleVerification:$('#googleSearchConsoleVerification').value.trim().replace(/^.*content=["']([^"']+)["'].*$/i,'$1').replace(/[^A-Za-z0-9_\-=]/g,'').slice(0,200),mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardOpacity:Number($('#cardOpacity').value),cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,showCategoryMenu:$('#showCategoryMenu').checked,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';const baseLink=card.dataset.catalogBaseLink||'';const affiliateParam=baseLink?g('affiliateParam'):'';const linkFinal=baseLink?combineAffiliateLink(baseLink,affiliateParam):(g('link')||'#');return{id:card.dataset.productId,name:g('name')||'Produto',price:g('price')||'Consulte',link:linkFinal,catalogBaseLink:baseLink,affiliateParam,buttonText:g('buttonText')||'Comprar agora',buttonColor:g('buttonColor')||$('#buyColor').value,displayText:g('displayText'),voiceText:g('voiceText'),keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',colors:g('colors').split(',').map(x=>x.trim()).filter(Boolean),image:card.dataset.upload||g('imageUrl')||'',images:[card.dataset.upload||g('imageUrl')||'',card.dataset.upload2||g('imageUrl2')||'',card.dataset.upload3||g('imageUrl3')||'',card.dataset.upload4||g('imageUrl4')||''].filter(Boolean),promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
+function collect(){return{storeType:$('#storeType').value||'affiliate',brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',featuredVideo:$('#featuredVideo').value.trim(),customDomain: myPlan!=='aprendiz' ? $('#customDomain').value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'') : '',googleAnalyticsId:($('#googleAnalyticsId').value.trim().toUpperCase().match(/^G-[A-Z0-9]+$/)||[''])[0],googleSearchConsoleVerification:$('#googleSearchConsoleVerification').value.trim().replace(/^.*content=["']([^"']+)["'].*$/i,'$1').replace(/[^A-Za-z0-9_\-=]/g,'').slice(0,200),mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardOpacity:Number($('#cardOpacity').value),cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,showCategoryMenu:$('#showCategoryMenu').checked,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';const linkFinal=g('link')||'#';return{id:card.dataset.productId,name:g('name')||'Produto',price:g('price')||'Consulte',link:linkFinal,buttonText:g('buttonText')||'Comprar agora',buttonColor:g('buttonColor')||$('#buyColor').value,displayText:g('displayText'),voiceText:g('voiceText'),keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',colors:g('colors').split(',').map(x=>x.trim()).filter(Boolean),image:card.dataset.upload||g('imageUrl')||'',images:[card.dataset.upload||g('imageUrl')||'',card.dataset.upload2||g('imageUrl2')||'',card.dataset.upload3||g('imageUrl3')||'',card.dataset.upload4||g('imageUrl4')||''].filter(Boolean),promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
 function liveVisual(p,cls=''){if(!p.image)return `<div class="live-noimg">🛍️</div>`;return `<img src="${esc(p.image)}" alt="${esc(p.name)}">`}
 function liveCard(p,inside=false){return `<div class="${inside?'live-pcard':'live-card'}">${liveVisual(p)}<b>${esc(p.name)}</b><div class="live-price">${esc(p.price)}</div><a class="live-buy" style="background:${esc(p.buttonColor||'var(--store-buy,var(--store-main))')}" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.buttonText||'Comprar agora')}</a></div>`}
 function liveProductResult(p){const t=String(p.displayText||'').trim();return (t?'<div style="margin-bottom:7px">'+esc(t)+'</div>':'')+liveCard(p,true)}
@@ -2050,12 +2043,11 @@ async function abrirCatalogoGeral(){
     if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum catálogo disponível ainda.</p>'; return; }
     lista.innerHTML = snap.docs.map(d=>{
       const c = d.data();
-      const jaConfigurado = !!myCatalogAffiliateParams[d.id];
       const bloqueado = myPlan === 'aprendiz' && !c.liberadoGratis;
-      const statusTxt = bloqueado ? '🔒 assine pra usar' : (jaConfigurado ? '✅ configurado' : 'configurar →');
+      const statusTxt = bloqueado ? '🔒 assine pra usar' : 'ver produtos →';
       return `<button type="button" class="btn" data-id="${d.id}" data-bloqueado="${bloqueado?'1':''}" style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;${bloqueado?'opacity:.6':''}">
         <span>📦 ${esc(c.nome)}</span>
-        <span style="font-size:11px;color:${bloqueado?'#dc2626':(jaConfigurado?'#16a34a':'var(--muted)')}">${statusTxt}</span>
+        <span style="font-size:11px;color:${bloqueado?'#dc2626':'var(--muted)'}">${statusTxt}</span>
       </button>`;
     }).join('');
     lista.querySelectorAll('button[data-id]').forEach(btn=>{
@@ -2072,11 +2064,8 @@ async function abrirCatalogoDetalhe(catalogoId, catalogoNome, linkAfiliacao){
   $('#catalogoModalTitulo').textContent = '📦 ' + catalogoNome;
   $('#catalogoPickerView').style.display='none';
   $('#catalogoDetalheView').style.display='block';
-  $('#afiliadoParamLabel').textContent = '🔗 Seu parâmetro de afiliado (' + catalogoNome + ')';
   $('#linkAfiliacaoParceiro').href = linkAfiliacao || '#';
-  const paramAtual = myCatalogAffiliateParams[catalogoId] || '';
-  $('#meuParametroAfiliado').value = paramAtual;
-  $('#parametroSalvoMsg').style.display = paramAtual ? 'inline' : 'none';
+  $('#linkAfiliacaoParceiro').style.display = linkAfiliacao ? 'inline-block' : 'none';
   const lista = $('#catalogoLista');
   lista.innerHTML = '<p class="empty-hint">Carregando produtos...</p>';
   try{
@@ -2097,27 +2086,16 @@ async function abrirCatalogoDetalhe(catalogoId, catalogoNome, linkAfiliacao){
         const p = docSnap.data();
         const atual = document.querySelectorAll('#products .product').length;
         if(atual >= myProductLimit){ $('#catalogoModal').style.display='none'; abrirPlanos(); return; }
-        const meuParam = myCatalogAffiliateParams[catalogoId] || '';
-        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', catalogBaseLink:p.baseLink||'', affiliateParam:meuParam, qna:p.qna||[], buttonText:p.buttonText||'Comprar agora', buttonColor:p.buttonColor||'#7A2E3B', displayText:p.displayText||'', voiceText:p.voiceText||'' }, {prepend:true,focus:true});
+        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', link:'https://', fromCatalog:true, qna:p.qna||[], buttonText:p.buttonText||'Comprar agora', buttonColor:p.buttonColor||'#7A2E3B', displayText:p.displayText||'', voiceText:p.voiceText||'' }, {prepend:true,focus:true});
         renderLive(); atualizarAvisoLimite();
         $('#catalogoModal').style.display='none';
-        toast(meuParam ? 'Produto adicionado com seu link de afiliado!' : 'Produto adicionado! Configure seu parâmetro de afiliado neste catálogo.');
+        toast('Produto adicionado! Agora cole o link completo dele no campo destacado.');
       };
     });
   }catch(e){ console.error(e); lista.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
 }
 $('#usarCatalogoBtn').onclick = abrirCatalogoGeral;
 $('#voltarCatalogos').onclick = abrirCatalogoGeral;
-$('#salvarParametroBtn').onclick = async ()=>{
-  const valor = $('#meuParametroAfiliado').value.trim();
-  if(!catalogoAtualId) return;
-  try{
-    await db.collection('users').doc(myUid).update({ [`catalogAffiliateParams.${catalogoAtualId}`]: valor });
-    myCatalogAffiliateParams[catalogoAtualId] = valor;
-    $('#parametroSalvoMsg').style.display = valor ? 'inline' : 'none';
-    toast('Parâmetro salvo! Já vale pra todos os produtos que você pegar deste catálogo.');
-  }catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
-};
 $('#fecharCatalogo').onclick = ()=> $('#catalogoModal').style.display='none';
 document.querySelector('#catalogoModal .plans-overlay')?.addEventListener('click', ()=> $('#catalogoModal').style.display='none');
 $('#addQnA').onclick=()=>{addQnA();renderLive()};$('#previewBtn').onclick=renderLive;$('#publishBtn').onclick=publish;$('#copyBtn').onclick=copyHTML;$('#downloadBtn').onclick=download;$('#saveBtn').onclick=save;$('#resetBtn').onclick=()=>{localStorage.removeItem('chatshop-v4');location.reload()};['brand','whatsapp','welcome','featuredVideo','mainColor','darkColor','accentColor','chatBg','buyColor','priceColor','cardColor','cardTextColor','categoryColor','categoryTextColor'].forEach(id=>$('#'+id).addEventListener('input',debounce));
