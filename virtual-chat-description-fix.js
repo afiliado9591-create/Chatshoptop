@@ -310,9 +310,26 @@ function installOriginalChat(){
   }
   window.__CHATSHOP_OPEN_PRODUCT_CHAT=openChatForProduct;
 
+  function closeChatAndReturnCatalog(){
+    clearTimeout(catalogReminderTimer);clearTimeout(conversationRestartTimer);clearTimeout(conversationSpeechTimer);
+    setConversationMode(false,true);
+    try{pubRecognition?.abort?.()}catch(err){}
+    try{speechSynthesis.cancel()}catch(err){}
+    pubListening=false;conversationSpeaking=false;
+    input.blur();document.activeElement?.blur?.();
+    productContext=null;activeProduct=-1;lastProduct=null;lastAnnouncedProduct=-1;
+    overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');
+    const root=$('#storefrontScreen')||$('.csv-page')||$('.vs-page');
+    document.documentElement.style.setProperty('overflow-y','auto','important');
+    document.body.style.setProperty('overflow-y','auto','important');
+    document.body.style.setProperty('touch-action','pan-y','important');
+    if(root){root.style.setProperty('overflow-y','auto','important');root.style.setProperty('touch-action','pan-y','important')}
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{overlay.style.display='';window.dispatchEvent(new Event('resize'))}));
+  }
+
   messages.addEventListener('click',e=>{
     const back=e.target.closest('[data-back-catalog]');
-    if(back){clearTimeout(catalogReminderTimer);setConversationMode(false,true);try{speechSynthesis.cancel()}catch(err){};productContext=null;activeProduct=-1;lastProduct=null;lastAnnouncedProduct=-1;overlay.classList.remove('open');return}
+    if(back){e.preventDefault();e.stopPropagation();closeChatAndReturnCatalog();return}
     const prod=e.target.closest('[data-pub-product]');
     if(prod){
       const i=Number(prod.dataset.pubProduct);activeProduct=i;lastProduct=products[i]||null;overlay.classList.remove('open');
@@ -324,8 +341,8 @@ function installOriginalChat(){
     if(send){const wrap=send.closest('.lead-form'),inp=wrap?.querySelector('.lead-input'),numero=String(inp?.value||'').replace(/\D/g,'');if(numero.length<10){if(inp){inp.style.borderColor='#dc2626';inp.placeholder='Digite um número válido com DDD'}return}send.disabled=true;if(inp)inp.disabled=true;send.textContent='Enviado ✓';saveLead(numero);setTimeout(()=>add('bot','Perfeito, já anotei aqui! 😊 Em breve a loja pode entrar em contato.'),250)}
   });
 
-  $('#pubChatToggle').onclick=()=>{if(activeProduct>=0&&products[activeProduct]){openChatForProduct(activeProduct);return}overlay.classList.add('open');setConversationMode(voiceEnabled,true);if(!messages.children.length)add('bot',esc(store.welcome||'Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja as opções abaixo.')+catButtons(categories()),store.welcome||'Olá! Como posso ajudar?');setTimeout(()=>input.focus(),120)};
-  $('#pubChatClose').onclick=()=>{clearTimeout(catalogReminderTimer);overlay.classList.remove('open');setConversationMode(false,true)};
+  $('#pubChatToggle').onclick=()=>{if(activeProduct>=0&&products[activeProduct]){openChatForProduct(activeProduct);return}overlay.removeAttribute('aria-hidden');overlay.classList.add('open');setConversationMode(voiceEnabled,true);if(!messages.children.length)add('bot',esc(store.welcome||'Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja as opções abaixo.')+catButtons(categories()),store.welcome||'Olá! Como posso ajudar?');setTimeout(()=>input.focus(),120)};
+  $('#pubChatClose').onclick=closeChatAndReturnCatalog;
   $('#pubSend').onclick=submit;input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit()}});
 
   function updateVoiceOutputUI(){
