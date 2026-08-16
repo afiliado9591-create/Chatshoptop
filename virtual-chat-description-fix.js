@@ -108,7 +108,7 @@ function installOriginalChat(){
   .conversation-bar{display:flex;align-items:center;gap:9px;padding:8px 10px;background:rgba(255,255,255,.92);border-top:1px solid rgba(0,0,0,.06);border-bottom:1px solid rgba(0,0,0,.08);flex-wrap:wrap}.conversation-toggle{border:0;border-radius:999px;background:#16a34a;color:#fff;padding:10px 14px;font-weight:900;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}.conversation-toggle.active{background:#dc2626}.conversation-dot{width:9px;height:9px;border-radius:50%;background:#fff}.conversation-hint{font-size:11px;color:#6b7280;line-height:1.25;flex:1;min-width:150px}.conversation-hint.active{color:#15803d;font-weight:800}
   .rec-status{display:none;align-items:center;gap:6px;color:#b91c1c;font-size:12px;font-weight:700;padding:0 4px}.rec-status.show{display:flex}.listen-btn{border:none;background:var(--store-main);color:#fff;cursor:pointer;font-size:16px;width:30px;height:30px;border-radius:50%;margin-left:6px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
   .cat-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cat-chip{border:1px solid var(--store-main);background:#fff;color:var(--store-main);padding:6px 11px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer}.cat-chip.all-chip{background:var(--store-main);color:#fff}.cat-chip.lead-chip{background:#25D366;border-color:#25D366;color:#fff}
-  .live-pcard{width:220px;margin-top:8px}.live-pcard img{width:100%;height:125px;object-fit:contain;border-radius:8px;background:#f6f6f6}.live-noimg{height:125px;display:grid;place-items:center;background:#f3f4f6;border-radius:8px;font-size:36px}.live-price{color:var(--store-main);font-weight:800;margin:4px 0}.live-buy{display:block;text-align:center;background:var(--store-main);color:#fff;text-decoration:none;padding:8px;border-radius:8px;font-weight:700;font-size:12px;border:0;width:100%;cursor:pointer}.lead-form{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.lead-input{flex:1;min-width:150px;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:13px}.lead-submit{border:0;background:var(--store-main);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer}`;
+  .vcd-product-seller{width:100%;border:0;border-radius:999px;background:var(--store-main,#7A2E3B);color:#fff;padding:11px 13px;margin:9px 0;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.16)}.vcd-product-seller-card{margin:8px 10px 10px;width:calc(100% - 20px);padding:9px 8px;font-size:12px}.live-pcard{width:220px;margin-top:8px}.live-pcard img{width:100%;height:125px;object-fit:contain;border-radius:8px;background:#f6f6f6}.live-noimg{height:125px;display:grid;place-items:center;background:#f3f4f6;border-radius:8px;font-size:36px}.live-price{color:var(--store-main);font-weight:800;margin:4px 0}.live-buy{display:block;text-align:center;background:var(--store-main);color:#fff;text-decoration:none;padding:8px;border-radius:8px;font-weight:700;font-size:12px;border:0;width:100%;cursor:pointer}.lead-form{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.lead-input{flex:1;min-width:150px;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:13px}.lead-submit{border:0;background:var(--store-main);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer}`;
   document.head.appendChild(fallback);
 
   const logo=safeImage(store.logo);
@@ -131,7 +131,7 @@ function installOriginalChat(){
     </div>`);
 
   const overlay=$('#pubChatOverlay'),messages=$('#pubMessages'),input=$('#pubInput');
-  let lastProduct=null,conversationMode=false,conversationSpeaking=false,conversationRestartTimer=null,conversationSpeechTimer=null,pubRecognition=null,pubListening=false;
+  let lastProduct=null,lastAnnouncedProduct=-1,conversationMode=false,conversationSpeaking=false,conversationRestartTimer=null,conversationSpeechTimer=null,pubRecognition=null,pubListening=false;
 
   function productWrittenText(p){return String(p?.displayText||p?.cardDescription||'').trim()}
   function productVoiceText(p){return String(p?.voiceText||`${p?.name||'Produto'}, ${money(p?.price)}.`).trim()}
@@ -230,6 +230,20 @@ function installOriginalChat(){
   }
   function submit(){const text=input.value.trim();if(!text)return;add('user',esc(text));input.value='';saveMessage(text);setTimeout(()=>reply(text),250)}
 
+  function openChatForProduct(index){
+    const i=Number(index),p=products[i];if(!Number.isInteger(i)||!p)return;
+    activeProduct=i;lastProduct=p;overlay.classList.add('open');
+    if(lastAnnouncedProduct!==i||!messages.children.length){
+      lastAnnouncedProduct=i;
+      const name=String(p.name||'este produto');
+      const intro='Olá! Agora estou atendendo sobre <b>'+esc(name)+'</b>. Pode perguntar sobre tamanho, cores, tecido, preço, entrega ou como comprar.'+productCard(p,i);
+      const voice='Olá! Agora estou atendendo sobre '+name+'. Pode perguntar sobre tamanho, cores, tecido, preço, entrega ou como comprar.';
+      add('bot',intro,voice);
+    }
+    setTimeout(()=>input.focus(),120);
+  }
+  window.__CHATSHOP_OPEN_PRODUCT_CHAT=openChatForProduct;
+
   messages.addEventListener('click',e=>{
     const prod=e.target.closest('[data-pub-product]');
     if(prod){
@@ -242,7 +256,7 @@ function installOriginalChat(){
     if(send){const wrap=send.closest('.lead-form'),inp=wrap?.querySelector('.lead-input'),numero=String(inp?.value||'').replace(/\D/g,'');if(numero.length<10){if(inp){inp.style.borderColor='#dc2626';inp.placeholder='Digite um número válido com DDD'}return}send.disabled=true;if(inp)inp.disabled=true;send.textContent='Enviado ✓';saveLead(numero);setTimeout(()=>add('bot','Perfeito, já anotei aqui! 😊 Em breve a loja pode entrar em contato.'),250)}
   });
 
-  $('#pubChatToggle').onclick=()=>{overlay.classList.add('open');if(!messages.children.length){add('bot',esc(store.welcome||'Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja as opções abaixo.')+catButtons(categories()));setTimeout(()=>input.focus(),120)}};
+  $('#pubChatToggle').onclick=()=>{if(activeProduct>=0&&products[activeProduct]){openChatForProduct(activeProduct);return}overlay.classList.add('open');if(!messages.children.length)add('bot',esc(store.welcome||'Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja as opções abaixo.')+catButtons(categories()));setTimeout(()=>input.focus(),120)};
   $('#pubChatClose').onclick=()=>{overlay.classList.remove('open');setConversationMode(false,true)};
   $('#pubSend').onclick=submit;input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit()}});
 
@@ -278,10 +292,27 @@ function installOriginalChat(){
   updateConversationUI();
 }
 
+function makeProductSellerButton(index,card=false){
+  const b=document.createElement('button');b.type='button';b.className='vcd-product-seller'+(card?' vcd-product-seller-card':'');b.dataset.chatProduct=String(index);b.textContent=card?'💬 Perguntar ao vendedor':'💬 Perguntar sobre este produto';
+  b.onclick=e=>{e.preventDefault();e.stopPropagation();window.__CHATSHOP_OPEN_PRODUCT_CHAT?.(index)};return b;
+}
+function injectProductSellerButtons(){
+  $('.csv-card,.vs-card').forEach((card,fallbackIndex)=>{
+    if(card.querySelector('.vcd-product-seller-card'))return;
+    const open=card.querySelector('.csv-open[data-product],.vs-open[data-product]');
+    let i=Number(open?.dataset.product);if(!Number.isInteger(i)||i<0)i=fallbackIndex;
+    if(products[i])card.appendChild(makeProductSellerButton(i,true));
+  });
+  const body=$('#vsProductBody')||$('#csvProductBody');if(!body||activeProduct<0||!products[activeProduct])return;
+  let b=body.querySelector('.vcd-product-seller:not(.vcd-product-seller-card)');
+  if(!b){b=makeProductSellerButton(activeProduct,false);const price=body.querySelector('.vs-detail-price,.csv-dprice');if(price)price.insertAdjacentElement('afterend',b);else body.appendChild(b)}
+  b.dataset.chatProduct=String(activeProduct);b.onclick=e=>{e.preventDefault();e.stopPropagation();window.__CHATSHOP_OPEN_PRODUCT_CHAT?.(activeProduct)};
+}
 function bindProductDescription(){
-  document.addEventListener('click',e=>{const b=e.target.closest('[data-product]');if(!b)return;const i=Number(b.dataset.product);if(Number.isInteger(i)){activeProduct=i;injectDescription(i)}},true);
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-product]');if(!b)return;const i=Number(b.dataset.product);if(Number.isInteger(i)){activeProduct=i;injectDescription(i);setTimeout(injectProductSellerButtons,40)}},true);
   const root=$('#storefrontScreen')||document.body;
-  new MutationObserver(()=>{if(activeProduct>=0&&($('#vsProductModal.open')||$('#csvProductModal.on')||$('#csvProductModal.open')))injectDescription(activeProduct)}).observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{injectProductSellerButtons();if(activeProduct>=0&&($('#vsProductModal.open')||$('#csvProductModal.on')||$('#csvProductModal.open'))){injectDescription(activeProduct);injectProductSellerButtons()}}).observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+  injectProductSellerButtons();
 }
 
 async function boot(){
