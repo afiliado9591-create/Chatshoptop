@@ -299,7 +299,7 @@ function makeProductSellerButton(index,card=false){
   b.onclick=e=>{e.preventDefault();e.stopPropagation();window.__CHATSHOP_OPEN_PRODUCT_CHAT?.(index)};return b;
 }
 function injectProductSellerButtons(){
-  $('.csv-card,.vs-card').forEach((card,fallbackIndex)=>{
+  Array.from(document.querySelectorAll('.csv-card,.vs-card')).forEach((card,fallbackIndex)=>{
     if(card.querySelector('.vcd-product-seller-card'))return;
     const open=card.querySelector('.csv-open[data-product],.vs-open[data-product]');
     let i=Number(open?.dataset.product);if(!Number.isInteger(i)||i<0)i=fallbackIndex;
@@ -322,8 +322,8 @@ async function boot(){
   if(!store||store.storeType!=='virtual')return;
   products=Array.isArray(store.products)?store.products:[];
   for(let i=0;i<100;i++){if($('.vs-page')||$('.csv-page'))break;await new Promise(r=>setTimeout(r,100))}
-  bindProductDescription();
   installOriginalChat();
+  try{bindProductDescription()}catch(e){console.warn('ChatShop: botões por produto indisponíveis',e)}
 }
 boot();
 })();
