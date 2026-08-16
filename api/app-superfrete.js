@@ -96,6 +96,7 @@ module.exports = async function handler(request, response) {
     const superfreteDomainFixTag = '<script src="/superfrete-domain-fix.js?v=20260814-1058"></script>';
     const superfreteTag = '<script src="/superfrete-upgrade.js?v=20260816-1305-multi-origin"></script>';
     const virtualChatTag = '<script src="/virtual-chat-description-fix.js?v=20260816-1250-buy-before-catalog"></script>';
+    const singleProductVideoTag = '<script src="/single-product-video.js?v=20260816-1325-product-video"></script>';
     const virtualScrollTag = '<script src="/virtual-scroll-fix.js?v=20260813-2147"></script>';
     const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260813-2302"></script>';
     const ownerMetricsTag = '<script src="/store-owner-metrics.js?v=20260814-0500"></script>';
@@ -114,6 +115,7 @@ module.exports = async function handler(request, response) {
     inject += superfreteDomainFixTag + '\n';
     inject += superfreteTag + '\n';
     inject += virtualChatTag + '\n';
+    if (!html.includes('/single-product-video.js')) inject += singleProductVideoTag + '\n';
     if (!html.includes('/virtual-scroll-fix.js')) inject += virtualScrollTag + '\n';
     if (!html.includes('/virtual-seller-audio.js')) inject += virtualSellerAudioTag + '\n';
     if (!html.includes('/store-owner-metrics.js')) inject += ownerMetricsTag + '\n';
