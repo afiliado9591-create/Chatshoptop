@@ -165,7 +165,7 @@ function forceScript(html, filename, version) {
 }
 
 function injectUpgrades(html, storefrontMode, layout) {
-  const version = '20260816-1715-seller-button-position';
+  const version = '20260816-1840-hide-chat-over-cart';
   const scripts = [
     'catalog-editor-upgrade.js',
     'store-layout-upgrade.js',
