@@ -78,7 +78,11 @@ function footerTarget(){
   const virtualPage=document.querySelector('.csv-page,.vs-page');
   if(virtualPage)return virtualPage;
   const feed=document.getElementById('pubFeed');
-  if(feed)return feed;
+  if(feed){
+    const grid=data.homeLayout==='grid'||document.body.classList.contains('chatshop-grid-clean')||document.body.classList.contains('store-grid-layout');
+    if(!grid){feed.querySelector(':scope > .vst-footer')?.remove();return null}
+    return feed;
+  }
   return document.querySelector('.catalog,#catalog');
 }
 function install(){
