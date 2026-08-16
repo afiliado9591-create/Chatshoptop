@@ -206,6 +206,7 @@ function installOriginalChat(){
     }catch(e){conversationSpeaking=false;if(conversationMode)scheduleConversationListen(400)}
   }
   function add(who,html,voiceText=''){
+    if(who==='bot'&&!productContext&&!String(html).includes('data-back-catalog'))html+=`<button class="live-back-catalog" type="button" data-back-catalog>↩ Voltar ao catálogo</button>`;
     const row=document.createElement('div');row.className='live-row '+who;
     const clean=String(html).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
     const spoken=String(voiceText||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim()||clean;
