@@ -324,7 +324,12 @@ function installOriginalChat(){
     document.body.style.setProperty('overflow-y','auto','important');
     document.body.style.setProperty('touch-action','pan-y','important');
     if(root){root.style.setProperty('overflow-y','auto','important');root.style.setProperty('touch-action','pan-y','important')}
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{overlay.style.display='';window.dispatchEvent(new Event('resize'))}));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      overlay.style.display='';
+      if(root)root.scrollTo?.({top:0,left:0,behavior:'auto'});
+      window.scrollTo({top:0,left:0,behavior:'auto'});
+      window.dispatchEvent(new Event('resize'));
+    }));
   }
 
   messages.addEventListener('click',e=>{
