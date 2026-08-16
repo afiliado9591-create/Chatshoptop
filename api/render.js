@@ -151,7 +151,7 @@ function forceScript(html, filename, version) {
 }
 
 function injectUpgrades(html, storefrontMode, layout) {
-  const version = '20260813-19';
+  const version = '20260816-1630-admin-landing-pages';
   const scripts = [
     'catalog-editor-upgrade.js',
     'store-layout-upgrade.js',
