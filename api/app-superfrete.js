@@ -90,11 +90,12 @@ module.exports = async function handler(request, response) {
     html = removeScript(html, 'virtual-payment-fix.js');
     html = removeScript(html, 'payment-choice-persist.js');
     html = removeScript(html, 'virtual-store-theme-footer.js');
+    html = removeScript(html, 'virtual-chat-description-fix.js');
 
     const virtualTag = '<script src="/virtual-shipping-upgrade.js?v=20260813-1707"></script>';
     const superfreteDomainFixTag = '<script src="/superfrete-domain-fix.js?v=20260814-1058"></script>';
     const superfreteTag = '<script src="/superfrete-upgrade.js?v=20260814-1058"></script>';
-    const virtualChatTag = '<script src="/virtual-chat-description-fix.js?v=20260816-0715"></script>';
+    const virtualChatTag = '<script src="/virtual-chat-description-fix.js?v=20260816-0815"></script>';
     const virtualScrollTag = '<script src="/virtual-scroll-fix.js?v=20260813-2147"></script>';
     const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260813-2302"></script>';
     const ownerMetricsTag = '<script src="/store-owner-metrics.js?v=20260814-0500"></script>';
@@ -112,7 +113,7 @@ module.exports = async function handler(request, response) {
     if (!html.includes('/virtual-shipping-upgrade.js')) inject += virtualTag + '\n';
     inject += superfreteDomainFixTag + '\n';
     inject += superfreteTag + '\n';
-    if (!html.includes('/virtual-chat-description-fix.js')) inject += virtualChatTag + '\n';
+    inject += virtualChatTag + '\n';
     if (!html.includes('/virtual-scroll-fix.js')) inject += virtualScrollTag + '\n';
     if (!html.includes('/virtual-seller-audio.js')) inject += virtualSellerAudioTag + '\n';
     if (!html.includes('/store-owner-metrics.js')) inject += ownerMetricsTag + '\n';
