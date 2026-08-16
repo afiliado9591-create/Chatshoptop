@@ -165,7 +165,7 @@ function forceScript(html, filename, version) {
 }
 
 function injectUpgrades(html, storefrontMode, layout) {
-  const version = '20260816-1340-audio-center';
+  const version = '20260816-1635-premium-all-stores';
   const scripts = [
     'catalog-editor-upgrade.js',
     'store-layout-upgrade.js',
