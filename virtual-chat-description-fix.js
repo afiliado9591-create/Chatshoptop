@@ -165,7 +165,7 @@ function installOriginalChat(){
     productContext.replyCount=(productContext.replyCount||0)+1;
     if(productContext.replyCount<(productContext.nextCatalogVoiceAt||3))return base;
     const step=productContext.catalogVoiceStep||4;productContext.nextCatalogVoiceAt+=step;productContext.catalogVoiceStep=step===4?3:4;
-    return base+' Se quiser ver mais produtos, volte ao catálogo. Clique no botão Voltar ao catálogo.';
+    return base+' Para comprar este produto, clique no botão Comprar. Ou, se quiser ver mais produtos, clique no botão Voltar ao catálogo.';
   }
   function scheduleCatalogReminder(){
     clearTimeout(catalogReminderTimer);if(!productContext||productContext.idleReminderSent)return;
@@ -174,7 +174,7 @@ function installOriginalChat(){
       if(!productContext||productContext.contextId!==contextId||productContext.idleReminderSent||!overlay.classList.contains('open'))return;
       const p=products[productContext.index],i=productContext.index;if(!p)return;
       productContext.idleReminderSent=true;
-      const reminder='Se quiser ver mais produtos, volte ao catálogo. Clique no botão Voltar ao catálogo.';
+      const reminder='Para comprar este produto, clique no botão Comprar. Ou, se quiser ver mais produtos, clique no botão Voltar ao catálogo.';
       add('bot',reminder+productActions(p,i),reminder);
     },35000);
   }
