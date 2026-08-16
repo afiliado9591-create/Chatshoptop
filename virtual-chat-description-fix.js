@@ -137,7 +137,7 @@ function installOriginalChat(){
   function productVoiceText(p){return String(p?.voiceText||`${p?.name||'Produto'}, ${money(p?.price)}.`).trim()}
   function productCard(p,i){
     const img=safeImage(Array.isArray(p.images)?p.images[0]:p.image);
-    return `<div class="live-pcard">${img?`<img src="${esc(img)}" alt="${esc(p.name||'Produto')}">`:'<div class="live-noimg">🛍️</div>'}<b>${esc(p.name||'Produto')}</b><div class="live-price">${esc(money(p.price))}</div><button class="live-buy" type="button" data-pub-product="${i}">Ver produto</button></div>`;
+    return `<div class="live-pcard">${img?`<img src="${esc(img)}" alt="${esc(p.name||'Produto')}">`:'<div class="live-noimg">🛍️</div>'}<b>${esc(p.name||'Produto')}</b><div class="live-price">${esc(money(p.price))}</div><button class="live-buy" type="button" data-pub-product="${i}">Comprar</button></div>`;
   }
   function productResultHtml(p){const i=products.indexOf(p);return productCard(p,i)}
   function catButtons(list){
@@ -185,7 +185,7 @@ function installOriginalChat(){
       const description=String(p?.voiceText||p?.cardDescription||p?.displayText||'').trim();
       if(description)parts.push(description);
       parts.push('O valor é '+money(p?.price)+'.');
-      parts.push('Para comprar, toque no botão Ver produto.');
+      parts.push('Para comprar, toque no botão Comprar.');
     });
     if(list.length>shown.length)parts.push('Há mais produtos disponíveis. Você pode continuar navegando pelo catálogo.');
     return parts.join(' [[pausa]] ');
@@ -207,12 +207,12 @@ function installOriginalChat(){
     if(purchaseIntent&&lastProduct){
       const i=products.indexOf(lastProduct);activeProduct=i;
       const name=String(lastProduct?.name||'este produto');
-      const written='Para comprar '+esc(name)+', toque em <b>Ver produto</b>. Na página você escolhe a cor e a quantidade, adiciona à sacola e finaliza o pedido.';
-      const voice='Para comprar '+name+', toque no botão Ver produto. Depois escolha a cor e a quantidade, adicione à sacola e finalize o pedido.';
+      const written='Para comprar '+esc(name)+', toque em <b>Comprar</b>. Na página você escolhe a cor e a quantidade, adiciona à sacola e finaliza o pedido.';
+      const voice='Para comprar '+name+', toque no botão Comprar. Depois escolha a cor e a quantidade, adicione à sacola e finalize o pedido.';
       add('bot',written+productCard(lastProduct,i),voice);return;
     }
     const pq=productQna(text,lastProduct?products.indexOf(lastProduct):-1);
-    if(pq){lastProduct=pq.p;activeProduct=pq.i;add('bot',esc(pq.answer));return}
+    if(pq){lastProduct=pq.p;activeProduct=pq.i;add('bot',esc(pq.answer)+productCard(pq.p,pq.i),String(pq.answer));return}
     const g=generalQna(text);if(g){add('bot',esc(g));return}
     const cat=categories().find(c=>{const cn=norm(c);return query.includes(cn)||cn.includes(query)||query.includes(cn.replace(/s$/,''))});
     if(cat){showCategory(cat,true);return}
