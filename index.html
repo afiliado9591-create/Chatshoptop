@@ -191,6 +191,7 @@
       <button class="btn" id="adminTabMetricas" type="button">📊 Métricas</button>
       <button class="btn" id="adminTabCatalogo" type="button">📦 Catálogo</button>
       <button class="btn" id="adminTabVideos" type="button">🎥 Vídeos</button>
+      <button class="btn" id="adminTabSeo" type="button">📈 Analytics e Google</button>
     </div>
     <div id="adminConteudo" style="margin-top:14px;max-height:60vh;overflow-y:auto"></div>
   </div>
@@ -239,6 +240,11 @@
 <div class="field" id="customDomainLocked" style="display:none">
 <label>Domínio próprio 🔒</label>
 <small>Disponível a partir do plano Básico. <a href="#" id="verPlanosDominio">Ver planos</a></small>
+</div>
+<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:12px;padding:11px;margin-top:10px">
+  <div style="font-weight:900;color:#1d4ed8;margin-bottom:8px">📈 Google Analytics e Search Console</div>
+  <div class="field"><label>ID do Google Analytics</label><input id="googleAnalyticsId" placeholder="G-XXXXXXXXXX"><small>Cole somente o ID que começa com G-. Não cole scripts.</small></div>
+  <div class="field" style="margin-bottom:0"><label>Verificação do Google Search Console</label><input id="googleSearchConsoleVerification" placeholder="Código da meta tag google-site-verification"><small>Cole apenas o conteúdo da verificação, não a tag HTML inteira. Para propriedade de domínio, a verificação é feita no DNS.</small></div>
 </div>
 </div>
 <div class="section"><h2>2. Aparência</h2>
@@ -488,6 +494,8 @@ async function populateForm(data){
   $('#welcome').value = data.welcome || '';
   $('#featuredVideo').value = data.featuredVideo || '';
   $('#customDomain').value = data.customDomain || '';
+  $('#googleAnalyticsId').value = data.googleAnalyticsId || '';
+  $('#googleSearchConsoleVerification').value = data.googleSearchConsoleVerification || '';
   $('#mainColor').value = data.mainColor || '#7A2E3B';
   $('#darkColor').value = data.darkColor || '#5B2029';
   $('#accentColor').value = data.accentColor || '#C9A24B';
@@ -518,6 +526,7 @@ function clearForm(){
   $('#storeType').value='affiliate'; $('#brand').value='Minha Loja'; $('#whatsapp').value='5511999999999'; $('#customDomain').value='';
   $('#welcome').value='Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja a vitrine.';
   $('#featuredVideo').value='';
+  $('#googleAnalyticsId').value='';$('#googleSearchConsoleVerification').value='';
   $('#mainColor').value='#7A2E3B'; $('#darkColor').value='#5B2029'; $('#accentColor').value='#C9A24B'; $('#chatBg').value='#FBF3EC'; $('#buyColor').value='#7A2E3B'; $('#priceColor').value='#7A2E3B'; $('#cardColor').value='#FFFFFF'; $('#cardOpacity').value='95'; $('#cardOpacityValue').textContent='95%'; $('#cardTextColor').value='#1A1A1A'; $('#categoryColor').value='#7A2E3B'; $('#categoryTextColor').value='#FFFFFF'; $('#showCategoryMenu').checked=true;
   $('#logoUrl').value=''; document.getElementById('logoField').dataset.upload=''; refreshLogo();
   $('#slug').value=''; $('#slug').dataset.touched=''; $('#slug').removeAttribute('disabled');
@@ -1172,12 +1181,21 @@ async function mostrarAdminVideos(){
   }catch(e){ console.error(e); box.innerHTML = '<p class="empty-hint">Não foi possível carregar os vídeos. Confira as regras do Firestore.</p>'; }
 }
 $('#adminBtn').onclick = abrirAdmin;
+async function mostrarAdminSeo(){
+  if(!isAdmin)return;
+  const box=$('#adminConteudo');box.innerHTML='<p class="empty-hint">Carregando configurações...</p>';
+  let data={};try{const snap=await db.collection('config').doc('platformSeo').get();if(snap.exists)data=snap.data()||{}}catch(e){console.warn(e)}
+  box.innerHTML=`<div style="font-weight:900;font-size:17px;margin-bottom:4px">📈 Analytics e Google da plataforma</div><p style="font-size:12px;color:var(--muted);margin-top:0">Estes dados valem para alibr.com.br, landing pages e páginas de conteúdo oficiais.</p><div class="field"><label>ID do Google Analytics</label><input id="adminGoogleAnalyticsId" value="${esc(data.googleAnalyticsId||'')}" placeholder="G-XXXXXXXXXX"><small>Cole somente o ID iniciado por G-.</small></div><div class="field"><label>Verificação do Google Search Console</label><input id="adminGoogleSearchVerification" value="${esc(data.googleSearchConsoleVerification||'')}" placeholder="Código google-site-verification"><small>Cole apenas o conteúdo da meta tag. Para propriedade de domínio, use a verificação DNS.</small></div><button class="btn primary" id="adminSaveSeo" type="button">💾 Salvar Analytics e Google</button><div class="notice" style="margin-top:10px">Os lojistas têm campos próprios dentro da edição de cada loja. Os dados deles são aplicados somente às páginas daquela loja.</div>`;
+  $('#adminSaveSeo').onclick=async()=>{const button=$('#adminSaveSeo'),ga=$('#adminGoogleAnalyticsId').value.trim().toUpperCase(),search=$('#adminGoogleSearchVerification').value.trim().replace(/^.*content=["']([^"']+)["'].*$/i,'$1').replace(/[^A-Za-z0-9_\-=]/g,'').slice(0,200);if(ga&&!/^G-[A-Z0-9]+$/.test(ga)){toast('O ID do Analytics precisa começar com G-');return}button.disabled=true;button.textContent='Salvando...';try{await db.collection('config').doc('platformSeo').set({googleAnalyticsId:ga,googleSearchConsoleVerification:search,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentUser?.email||''},{merge:true});toast('Configurações do Google salvas!')}catch(e){console.error(e);alert('Não foi possível salvar. Verifique a permissão de administrador no Firebase.')}finally{button.disabled=false;button.textContent='💾 Salvar Analytics e Google'}};
+}
+
 $('#adminTabUsuarios').onclick = mostrarAdminUsuarios;
 $('#adminTabIndicacoes').onclick = mostrarAdminIndicacoes;
 $('#adminTabDominios').onclick = mostrarAdminDominios;
 $('#adminTabMetricas').onclick = mostrarAdminMetricas;
 $('#adminTabCatalogo').onclick = mostrarAdminCatalogo;
 $('#adminTabVideos').onclick = mostrarAdminVideos;
+$('#adminTabSeo').onclick = mostrarAdminSeo;
 $('#fecharAdmin').onclick = ()=> $('#adminModal').style.display='none';
 document.querySelector('#adminModal .plans-overlay')?.addEventListener('click', ()=> $('#adminModal').style.display='none');
 
@@ -1964,7 +1982,7 @@ card.querySelector('.remove').onclick=()=>{card.remove();debounce()};
 card.querySelectorAll('input,textarea').forEach(i=>i.addEventListener('input',debounce));
 qnaListEl.appendChild(card)}
 function collectQnA(){return [...document.querySelectorAll('#qnaList .product')].map(card=>{const k=card.querySelector('[data-k="keywords"]').value.trim();const a=card.querySelector('[data-k="answer"]').value.trim();return{keywords:k.split(',').map(x=>x.trim()).filter(Boolean),answer:a}}).filter(q=>q.keywords.length && q.answer)}
-function collect(){return{storeType:$('#storeType').value||'affiliate',brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',featuredVideo:$('#featuredVideo').value.trim(),customDomain: myPlan!=='aprendiz' ? $('#customDomain').value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'') : '',mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardOpacity:Number($('#cardOpacity').value),cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,showCategoryMenu:$('#showCategoryMenu').checked,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';const baseLink=card.dataset.catalogBaseLink||'';const affiliateParam=baseLink?g('affiliateParam'):'';const linkFinal=baseLink?combineAffiliateLink(baseLink,affiliateParam):(g('link')||'#');return{id:card.dataset.productId,name:g('name')||'Produto',price:g('price')||'Consulte',link:linkFinal,catalogBaseLink:baseLink,affiliateParam,buttonText:g('buttonText')||'Comprar agora',buttonColor:g('buttonColor')||$('#buyColor').value,displayText:g('displayText'),voiceText:g('voiceText'),keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',colors:g('colors').split(',').map(x=>x.trim()).filter(Boolean),image:card.dataset.upload||g('imageUrl')||'',images:[card.dataset.upload||g('imageUrl')||'',card.dataset.upload2||g('imageUrl2')||'',card.dataset.upload3||g('imageUrl3')||'',card.dataset.upload4||g('imageUrl4')||''].filter(Boolean),promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
+function collect(){return{storeType:$('#storeType').value||'affiliate',brand:$('#brand').value.trim()||'Minha Loja',logo:getLogoData(),whatsapp:$('#whatsapp').value.replace(/\D/g,''),welcome:$('#welcome').value.trim()||'Olá! Como posso ajudar?',featuredVideo:$('#featuredVideo').value.trim(),customDomain: myPlan!=='aprendiz' ? $('#customDomain').value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'') : '',googleAnalyticsId:($('#googleAnalyticsId').value.trim().toUpperCase().match(/^G-[A-Z0-9]+$/)||[''])[0],googleSearchConsoleVerification:$('#googleSearchConsoleVerification').value.trim().replace(/^.*content=["']([^"']+)["'].*$/i,'$1').replace(/[^A-Za-z0-9_\-=]/g,'').slice(0,200),mainColor:$('#mainColor').value,darkColor:$('#darkColor').value,accentColor:$('#accentColor').value,chatBg:$('#chatBg').value,buyColor:$('#buyColor').value,priceColor:$('#priceColor').value,cardColor:$('#cardColor').value,cardOpacity:Number($('#cardOpacity').value),cardTextColor:$('#cardTextColor').value,categoryColor:$('#categoryColor').value,categoryTextColor:$('#categoryTextColor').value,showCategoryMenu:$('#showCategoryMenu').checked,products:[...document.querySelectorAll('#products .product')].map(card=>{const g=k=>card.querySelector(`[data-k="${k}"]`)?.value.trim()||'';const baseLink=card.dataset.catalogBaseLink||'';const affiliateParam=baseLink?g('affiliateParam'):'';const linkFinal=baseLink?combineAffiliateLink(baseLink,affiliateParam):(g('link')||'#');return{id:card.dataset.productId,name:g('name')||'Produto',price:g('price')||'Consulte',link:linkFinal,catalogBaseLink:baseLink,affiliateParam,buttonText:g('buttonText')||'Comprar agora',buttonColor:g('buttonColor')||$('#buyColor').value,displayText:g('displayText'),voiceText:g('voiceText'),keywords:g('keywords').split(',').map(x=>x.trim()).filter(Boolean),category:g('category')||'',colors:g('colors').split(',').map(x=>x.trim()).filter(Boolean),image:card.dataset.upload||g('imageUrl')||'',images:[card.dataset.upload||g('imageUrl')||'',card.dataset.upload2||g('imageUrl2')||'',card.dataset.upload3||g('imageUrl3')||'',card.dataset.upload4||g('imageUrl4')||''].filter(Boolean),promo:card.querySelector('[data-k="promo"]')?.checked||false,qna:[...card.querySelectorAll('.prod-qna-row')].map(row=>({question:row.querySelector('.pq-question').value.trim(),answer:row.querySelector('.pq-answer').value.trim()})).filter(x=>x.question&&x.answer)}}),qna:collectQnA()}}
 function liveVisual(p,cls=''){if(!p.image)return `<div class="live-noimg">🛍️</div>`;return `<img src="${esc(p.image)}" alt="${esc(p.name)}">`}
 function liveCard(p,inside=false){return `<div class="${inside?'live-pcard':'live-card'}">${liveVisual(p)}<b>${esc(p.name)}</b><div class="live-price">${esc(p.price)}</div><a class="live-buy" style="background:${esc(p.buttonColor||'var(--store-buy,var(--store-main))')}" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.buttonText||'Comprar agora')}</a></div>`}
 function liveProductResult(p){const t=String(p.displayText||'').trim();return (t?'<div style="margin-bottom:7px">'+esc(t)+'</div>':'')+liveCard(p,true)}
