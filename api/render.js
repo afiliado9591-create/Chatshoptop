@@ -103,6 +103,20 @@ async function getStoreByCustomDomain(host) {
   return doc ? decodeFirestoreFields(doc.fields || {}) : null;
 }
 
+async function getPlatformSeo() {
+  const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/config/platformSeo?key=${API_KEY}`;
+  try { const r=await fetch(url,{headers:{accept:'application/json'}});if(!r.ok)return{};const doc=await r.json();return decodeFirestoreFields(doc.fields||{}); } catch(e) { return {}; }
+}
+
+function cleanGaId(value){const v=String(value||'').trim().toUpperCase();return /^G-[A-Z0-9]+$/.test(v)?v:''}
+function cleanVerification(value){const v=String(value||'').trim();return /^[A-Za-z0-9_\-=]{6,200}$/.test(v)?v:''}
+function injectAnalyticsSeo(html,settings={}){
+  const ga=cleanGaId(settings.googleAnalyticsId),verification=cleanVerification(settings.googleSearchConsoleVerification);
+  if(verification)html=upsertMeta(html,'name','google-site-verification',verification);
+  if(ga){html=upsertMeta(html,'name','chatshop-google-analytics-id',ga);html=forceScript(html,'analytics-loader.js','20260816-1700')}
+  return html;
+}
+
 function upsertMeta(html, attr, key, content) {
   const safe = htmlEscape(content);
   const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -250,6 +264,7 @@ module.exports = async function handler(request, response) {
 
     if (isBase || isVercelHost || !host) {
       html = injectUpgrades(html, false, 'editor');
+      html = injectAnalyticsSeo(html, await getPlatformSeo());
       response.setHeader('Content-Type','text/html; charset=utf-8');
       response.setHeader('Cache-Control','public, max-age=0, s-maxage=20');
       return response.status(200).send(html);
@@ -269,6 +284,7 @@ module.exports = async function handler(request, response) {
     const requestedProduct = productIndex >= 0 && Array.isArray(store?.products) ? store.products[productIndex] : null;
     const layout = store?.homeLayout === 'grid' ? 'grid' : 'single';
     html = injectStoreFeatureBootstrap(html, store);
+    html = injectAnalyticsSeo(html, store || {});
     html = injectUpgrades(html, true, layout);
     if (layout === 'grid') {
       html = disableLegacyStoreAutoload(html);
