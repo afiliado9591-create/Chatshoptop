@@ -309,6 +309,8 @@ function installOriginalChat(){
 
 function makeProductSellerButton(index,card=false){
   const b=document.createElement('button');b.type='button';b.className='vcd-product-seller'+(card?' vcd-product-seller-card':'');b.dataset.chatProduct=String(index);b.textContent=card?'💬 Perguntar ao vendedor':'💬 Perguntar sobre este produto';
+  const color=/^#[0-9a-f]{6}$/i.test(store?.mainColor||'')?store.mainColor:'#c2185b';
+  b.style.cssText=`display:block;width:100%;margin:${card?'10px 0 0':'9px 0'};padding:${card?'11px 10px':'12px 13px'};border:0;border-radius:999px;background:${color};color:#fff;font-size:${card?'13px':'14px'};font-weight:900;line-height:1.25;text-align:center;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.16);box-sizing:border-box`;
   b.onclick=e=>{e.preventDefault();e.stopPropagation();window.__CHATSHOP_OPEN_PRODUCT_CHAT?.(index)};return b;
 }
 function injectProductSellerButtons(){
@@ -316,7 +318,10 @@ function injectProductSellerButtons(){
     if(card.querySelector('.vcd-product-seller-card'))return;
     const open=card.querySelector('.csv-open[data-product],.vs-open[data-product]');
     let i=Number(open?.dataset.product);if(!Number.isInteger(i)||i<0)i=fallbackIndex;
-    if(products[i])card.appendChild(makeProductSellerButton(i,true));
+    if(products[i]){
+      const target=card.querySelector('.csv-body,.vs-body')||card;
+      target.appendChild(makeProductSellerButton(i,true));
+    }
   });
   const body=$('#vsProductBody')||$('#csvProductBody');if(!body||activeProduct<0||!products[activeProduct])return;
   let b=body.querySelector('.vcd-product-seller:not(.vcd-product-seller-card)');
