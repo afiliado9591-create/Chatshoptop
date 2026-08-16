@@ -23,7 +23,10 @@ const POLICY = {
 };
 
 function currentPlan(){
-  try{return (typeof myPlan!=='undefined' && myPlan) || 'aprendiz'}catch(e){return 'aprendiz'}
+  try{
+    if(typeof isAdmin!=='undefined'&&isAdmin===true)return 'profissional';
+    return (typeof myPlan!=='undefined' && myPlan) || 'aprendiz';
+  }catch(e){return 'aprendiz'}
 }
 function cap(plan){return POLICY[plan] || POLICY.aprendiz}
 function isPro(){return currentPlan()==='profissional'}
@@ -49,7 +52,7 @@ async function syncLoggedUser(){
     if(typeof db==='undefined'||!db||typeof myUid==='undefined'||!myUid)return;
     const ref=db.collection('users').doc(myUid);
     const snap=await ref.get();
-    const plan=(snap.exists&&snap.data().plan)||currentPlan()||'aprendiz';
+    const plan=(typeof isAdmin!=='undefined'&&isAdmin===true)?'profissional':((snap.exists&&snap.data().plan)||currentPlan()||'aprendiz');
     const c=cap(plan);
     await ref.set({productLimit:c.products,chatLimit:c.chats,planPolicyVersion:'2026-08-14'}, {merge:true});
     try{myPlan=plan;myProductLimit=c.products;myChatLimit=c.chats}catch(e){}
