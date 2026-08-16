@@ -49,12 +49,17 @@ async function getPage(slug){
   const json = await r.json();
   return decodeFields(json.fields || {});
 }
+async function getPlatformSeo(){
+  const url=`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/config/platformSeo?key=${API_KEY}`;
+  try{const r=await fetch(url,{headers:{accept:'application/json'},cache:'no-store'});if(r.ok){const j=await r.json();return decodeFields(j.fields||{})}}catch(e){}return{};
+}
 
 module.exports = async function handler(req,res){
   try{
     const slug = cleanSlug(req.query && req.query.slug);
     if(!slug){ res.status(404).send('Página não encontrada.'); return; }
     const page = await getPage(slug);
+    const platformSeo = await getPlatformSeo();
     if(!page || page.type !== 'contentPage' || page.published === false){
       res.status(404).setHeader('Content-Type','text/html; charset=utf-8');
       res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Página não encontrada · ChatShop</title></head><body style="font-family:Arial,sans-serif;padding:30px"><h1>Página não encontrada</h1><p>Esta página não existe ou ainda não foi publicada.</p><a href="https://${BASE_DOMAIN}/site">Voltar ao início</a></body></html>`);
@@ -68,6 +73,8 @@ module.exports = async function handler(req,res){
     const ogImage = /^https:\/\//i.test(image) ? image : '';
     const keywords = Array.isArray(page.keywords) ? page.keywords.join(', ') : '';
     const links = Array.isArray(page.links) ? page.links.filter(x => x && x.label && /^https?:\/\//i.test(String(x.url || ''))) : [];
+    const ga=/^G-[A-Z0-9]+$/.test(String(platformSeo.googleAnalyticsId||'').toUpperCase())?String(platformSeo.googleAnalyticsId).toUpperCase():'';
+    const verification=/^[A-Za-z0-9_\-=]{6,200}$/.test(String(platformSeo.googleSearchConsoleVerification||''))?String(platformSeo.googleSearchConsoleVerification):'';
     const jsonLd = {
       '@context':'https://schema.org',
       '@type':'Article',
@@ -83,6 +90,8 @@ module.exports = async function handler(req,res){
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+${verification ? `<meta name="google-site-verification" content="${esc(verification)}">` : ''}
+${ga ? `<meta name="chatshop-google-analytics-id" content="${esc(ga)}"><script src="/analytics-loader.js?v=20260816-1700" defer></script>` : ''}
 <title>${esc(title)} · ChatShop</title>
 <meta name="description" content="${esc(description)}">
 ${keywords ? `<meta name="keywords" content="${esc(keywords)}">` : ''}
