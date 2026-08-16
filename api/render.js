@@ -165,7 +165,7 @@ function forceScript(html, filename, version) {
 }
 
 function injectUpgrades(html, storefrontMode, layout) {
-  const version = '20260816-1635-premium-all-stores';
+  const version = '20260816-1715-seller-button-position';
   const scripts = [
     'catalog-editor-upgrade.js',
     'store-layout-upgrade.js',
@@ -177,7 +177,8 @@ function injectUpgrades(html, storefrontMode, layout) {
     'admin-content-pages.js',
     'seller-audio-admin-controls.js',
     'seller-audio-admin-fix.js',
-    'seller-audio-upload-fix.js'
+    'seller-audio-upload-fix.js',
+    'product-seller-button-control.js'
   ];
   scripts.forEach(name => { html = removeScript(html, name); });
 
@@ -198,6 +199,7 @@ function injectUpgrades(html, storefrontMode, layout) {
     html = forceScript(html, 'seller-audio-admin-fix.js', version);
     html = forceScript(html, 'seller-audio-upload-fix.js', version);
   }
+  html = forceScript(html, 'product-seller-button-control.js', version);
   return html;
 }
 
