@@ -341,8 +341,8 @@ async function boot(){
   store=await loadStore();
   if(!store||store.storeType!=='virtual')return;
   products=Array.isArray(store.products)?store.products:[];
-  for(let i=0;i<100;i++){if($('.vs-page')||$('.csv-page'))break;await new Promise(r=>setTimeout(r,100))}
   installOriginalChat();
+  for(let i=0;i<100;i++){if($('.vs-page')||$('.csv-page'))break;await new Promise(r=>setTimeout(r,100))}
   try{bindProductDescription()}catch(e){console.warn('ChatShop: botões por produto indisponíveis',e)}
 }
 boot();
