@@ -109,6 +109,31 @@ function refreshPublic(){
   setSellerButton(activeSingleProduct(),true);
   return true;
 }
+function virtualProductModalOpen(){
+  return Boolean(
+    document.querySelector('#csvProduct.on,#csvProduct.open,#csvProductModal.on,#csvProductModal.open,#vsProduct.on,#vsProduct.open,#vsProductModal.on,#vsProductModal.open')
+  );
+}
+function syncVirtualProductGuard(){
+  const open=virtualProductModalOpen();
+  document.body?.classList.toggle('chatshop-virtual-product-open',open);
+  return open;
+}
+function installVirtualProductGuard(){
+  if(!document.body)return false;
+  if(!document.getElementById('virtualProductChatGuardStyle')){
+    const style=document.createElement('style');style.id='virtualProductChatGuardStyle';
+    style.textContent='body.chatshop-virtual-product-open #pubChatToggle{display:none!important}';
+    document.head.appendChild(style);
+  }
+  if(!document.body.dataset.virtualProductChatGuard){
+    document.body.dataset.virtualProductChatGuard='1';
+    new MutationObserver(syncVirtualProductGuard).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+    document.addEventListener('click',()=>setTimeout(syncVirtualProductGuard,0),true);
+  }
+  syncVirtualProductGuard();
+  return true;
+}
 function installPublic(){
   if(!publicData())return false;
   if(!$('#pubFeed')||!$('#pubChatToggle'))return false;
@@ -141,7 +166,7 @@ function installPublic(){
 }
 function boot(){
   let tries=0;const timer=setInterval(()=>{
-    tries++;installEditor();installPublic();
+    tries++;installEditor();installVirtualProductGuard();installPublic();
     if(tries>100)clearInterval(timer);
   },120);
 }
