@@ -108,7 +108,7 @@ function installOriginalChat(){
   .conversation-bar{display:flex;align-items:center;gap:9px;padding:8px 10px;background:rgba(255,255,255,.92);border-top:1px solid rgba(0,0,0,.06);border-bottom:1px solid rgba(0,0,0,.08);flex-wrap:wrap}.conversation-toggle{border:0;border-radius:999px;background:#16a34a;color:#fff;padding:10px 14px;font-weight:900;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}.conversation-toggle.active{background:#dc2626}.conversation-dot{width:9px;height:9px;border-radius:50%;background:#fff}.conversation-hint{font-size:11px;color:#6b7280;line-height:1.25;flex:1;min-width:150px}.conversation-hint.active{color:#15803d;font-weight:800}
   .rec-status{display:none;align-items:center;gap:6px;color:#b91c1c;font-size:12px;font-weight:700;padding:0 4px}.rec-status.show{display:flex}.listen-btn{border:none;background:var(--store-main);color:#fff;cursor:pointer;font-size:16px;width:30px;height:30px;border-radius:50%;margin-left:6px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
   .cat-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cat-chip{border:1px solid var(--store-main);background:#fff;color:var(--store-main);padding:6px 11px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer}.cat-chip.all-chip{background:var(--store-main);color:#fff}.cat-chip.lead-chip{background:#25D366;border-color:#25D366;color:#fff}
-  .vcd-product-seller{width:100%;border:0;border-radius:999px;background:var(--store-main,#7A2E3B);color:#fff;padding:11px 13px;margin:9px 0;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.16)}.vcd-product-seller-card{margin:8px 10px 10px;width:calc(100% - 20px);padding:9px 8px;font-size:12px}.live-pcard{width:220px;margin-top:8px}.live-pcard img{width:100%;height:125px;object-fit:contain;border-radius:8px;background:#f6f6f6}.live-noimg{height:125px;display:grid;place-items:center;background:#f3f4f6;border-radius:8px;font-size:36px}.live-price{color:var(--store-main);font-weight:800;margin:4px 0}.live-buy{display:block;text-align:center;background:var(--store-main);color:#fff;text-decoration:none;padding:8px;border-radius:8px;font-weight:700;font-size:12px;border:0;width:100%;cursor:pointer}.lead-form{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.lead-input{flex:1;min-width:150px;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:13px}.lead-submit{border:0;background:var(--store-main);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer}`;
+  .vcd-product-seller{width:100%;border:0;border-radius:999px;background:var(--store-main,#7A2E3B);color:#fff;padding:11px 13px;margin:9px 0;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.16)}.vcd-product-seller-card{margin:8px 10px 10px;width:calc(100% - 20px);padding:9px 8px;font-size:12px}.live-pcard{width:220px;margin-top:8px}.live-pcard img{width:100%;height:125px;object-fit:contain;border-radius:8px;background:#f6f6f6}.live-pdesc{font-size:12px;line-height:1.4;color:#4b5563;margin:5px 0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.live-noimg{height:125px;display:grid;place-items:center;background:#f3f4f6;border-radius:8px;font-size:36px}.live-price{color:var(--store-main);font-weight:800;margin:4px 0}.live-buy{display:block;text-align:center;background:var(--store-main);color:#fff;text-decoration:none;padding:8px;border-radius:8px;font-weight:700;font-size:12px;border:0;width:100%;cursor:pointer}.lead-form{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.lead-input{flex:1;min-width:150px;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:13px}.lead-submit{border:0;background:var(--store-main);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer}`;
   document.head.appendChild(fallback);
 
   const logo=safeImage(store.logo);
@@ -137,7 +137,8 @@ function installOriginalChat(){
   function productVoiceText(p){return String(p?.voiceText||`${p?.name||'Produto'}, ${money(p?.price)}.`).trim()}
   function productCard(p,i){
     const img=safeImage(Array.isArray(p.images)?p.images[0]:p.image);
-    return `<div class="live-pcard">${img?`<img src="${esc(img)}" alt="${esc(p.name||'Produto')}">`:'<div class="live-noimg">🛍️</div>'}<b>${esc(p.name||'Produto')}</b><div class="live-price">${esc(money(p.price))}</div><button class="live-buy" type="button" data-pub-product="${i}">Comprar</button></div>`;
+    const description=productWrittenText(p);
+    return `<div class="live-pcard">${img?`<img src="${esc(img)}" alt="${esc(p.name||'Produto')}">`:'<div class="live-noimg">🛍️</div>'}<b>${esc(p.name||'Produto')}</b>${description?`<div class="live-pdesc">${esc(description)}</div>`:''}<div class="live-price">${esc(money(p.price))}</div><button class="live-buy" type="button" data-pub-product="${i}">Comprar</button></div>`;
   }
   function productResultHtml(p){const i=products.indexOf(p);return productCard(p,i)}
   function catButtons(list){
@@ -211,13 +212,14 @@ function installOriginalChat(){
       const voice='Para comprar '+name+', toque no botão Comprar. Depois escolha a cor e a quantidade, adicione à sacola e finalize o pedido.';
       add('bot',written+productCard(lastProduct,i),voice);return;
     }
+    const mentioned=matchProduct(text);
     const pq=productQna(text,lastProduct?products.indexOf(lastProduct):-1);
     if(pq){lastProduct=pq.p;activeProduct=pq.i;add('bot',esc(pq.answer)+productCard(pq.p,pq.i),String(pq.answer));return}
-    const g=generalQna(text);if(g){add('bot',esc(g));return}
+    const g=generalQna(text);if(g){if(mentioned){lastProduct=mentioned.p;activeProduct=mentioned.i;add('bot',esc(g)+productCard(mentioned.p,mentioned.i),String(g)+' '+productVoiceText(mentioned.p))}else add('bot',esc(g));return}
     const cat=categories().find(c=>{const cn=norm(c);return query.includes(cn)||cn.includes(query)||query.includes(cn.replace(/s$/,''))});
     if(cat){showCategory(cat,true);return}
     if(/catalogo|ver todos|todos os produtos|mostrar produtos|quais produtos|produtos disponiveis/.test(query)){showAllProducts();return}
-    const found=matchProduct(text);
+    const found=mentioned;
     if(found){lastProduct=found.p;activeProduct=found.i;const written=productWrittenText(found.p);add('bot',(written?esc(written):'Encontrei este produto para você:')+productCard(found.p,found.i),productVoiceText(found.p));return}
     if(/oi|ola|bom dia|boa tarde|boa noite/.test(query)){add('bot',esc(store.welcome||'Olá! Como posso ajudar?'));return}
     if(/preco|valor|quanto/.test(query)){add('bot','Os preços aparecem nos produtos. Escreva o nome do produto que você quer consultar.');return}
