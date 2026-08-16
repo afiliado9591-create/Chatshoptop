@@ -10,6 +10,19 @@ const money=v=>{let s=String(v??'').replace(/[^0-9,.-]/g,'');if(s.includes(','))
 let store=null,products=[],activeProduct=-1;
 
 async function loadStore(){
+  try{
+    let data=window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||null;
+    if(!data){
+      const source=$('#chatshopStoreFeatureBootstrap')?.textContent||'';
+      const match=source.match(/window\.__CHATSHOP_STORE_FEATURE_DATA\s*=\s*([\s\S]*?)\s*;?\s*$/);
+      if(match?.[1])data=JSON.parse(match[1]);
+    }
+    if(data){
+      const db=window.firebase?.firestore?.();
+      const slug=String(data.slug||'').trim();
+      return{...data,slug,ref:db&&slug?db.collection('chatshops').doc(slug):null};
+    }
+  }catch(e){console.warn('ChatShop virtual: dados incorporados inválidos',e)}
   const host=location.hostname.toLowerCase().replace(/\.$/,'');
   if(!host.endsWith('.alibr.com.br')||host==='www.alibr.com.br')return null;
   const slug=host.slice(0,-'.alibr.com.br'.length);
