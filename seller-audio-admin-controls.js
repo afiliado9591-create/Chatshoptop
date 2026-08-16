@@ -193,18 +193,20 @@ function stopPublicPlayback(){
   if(currentPublicButton){currentPublicButton.innerHTML=currentPublicButton.classList.contains('seller-audio-single')?'▶ Ouvir descrição':'🔊 Detalhes do produto';currentPublicButton=null}
 }
 function playSellerAudio(p,btn){
-  const mode=String(p?.sellerAudioMode||'off');
+  const legacyText=String(p?.voiceText||'').trim();
+  const savedMode=String(p?.sellerAudioMode||'off');
+  const mode=savedMode==='off'&&legacyText?'tts':savedMode;
   if(currentPublicButton===btn){stopPublicPlayback();return}
   stopPublicPlayback();currentPublicButton=btn;btn.innerHTML='⏹️ Parar áudio';
   if(mode==='tts'){
-    const text=String(p?.sellerAudioText||'').trim();if(!text){stopPublicPlayback();return}
+    const text=String(p?.sellerAudioText||legacyText).trim();if(!text){stopPublicPlayback();return}
     try{const u=new SpeechSynthesisUtterance(text);u.lang='pt-BR';u.onend=stopPublicPlayback;u.onerror=stopPublicPlayback;speechSynthesis.speak(u)}catch(e){stopPublicPlayback()}
     return;
   }
   const url=String(p?.sellerAudioUrl||'').trim();if(!url){stopPublicPlayback();return}
   try{const a=new Audio(url);currentPublicAudio=a;a.onended=stopPublicPlayback;a.onerror=stopPublicPlayback;a.play().catch(stopPublicPlayback)}catch(e){stopPublicPlayback()}
 }
-function hasSellerAudio(p){const m=String(p?.sellerAudioMode||'off');return m==='tts'?!!String(p?.sellerAudioText||'').trim():((m==='upload'||m==='record')&&!!String(p?.sellerAudioUrl||'').trim())}
+function hasSellerAudio(p){const legacyText=String(p?.voiceText||'').trim();const saved=String(p?.sellerAudioMode||'off');const m=saved==='off'&&legacyText?'tts':saved;return m==='tts'?!!String(p?.sellerAudioText||legacyText).trim():((m==='upload'||m==='record')&&!!String(p?.sellerAudioUrl||'').trim())}
 
 function productForCard(card){
   const ps=publicProducts();const i=Number(card.dataset.i);if(Number.isInteger(i)&&i>=0&&ps[i])return ps[i];
