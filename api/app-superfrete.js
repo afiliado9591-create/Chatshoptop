@@ -94,7 +94,7 @@ module.exports = async function handler(request, response) {
 
     const virtualTag = '<script src="/virtual-shipping-upgrade.js?v=20260813-1707"></script>';
     const superfreteDomainFixTag = '<script src="/superfrete-domain-fix.js?v=20260814-1058"></script>';
-    const superfreteTag = '<script src="/superfrete-upgrade.js?v=20260814-1058"></script>';
+    const superfreteTag = '<script src="/superfrete-upgrade.js?v=20260816-1305-multi-origin"></script>';
     const virtualChatTag = '<script src="/virtual-chat-description-fix.js?v=20260816-1250-buy-before-catalog"></script>';
     const virtualScrollTag = '<script src="/virtual-scroll-fix.js?v=20260813-2147"></script>';
     const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260813-2302"></script>';
