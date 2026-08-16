@@ -310,7 +310,9 @@ function installOriginalChat(){
 function makeProductSellerButton(index,card=false){
   const b=document.createElement('button');b.type='button';b.className='vcd-product-seller'+(card?' vcd-product-seller-card':'');b.dataset.chatProduct=String(index);b.textContent=card?'💬 Perguntar ao vendedor':'💬 Perguntar sobre este produto';
   const color=/^#[0-9a-f]{6}$/i.test(store?.mainColor||'')?store.mainColor:'#c2185b';
-  b.style.cssText=`display:block;width:100%;margin:${card?'10px 0 0':'9px 0'};padding:${card?'11px 10px':'12px 13px'};border:0;border-radius:999px;background:${color};color:#fff;font-size:${card?'13px':'14px'};font-weight:900;line-height:1.25;text-align:center;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.16);box-sizing:border-box`;
+  b.style.cssText=card
+    ? `display:inline-block;width:100%;height:35px;margin:10px 0 0;padding:10px 4px;border:0;border-radius:9px;background:${color};color:#fff;font-size:12px;font-weight:900;line-height:15px;white-space:nowrap;text-align:center;cursor:pointer;box-shadow:none;box-sizing:border-box`
+    : `display:block;width:100%;margin:9px 0;padding:12px 13px;border:0;border-radius:999px;background:${color};color:#fff;font-size:14px;font-weight:900;line-height:1.25;text-align:center;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.16);box-sizing:border-box`;
   b.onclick=e=>{e.preventDefault();e.stopPropagation();window.__CHATSHOP_OPEN_PRODUCT_CHAT?.(index)};return b;
 }
 function injectProductSellerButtons(){
