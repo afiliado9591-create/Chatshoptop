@@ -123,6 +123,7 @@ function installOriginalChat(){
   .live-messages{flex:1;overflow:auto;padding:15px;display:flex;flex-direction:column;gap:9px}.live-row{display:flex}.live-row.user{justify-content:flex-end}.live-bubble{max-width:82%;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid #ead9cc;line-height:1.4;font-size:14px}.live-row.user .live-bubble{background:#f3e3d3;border:0;border-top-right-radius:3px}.live-time{display:block;text-align:right;font-size:10px;color:#8a7570;margin-top:4px}
   .live-inputbar{display:flex;gap:8px;padding:10px;background:#f1e6dc}.live-inputbar input{flex:1;border:0;border-radius:22px;padding:12px 15px;font-size:15px;outline:none}.live-inputbar button{width:44px;height:44px;border:0;border-radius:50%;background:var(--store-main);color:#fff;font-size:18px;cursor:pointer;display:grid;place-items:center;flex-shrink:0}.live-inputbar button.recording{background:#dc2626}
   .conversation-bar{display:flex;align-items:center;gap:9px;padding:8px 10px;background:rgba(255,255,255,.92);border-top:1px solid rgba(0,0,0,.06);border-bottom:1px solid rgba(0,0,0,.08);flex-wrap:wrap}.conversation-toggle{border:0;border-radius:999px;background:#16a34a;color:#fff;padding:10px 14px;font-weight:900;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}.conversation-toggle.active{background:#dc2626}.conversation-dot{width:9px;height:9px;border-radius:50%;background:#fff}.conversation-hint{font-size:11px;color:#6b7280;line-height:1.25;flex:1;min-width:150px}.conversation-hint.active{color:#15803d;font-weight:800}
+  .voice-output-toggle{border:0;border-radius:999px;background:var(--store-main);color:#fff;padding:10px 13px;font-weight:900;font-size:12px;cursor:pointer;white-space:nowrap}.voice-output-toggle.off{background:#6b7280}
   .rec-status{display:none;align-items:center;gap:6px;color:#b91c1c;font-size:12px;font-weight:700;padding:0 4px}.rec-status.show{display:flex}.listen-btn{border:none;background:var(--store-main);color:#fff;cursor:pointer;font-size:16px;width:30px;height:30px;border-radius:50%;margin-left:6px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
   .cat-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cat-chip{border:1px solid var(--store-main);background:#fff;color:var(--store-main);padding:6px 11px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer}.cat-chip.all-chip{background:var(--store-main);color:#fff}.cat-chip.lead-chip{background:#25D366;border-color:#25D366;color:#fff}
   .vcd-product-seller{width:100%;border:0;border-radius:999px;background:var(--store-main,#7A2E3B);color:#fff;padding:11px 13px;margin:9px 0;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.16)}.vcd-product-seller-card{margin:8px 10px 10px;width:calc(100% - 20px);padding:9px 8px;font-size:12px}.live-pcard{width:220px;margin-top:8px}.live-pcard img{width:100%;height:125px;object-fit:contain;border-radius:8px;background:#f6f6f6}.live-pdesc{font-size:12px;line-height:1.4;color:#4b5563;margin:5px 0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.live-noimg{height:125px;display:grid;place-items:center;background:#f3f4f6;border-radius:8px;font-size:36px}.live-price{color:var(--store-main);font-weight:800;margin:4px 0}.live-buy{display:block;text-align:center;background:var(--store-main);color:#fff;text-decoration:none;padding:8px;border-radius:8px;font-weight:700;font-size:12px;border:0;width:100%;cursor:pointer}.lead-form{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.lead-input{flex:1;min-width:150px;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:13px}.lead-submit{border:0;background:var(--store-main);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer}`;
@@ -140,6 +141,7 @@ function installOriginalChat(){
         </div>
         <div class="live-messages" id="pubMessages"></div>
         <div class="conversation-bar">
+          <button id="pubVoiceToggle" class="voice-output-toggle" type="button" aria-pressed="true">🔊 Voz ativada</button>
           <button id="pubConversationToggle" class="conversation-toggle" type="button" aria-pressed="false" title="Ativar conversa por voz contínua"><span class="conversation-dot"></span><span id="pubConversationLabel">🎙️ Ativar conversa</span></button>
           <span class="conversation-hint" id="pubConversationHint">Fale e o ChatShop responde em voz alta automaticamente.</span>
         </div>
@@ -148,7 +150,7 @@ function installOriginalChat(){
     </div>`);
 
   const overlay=$('#pubChatOverlay'),messages=$('#pubMessages'),input=$('#pubInput');
-  let lastProduct=null,lastAnnouncedProduct=-1,productContext=null,conversationMode=false,conversationSpeaking=false,conversationRestartTimer=null,conversationSpeechTimer=null,pubRecognition=null,pubListening=false;
+  let lastProduct=null,lastAnnouncedProduct=-1,productContext=null,voiceEnabled=localStorage.getItem('chatshop_voice_output')!=='off',conversationMode=false,conversationSpeaking=false,conversationRestartTimer=null,conversationSpeechTimer=null,pubRecognition=null,pubListening=false;
 
   function productWrittenText(p){return String(p?.displayText||p?.cardDescription||'').trim()}
   function productVoiceText(p){return String(p?.voiceText||`${p?.name||'Produto'}, ${money(p?.price)}.`).trim()}
@@ -164,7 +166,8 @@ function installOriginalChat(){
     html+='<button type="button" class="cat-chip lead-chip" data-cat="__LEAD__">📱 Deixar WhatsApp</button></div>';
     return html;
   }
-  function speak(text){
+  function speak(text,force=false){
+    if(!voiceEnabled&&!force)return;
     try{
       clearTimeout(conversationRestartTimer);clearTimeout(conversationSpeechTimer);conversationSpeaking=true;
       if(pubListening&&pubRecognition){try{pubRecognition.stop()}catch(e){}}
@@ -189,7 +192,7 @@ function installOriginalChat(){
     const spoken=String(voiceText||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim()||clean;
     const listen=(who==='bot'&&spoken)?'<button type="button" class="listen-btn" title="Ouvir mensagem">🔊</button>':'';
     row.innerHTML=`<div class="live-bubble">${html}${listen}<span class="live-time">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
-    if(who==='bot'){const b=row.querySelector('.listen-btn');if(b)b.onclick=()=>speak(spoken)}
+    if(who==='bot'){const b=row.querySelector('.listen-btn');if(b)b.onclick=()=>speak(spoken,true)}
     messages.appendChild(row);messages.scrollTop=messages.scrollHeight;
     if(who==='bot'&&conversationMode&&spoken)setTimeout(()=>speak(spoken),120);
   }
@@ -280,6 +283,7 @@ function installOriginalChat(){
     const intro='<b>'+esc(name)+'</b><br>'+summary+productCard(p,i)+'<div style="margin-top:8px;font-weight:800">Tem alguma dúvida sobre esse produto?</div>';
     const voice=name+'. '+(description||'Confira os detalhes e as opções disponíveis.')+' Tem alguma dúvida sobre esse produto?';
     add('bot',intro,voice);
+    if(voiceEnabled&&!conversationMode)setTimeout(()=>speak('Voz ativada. Se preferir, desative a voz. '+name+'. '+(description||'Confira os detalhes e as opções disponíveis.')+'. O valor é '+money(p.price)+'. Tem alguma dúvida sobre esse produto?'),180);
     setTimeout(()=>input.focus(),120);
   }
   window.__CHATSHOP_OPEN_PRODUCT_CHAT=openChatForProduct;
@@ -299,6 +303,13 @@ function installOriginalChat(){
   $('#pubChatToggle').onclick=()=>{if(activeProduct>=0&&products[activeProduct]){openChatForProduct(activeProduct);return}overlay.classList.add('open');if(!messages.children.length)add('bot',esc(store.welcome||'Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja as opções abaixo.')+catButtons(categories()));setTimeout(()=>input.focus(),120)};
   $('#pubChatClose').onclick=()=>{overlay.classList.remove('open');setConversationMode(false,true)};
   $('#pubSend').onclick=submit;input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit()}});
+
+  function updateVoiceOutputUI(){
+    const btn=$('#pubVoiceToggle');if(!btn)return;
+    btn.textContent=voiceEnabled?'🔊 Voz ativada':'🔇 Voz desativada';btn.classList.toggle('off',!voiceEnabled);btn.setAttribute('aria-pressed',voiceEnabled?'true':'false');
+  }
+  $('#pubVoiceToggle').onclick=()=>{voiceEnabled=!voiceEnabled;localStorage.setItem('chatshop_voice_output',voiceEnabled?'on':'off');if(!voiceEnabled){try{speechSynthesis.cancel()}catch(e){}}else speak('Voz ativada.',true);updateVoiceOutputUI()};
+  updateVoiceOutputUI();
 
   function makeRecognition(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;const r=new SR();r.lang='pt-BR';r.continuous=false;r.interimResults=false;r.maxAlternatives=1;return r}
   function updateConversationUI(){
