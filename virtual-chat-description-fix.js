@@ -158,6 +158,7 @@ function installOriginalChat(){
     const description=productWrittenText(p);
     return `<div class="live-pcard">${img?`<img src="${esc(img)}" alt="${esc(p.name||'Produto')}">`:'<div class="live-noimg">🛍️</div>'}<b>${esc(p.name||'Produto')}</b>${description?`<div class="live-pdesc">${esc(description)}</div>`:''}<div class="live-price">${esc(money(p.price))}</div><button class="live-buy" type="button" data-pub-product="${i}">Comprar</button></div>`;
   }
+  function productBuyButton(p,i){return `<button class="live-buy" type="button" data-pub-product="${i}" style="margin-top:10px">Comprar ${esc(p?.name||'este produto')}</button>`}
   function productResultHtml(p){const i=products.indexOf(p);return productCard(p,i)}
   function catButtons(list){
     let html='<div class="cat-row"><button type="button" class="cat-chip all-chip" data-cat="__ALL__">Ver todos</button>';
@@ -228,19 +229,19 @@ function installOriginalChat(){
       const purchaseIntent=/como comprar|quero comprar|onde comprar|comprar|vou levar|sacola|carrinho/.test(query);
       if(purchaseIntent){
         const name=String(p?.name||'este produto');
-        add('bot','Para comprar <b>'+esc(name)+'</b>, toque em <b>Comprar</b>.'+productCard(p,i),'Para comprar '+name+', toque no botão Comprar.');return;
+        add('bot','Para comprar <b>'+esc(name)+'</b>, toque no botão abaixo.'+productBuyButton(p,i),'Para comprar '+name+', toque no botão Comprar.');return;
       }
       for(const qa of(Array.isArray(p.qna)?p.qna:[])){
         if(!qa?.question||!qa?.answer)continue;
         const words=norm(qa.question).split(' ').filter(w=>w.length>2);
-        if(words.some(w=>query.includes(w))){add('bot',esc(qa.answer),String(qa.answer));return}
+        if(words.some(w=>query.includes(w))){add('bot',esc(qa.answer)+productBuyButton(p,i),String(qa.answer));return}
       }
-      if(/preco|valor|quanto custa|custa/.test(query)){add('bot','O valor de <b>'+esc(p.name||'este produto')+'</b> é '+esc(money(p.price))+'.'+productCard(p,i),'O valor é '+money(p.price)+'.');return}
+      if(/preco|valor|quanto custa|custa/.test(query)){add('bot','O valor de <b>'+esc(p.name||'este produto')+'</b> é '+esc(money(p.price))+'.'+productBuyButton(p,i),'O valor é '+money(p.price)+'.');return}
       if(/descricao|detalhe|como e|fale sobre|material|tecido/.test(query)){
         const description=productWrittenText(p);
-        if(description){add('bot',esc(description)+productCard(p,i),productVoiceText(p));return}
+        if(description){add('bot',esc(description)+productBuyButton(p,i),productVoiceText(p));return}
       }
-      add('bot','Não encontrei essa informação cadastrada para <b>'+esc(p.name||'este produto')+'</b>. Posso responder somente com os dados e perguntas cadastradas para este produto.');return;
+      add('bot','Não encontrei essa informação cadastrada para <b>'+esc(p.name||'este produto')+'</b>. Posso responder somente com os dados e perguntas cadastradas para este produto.'+productBuyButton(p,i));return;
     }
     const purchaseIntent=/como comprar|quero comprar|onde comprar|comprar (?:esse|este|essa|esta)|vou levar|adicionar (?:na|ao) (?:sacola|carrinho)|colocar (?:na|no) (?:sacola|carrinho)/.test(query);
     if(purchaseIntent&&lastProduct){
