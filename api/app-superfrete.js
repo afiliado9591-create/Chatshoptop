@@ -89,6 +89,7 @@ module.exports = async function handler(request, response) {
     html = removeScript(html, 'mercadopago-oauth-ui.js');
     html = removeScript(html, 'virtual-payment-fix.js');
     html = removeScript(html, 'payment-choice-persist.js');
+    html = removeScript(html, 'virtual-store-theme-footer.js');
 
     const virtualTag = '<script src="/virtual-shipping-upgrade.js?v=20260813-1707"></script>';
     const superfreteDomainFixTag = '<script src="/superfrete-domain-fix.js?v=20260814-1058"></script>';
@@ -98,7 +99,7 @@ module.exports = async function handler(request, response) {
     const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260813-2302"></script>';
     const ownerMetricsTag = '<script src="/store-owner-metrics.js?v=20260814-0500"></script>';
     const virtualCategoryMenuTag = '<script src="/virtual-category-menu.js?v=20260814-0523"></script>';
-    const virtualThemeFooterTag = '<script src="/virtual-store-theme-footer.js?v=20260814-0613"></script>';
+    const virtualThemeFooterTag = '<script src="/virtual-store-theme-footer.js?v=20260816-0635"></script>';
     const customDomainChatTag = '<script src="/custom-domain-chat.js?v=20260815-0955"></script>';
     const storePagesTag = '<script src="/store-pages-ui.js?v=20260815-1315"></script>';
     const adminPublicPagesTag = '<script src="/admin-public-pages.js?v=20260814-1350"></script>';
@@ -116,7 +117,7 @@ module.exports = async function handler(request, response) {
     if (!html.includes('/virtual-seller-audio.js')) inject += virtualSellerAudioTag + '\n';
     if (!html.includes('/store-owner-metrics.js')) inject += ownerMetricsTag + '\n';
     if (!html.includes('/virtual-category-menu.js')) inject += virtualCategoryMenuTag + '\n';
-    if (!html.includes('/virtual-store-theme-footer.js')) inject += virtualThemeFooterTag + '\n';
+    inject += virtualThemeFooterTag + '\n';
     if (!html.includes('/custom-domain-chat.js')) inject += customDomainChatTag + '\n';
     if (!html.includes('/store-pages-ui.js')) inject += storePagesTag + '\n';
     if (!html.includes('/admin-public-pages.js')) inject += adminPublicPagesTag + '\n';
