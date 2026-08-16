@@ -97,7 +97,10 @@ function saveLead(number){
 }
 
 function installOriginalChat(){
-  if($('#pubChatToggle')||store?.adminControl?.chatPaused)return;
+  if(store?.adminControl?.chatPaused)return;
+  const existingToggle=$('#pubChatToggle');
+  if(existingToggle&&typeof window.__CHATSHOP_OPEN_PRODUCT_CHAT==='function')return;
+  if(existingToggle){existingToggle.remove();$('#pubChatOverlay')?.remove();$('#customDomainChatStyle')?.remove()}
   $('#virtualChatToggle')?.remove();$('#virtualChatOverlay')?.remove();
   const main=/^#[0-9a-f]{6}$/i.test(store?.mainColor||'')?store.mainColor:'#7A2E3B';
   const dark=/^#[0-9a-f]{6}$/i.test(store?.darkColor||'')?store.darkColor:'#5B2029';
