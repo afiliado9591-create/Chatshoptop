@@ -53,7 +53,7 @@ function installStyle(){
 }
 
 function affiliateFooterLink(){
-  const plan=String(data.plan||data.planId||data.subscriptionPlan||'').toLowerCase();
+  const plan=String(data.planTier||data.plan||data.planId||data.subscriptionPlan||'').toLowerCase();
   const professional=['profissional','professional','pro','premium'].includes(plan);
   const enabled=Boolean(data.affiliateProgram&&data.affiliateProgram.enabled);
   return professional&&enabled?'<a href="/afiliados">Ganhe dinheiro com esta loja</a>':'';
