@@ -47,6 +47,14 @@ function installStyle(){
   .vst-footer-links a:hover,.vst-footer-links a:focus{opacity:.76}
   .vst-footer-line{width:min(86%,420px);height:1px;background:currentColor;opacity:.22;margin:8px 0 2px}
   .vst-footer-note{font-size:11px;opacity:.72;line-height:1.45}
+  #pubFeed>.vst-footer{grid-column:1/-1!important;width:100%!important}
+  body:not(.chatshop-grid-clean):not(.store-grid-layout) #pubFeed>.vst-footer{
+    min-height:100dvh!important;margin:0!important;scroll-snap-align:start!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    flex:0 0 100%!important;
+  }
+  body.chatshop-grid-clean #pubFeed>.vst-footer,
+  body.store-grid-layout #pubFeed>.vst-footer{margin:18px 0 0!important;border-radius:16px!important}
   @media(max-width:520px){.csv-head,.vs-head{padding:9px 10px!important;gap:8px!important}.csv-title b,.vs-head-title b{font-size:16px!important}.csv-bag,.vs-bag{padding:9px 11px!important;font-size:12px!important}.vst-footer{margin-top:18px;padding:28px 14px 92px}.vst-footer-brand{font-size:18px}}
   `;
   document.head.appendChild(s);
@@ -61,14 +69,23 @@ function affiliateFooterLink(){
 
 function footerHtml(){
   const affiliateLink=affiliateFooterLink();
-  return `<footer class="vst-footer"><div class="vst-footer-inner"><div class="vst-footer-logo">${logo?`<img src="${esc(logo)}" alt="${esc(brand)}">`:esc(brand.charAt(0).toUpperCase())}</div><div class="vst-footer-brand">${esc(brand)}</div><div class="vst-footer-sub">${data.storeType==='virtual'?'Loja virtual':'Catálogo online'} · Atendimento online</div><nav class="vst-footer-links" aria-label="Informações da loja"><a href="/quem-somos">Quem somos</a><a href="/politica-de-privacidade">Política de privacidade</a>${affiliateLink}</nav><div class="vst-footer-line"></div><div class="vst-footer-note">Compre seus produtos com praticidade pelo ChatShop.</div></div></footer>`;
+  const phone=String(data.whatsapp||'').replace(/\D/g,'');
+  const contactLink=phone?'<a href="https://wa.me/'+esc(phone)+'" target="_blank" rel="noopener">Fale conosco</a>':'';
+  return `<footer class="vst-footer"><div class="vst-footer-inner"><div class="vst-footer-logo">${logo?`<img src="${esc(logo)}" alt="${esc(brand)}">`:esc(brand.charAt(0).toUpperCase())}</div><div class="vst-footer-brand">${esc(brand)}</div><div class="vst-footer-sub">${data.storeType==='virtual'?'Loja virtual':'Catálogo online'} · Atendimento online</div><nav class="vst-footer-links" aria-label="Menu do rodapé"><a href="/">Início</a><a href="/">Produtos</a><a href="/quem-somos">Quem somos</a><a href="/politica-de-privacidade">Política de privacidade</a>${contactLink}${affiliateLink}</nav><div class="vst-footer-line"></div><div class="vst-footer-note">Compre seus produtos com praticidade pelo ChatShop.</div></div></footer>`;
 }
 
+function footerTarget(){
+  const virtualPage=document.querySelector('.csv-page,.vs-page');
+  if(virtualPage)return virtualPage;
+  const feed=document.getElementById('pubFeed');
+  if(feed)return feed;
+  return document.querySelector('.catalog,#catalog');
+}
 function install(){
-  const page=document.querySelector('.csv-page,.vs-page,.catalog,#catalog');
+  const page=footerTarget();
   if(!page)return false;
   installStyle();
-  if(!page.querySelector('.vst-footer'))page.insertAdjacentHTML('beforeend',footerHtml());
+  if(!page.querySelector(':scope > .vst-footer'))page.insertAdjacentHTML('beforeend',footerHtml());
   return true;
 }
 
