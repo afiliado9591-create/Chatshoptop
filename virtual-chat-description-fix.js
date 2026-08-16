@@ -8,6 +8,7 @@ const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u03
 const safeImage=v=>{const s=String(v||'').trim();return /^(https?:\/\/|data:image\/)/i.test(s)?s:''};
 const money=v=>{let s=String(v??'').replace(/[^0-9,.-]/g,'');if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');const n=Number(s);return Number.isFinite(n)&&n?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):(String(v||'').trim()||'Consulte')};
 let store=null,products=[],activeProduct=-1;
+const productId=(p,i)=>String(p?.id||p?.productId||`${norm(p?.name||'produto').replace(/\s+/g,'-')||'produto'}-${i}`);
 
 async function loadStore(){
   try{
@@ -85,11 +86,11 @@ function generalQna(text){
 }
 function categories(){return [...new Set(products.map(p=>String(p?.category||'').trim()).filter(Boolean))]}
 function sameCategory(a,b){return norm(a)===norm(b)}
-function saveMessage(text){
+function saveMessage(text,context={}){
   try{
     if(!store?.ref)return;
     store.ref.update({messageCount:firebase.firestore.FieldValue.increment(1)}).catch(()=>{});
-    store.ref.collection('mensagens').add({texto:text,data:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+    store.ref.collection('mensagens').add({texto:text,productId:context.productId||null,productName:context.productName||null,contextId:context.contextId||null,data:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
   }catch(e){}
 }
 function saveLead(number){
@@ -147,7 +148,7 @@ function installOriginalChat(){
     </div>`);
 
   const overlay=$('#pubChatOverlay'),messages=$('#pubMessages'),input=$('#pubInput');
-  let lastProduct=null,lastAnnouncedProduct=-1,conversationMode=false,conversationSpeaking=false,conversationRestartTimer=null,conversationSpeechTimer=null,pubRecognition=null,pubListening=false;
+  let lastProduct=null,lastAnnouncedProduct=-1,productContext=null,conversationMode=false,conversationSpeaking=false,conversationRestartTimer=null,conversationSpeechTimer=null,pubRecognition=null,pubListening=false;
 
   function productWrittenText(p){return String(p?.displayText||p?.cardDescription||'').trim()}
   function productVoiceText(p){return String(p?.voiceText||`${p?.name||'Produto'}, ${money(p?.price)}.`).trim()}
@@ -220,6 +221,25 @@ function installOriginalChat(){
   }
   function reply(text){
     const query=norm(text);
+    if(productContext&&products[productContext.index]){
+      const p=products[productContext.index],i=productContext.index;
+      const purchaseIntent=/como comprar|quero comprar|onde comprar|comprar|vou levar|sacola|carrinho/.test(query);
+      if(purchaseIntent){
+        const name=String(p?.name||'este produto');
+        add('bot','Para comprar <b>'+esc(name)+'</b>, toque em <b>Comprar</b>.'+productCard(p,i),'Para comprar '+name+', toque no botão Comprar.');return;
+      }
+      for(const qa of(Array.isArray(p.qna)?p.qna:[])){
+        if(!qa?.question||!qa?.answer)continue;
+        const words=norm(qa.question).split(' ').filter(w=>w.length>2);
+        if(words.some(w=>query.includes(w))){add('bot',esc(qa.answer),String(qa.answer));return}
+      }
+      if(/preco|valor|quanto custa|custa/.test(query)){add('bot','O valor de <b>'+esc(p.name||'este produto')+'</b> é '+esc(money(p.price))+'.'+productCard(p,i),'O valor é '+money(p.price)+'.');return}
+      if(/descricao|detalhe|como e|fale sobre|material|tecido/.test(query)){
+        const description=productWrittenText(p);
+        if(description){add('bot',esc(description)+productCard(p,i),productVoiceText(p));return}
+      }
+      add('bot','Não encontrei essa informação cadastrada para <b>'+esc(p.name||'este produto')+'</b>. Posso responder somente com os dados e perguntas cadastradas para este produto.');return;
+    }
     const purchaseIntent=/como comprar|quero comprar|onde comprar|comprar (?:esse|este|essa|esta)|vou levar|adicionar (?:na|ao) (?:sacola|carrinho)|colocar (?:na|no) (?:sacola|carrinho)/.test(query);
     if(purchaseIntent&&lastProduct){
       const i=products.indexOf(lastProduct);activeProduct=i;
@@ -246,18 +266,20 @@ function installOriginalChat(){
     }
     add('bot','Não encontrei um produto exato. Tente escrever o nome ou escolha uma opção abaixo:'+catButtons(categories()));
   }
-  function submit(){const text=input.value.trim();if(!text)return;add('user',esc(text));input.value='';saveMessage(text);setTimeout(()=>reply(text),250)}
+  function submit(){const text=input.value.trim();if(!text)return;add('user',esc(text));input.value='';saveMessage(text,productContext||{});setTimeout(()=>reply(text),250)}
 
   function openChatForProduct(index){
     const i=Number(index),p=products[i];if(!Number.isInteger(i)||!p)return;
-    activeProduct=i;lastProduct=p;overlay.classList.add('open');
-    if(lastAnnouncedProduct!==i||!messages.children.length){
-      lastAnnouncedProduct=i;
-      const name=String(p.name||'este produto');
-      const intro='Olá! Agora estou atendendo sobre <b>'+esc(name)+'</b>. Pode perguntar sobre tamanho, cores, tecido, preço, entrega ou como comprar.'+productCard(p,i);
-      const voice='Olá! Agora estou atendendo sobre '+name+'. Pode perguntar sobre tamanho, cores, tecido, preço, entrega ou como comprar.';
-      add('bot',intro,voice);
-    }
+    const id=productId(p,i),changed=!productContext||productContext.productId!==id;
+    activeProduct=i;lastProduct=p;lastAnnouncedProduct=i;
+    productContext={productId:id,productName:String(p.name||'Produto'),contextId:id+'-'+Date.now().toString(36),index:i};
+    overlay.classList.add('open');
+    if(changed)messages.innerHTML='';
+    const name=String(p.name||'este produto'),description=productWrittenText(p).slice(0,240);
+    const summary=description?esc(description):'Confira os detalhes, o preço e as opções disponíveis.';
+    const intro='<b>'+esc(name)+'</b><br>'+summary+productCard(p,i)+'<div style="margin-top:8px;font-weight:800">Tem alguma dúvida sobre esse produto?</div>';
+    const voice=name+'. '+(description||'Confira os detalhes e as opções disponíveis.')+' Tem alguma dúvida sobre esse produto?';
+    add('bot',intro,voice);
     setTimeout(()=>input.focus(),120);
   }
   window.__CHATSHOP_OPEN_PRODUCT_CHAT=openChatForProduct;
