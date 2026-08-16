@@ -127,6 +127,7 @@ function installOriginalChat(){
   .rec-status{display:none;align-items:center;gap:6px;color:#b91c1c;font-size:12px;font-weight:700;padding:0 4px}.rec-status.show{display:flex}.listen-btn{border:none;background:var(--store-main);color:#fff;cursor:pointer;font-size:16px;width:30px;height:30px;border-radius:50%;margin-left:6px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
   .cat-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cat-chip{border:1px solid var(--store-main);background:#fff;color:var(--store-main);padding:6px 11px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer}.cat-chip.all-chip{background:var(--store-main);color:#fff}.cat-chip.lead-chip{background:#25D366;border-color:#25D366;color:#fff}
   .vcd-product-seller{width:100%;border:0;border-radius:999px;background:var(--store-main,#7A2E3B);color:#fff;padding:11px 13px;margin:9px 0;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.16)}.vcd-product-seller-card{margin:8px 10px 10px;width:calc(100% - 20px);padding:9px 8px;font-size:12px}.live-pcard{width:220px;margin-top:8px}.live-pcard img{width:100%;height:125px;object-fit:contain;border-radius:8px;background:#f6f6f6}.live-pdesc{font-size:12px;line-height:1.4;color:#4b5563;margin:5px 0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.live-noimg{height:125px;display:grid;place-items:center;background:#f3f4f6;border-radius:8px;font-size:36px}.live-price{color:var(--store-main);font-weight:800;margin:4px 0}.live-buy{display:block;text-align:center;background:var(--store-main);color:#fff;text-decoration:none;padding:8px;border-radius:8px;font-weight:700;font-size:12px;border:0;width:100%;cursor:pointer}.lead-form{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.lead-input{flex:1;min-width:150px;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:13px}.lead-submit{border:0;background:var(--store-main);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer}`;
+  fallback.textContent+=`.live-back-catalog{display:block;width:100%;margin-top:7px;padding:8px;border:1px solid var(--store-main);border-radius:8px;background:#fff;color:var(--store-main);font-size:12px;font-weight:900;cursor:pointer}`;
   document.head.appendChild(fallback);
 
   const logo=safeImage(store.logo);
@@ -158,7 +159,8 @@ function installOriginalChat(){
     const description=productWrittenText(p);
     return `<div class="live-pcard">${img?`<img src="${esc(img)}" alt="${esc(p.name||'Produto')}">`:'<div class="live-noimg">🛍️</div>'}<b>${esc(p.name||'Produto')}</b>${description?`<div class="live-pdesc">${esc(description)}</div>`:''}<div class="live-price">${esc(money(p.price))}</div><button class="live-buy" type="button" data-pub-product="${i}">Comprar</button></div>`;
   }
-  function productBuyButton(p,i){return `<button class="live-buy" type="button" data-pub-product="${i}" style="margin-top:10px">Comprar ${esc(p?.name||'este produto')}</button>`}
+  function productActions(p,i){return `<button class="live-buy" type="button" data-pub-product="${i}" style="margin-top:10px">Comprar ${esc(p?.name||'este produto')}</button><button class="live-back-catalog" type="button" data-back-catalog>↩ Voltar ao catálogo</button>`}
+  function catalogVoice(text){return String(text||'')+' Se quiser ver mais produtos, volte ao catálogo. Clique no botão Voltar ao catálogo.'}
   function productResultHtml(p){const i=products.indexOf(p);return productCard(p,i)}
   function catButtons(list){
     let html='<div class="cat-row"><button type="button" class="cat-chip all-chip" data-cat="__ALL__">Ver todos</button>';
@@ -229,19 +231,20 @@ function installOriginalChat(){
       const purchaseIntent=/como comprar|quero comprar|onde comprar|comprar|vou levar|sacola|carrinho/.test(query);
       if(purchaseIntent){
         const name=String(p?.name||'este produto');
-        add('bot','Para comprar <b>'+esc(name)+'</b>, toque no botão abaixo.'+productBuyButton(p,i),'Para comprar '+name+', toque no botão Comprar.');return;
+        add('bot','Para comprar <b>'+esc(name)+'</b>, toque no botão abaixo.'+productActions(p,i),catalogVoice('Para comprar '+name+', toque no botão Comprar.'));return;
       }
       for(const qa of(Array.isArray(p.qna)?p.qna:[])){
         if(!qa?.question||!qa?.answer)continue;
         const words=norm(qa.question).split(' ').filter(w=>w.length>2);
-        if(words.some(w=>query.includes(w))){add('bot',esc(qa.answer)+productBuyButton(p,i),String(qa.answer));return}
+        if(words.some(w=>query.includes(w))){add('bot',esc(qa.answer)+productActions(p,i),catalogVoice(qa.answer));return}
       }
-      if(/preco|valor|quanto custa|custa/.test(query)){add('bot','O valor de <b>'+esc(p.name||'este produto')+'</b> é '+esc(money(p.price))+'.'+productBuyButton(p,i),'O valor é '+money(p.price)+'.');return}
+      if(/preco|valor|quanto custa|custa/.test(query)){add('bot','O valor de <b>'+esc(p.name||'este produto')+'</b> é '+esc(money(p.price))+'.'+productActions(p,i),catalogVoice('O valor é '+money(p.price)+'.'));return}
       if(/descricao|detalhe|como e|fale sobre|material|tecido/.test(query)){
         const description=productWrittenText(p);
-        if(description){add('bot',esc(description)+productBuyButton(p,i),productVoiceText(p));return}
+        if(description){add('bot',esc(description)+productActions(p,i),catalogVoice(productVoiceText(p)));return}
       }
-      add('bot','Não encontrei essa informação cadastrada para <b>'+esc(p.name||'este produto')+'</b>. Posso responder somente com os dados e perguntas cadastradas para este produto.'+productBuyButton(p,i));return;
+      const unavailable='Não encontrei essa informação cadastrada para '+String(p.name||'este produto')+'. Posso responder somente com os dados e perguntas cadastradas para este produto.';
+      add('bot',esc(unavailable)+productActions(p,i),catalogVoice(unavailable));return;
     }
     const purchaseIntent=/como comprar|quero comprar|onde comprar|comprar (?:esse|este|essa|esta)|vou levar|adicionar (?:na|ao) (?:sacola|carrinho)|colocar (?:na|no) (?:sacola|carrinho)/.test(query);
     if(purchaseIntent&&lastProduct){
@@ -280,8 +283,8 @@ function installOriginalChat(){
     if(changed)messages.innerHTML='';
     const name=String(p.name||'este produto'),description=productWrittenText(p).slice(0,240);
     const summary=description?esc(description):'Confira os detalhes, o preço e as opções disponíveis.';
-    const intro='<b>'+esc(name)+'</b><br>'+summary+productCard(p,i)+'<div style="margin-top:8px;font-weight:800">Tem alguma dúvida sobre esse produto?</div>';
-    const voice='Voz ativada. Se preferir, desative a voz. '+name+'. '+(description||'Confira os detalhes e as opções disponíveis.')+'. O valor é '+money(p.price)+'. Tem alguma dúvida sobre esse produto?';
+    const intro='<b>'+esc(name)+'</b><br>'+summary+productCard(p,i)+'<button class="live-back-catalog" type="button" data-back-catalog>↩ Voltar ao catálogo</button><div style="margin-top:8px;font-weight:800">Tem alguma dúvida sobre esse produto?</div>';
+    const voice=catalogVoice('Voz ativada. Se preferir, desative a voz. '+name+'. '+(description||'Confira os detalhes e as opções disponíveis.')+'. O valor é '+money(p.price)+'. Tem alguma dúvida sobre esse produto?');
     setConversationMode(voiceEnabled,true);
     add('bot',intro,voice);
     setTimeout(()=>input.focus(),120);
@@ -289,6 +292,8 @@ function installOriginalChat(){
   window.__CHATSHOP_OPEN_PRODUCT_CHAT=openChatForProduct;
 
   messages.addEventListener('click',e=>{
+    const back=e.target.closest('[data-back-catalog]');
+    if(back){setConversationMode(false,true);try{speechSynthesis.cancel()}catch(err){};productContext=null;activeProduct=-1;lastProduct=null;lastAnnouncedProduct=-1;overlay.classList.remove('open');return}
     const prod=e.target.closest('[data-pub-product]');
     if(prod){
       const i=Number(prod.dataset.pubProduct);activeProduct=i;lastProduct=products[i]||null;overlay.classList.remove('open');
