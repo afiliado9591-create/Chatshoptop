@@ -141,9 +141,8 @@ function installOriginalChat(){
         </div>
         <div class="live-messages" id="pubMessages"></div>
         <div class="conversation-bar">
-          <button id="pubVoiceToggle" class="voice-output-toggle" type="button" aria-pressed="true">🔊 Voz ativada</button>
-          <button id="pubConversationToggle" class="conversation-toggle" type="button" aria-pressed="false" title="Ativar conversa por voz contínua"><span class="conversation-dot"></span><span id="pubConversationLabel">🎙️ Ativar conversa</span></button>
-          <span class="conversation-hint" id="pubConversationHint">Fale e o ChatShop responde em voz alta automaticamente.</span>
+          <button id="pubVoiceToggle" class="voice-output-toggle" type="button" aria-pressed="true">🔊 Conversa ativada</button>
+          <span class="conversation-hint" id="pubConversationHint">Depois da resposta, o microfone abre automaticamente para você falar.</span>
         </div>
         <div class="live-inputbar"><button id="pubMic" type="button" title="Falar uma vez" style="background:var(--store-main)">🎤</button><input id="pubInput" placeholder="Digite o que procura"><span class="rec-status" id="pubRecStatus">🔴 <span id="pubRecTime">00:00</span></span><button id="pubSend" type="button" style="background:var(--store-main)">➤</button></div>
       </div>
@@ -281,9 +280,9 @@ function installOriginalChat(){
     const name=String(p.name||'este produto'),description=productWrittenText(p).slice(0,240);
     const summary=description?esc(description):'Confira os detalhes, o preço e as opções disponíveis.';
     const intro='<b>'+esc(name)+'</b><br>'+summary+productCard(p,i)+'<div style="margin-top:8px;font-weight:800">Tem alguma dúvida sobre esse produto?</div>';
-    const voice=name+'. '+(description||'Confira os detalhes e as opções disponíveis.')+' Tem alguma dúvida sobre esse produto?';
+    const voice='Voz ativada. Se preferir, desative a voz. '+name+'. '+(description||'Confira os detalhes e as opções disponíveis.')+'. O valor é '+money(p.price)+'. Tem alguma dúvida sobre esse produto?';
+    setConversationMode(voiceEnabled,true);
     add('bot',intro,voice);
-    if(voiceEnabled&&!conversationMode)setTimeout(()=>speak('Voz ativada. Se preferir, desative a voz. '+name+'. '+(description||'Confira os detalhes e as opções disponíveis.')+'. O valor é '+money(p.price)+'. Tem alguma dúvida sobre esse produto?'),180);
     setTimeout(()=>input.focus(),120);
   }
   window.__CHATSHOP_OPEN_PRODUCT_CHAT=openChatForProduct;
@@ -300,15 +299,15 @@ function installOriginalChat(){
     if(send){const wrap=send.closest('.lead-form'),inp=wrap?.querySelector('.lead-input'),numero=String(inp?.value||'').replace(/\D/g,'');if(numero.length<10){if(inp){inp.style.borderColor='#dc2626';inp.placeholder='Digite um número válido com DDD'}return}send.disabled=true;if(inp)inp.disabled=true;send.textContent='Enviado ✓';saveLead(numero);setTimeout(()=>add('bot','Perfeito, já anotei aqui! 😊 Em breve a loja pode entrar em contato.'),250)}
   });
 
-  $('#pubChatToggle').onclick=()=>{if(activeProduct>=0&&products[activeProduct]){openChatForProduct(activeProduct);return}overlay.classList.add('open');if(!messages.children.length)add('bot',esc(store.welcome||'Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja as opções abaixo.')+catButtons(categories()));setTimeout(()=>input.focus(),120)};
+  $('#pubChatToggle').onclick=()=>{if(activeProduct>=0&&products[activeProduct]){openChatForProduct(activeProduct);return}overlay.classList.add('open');setConversationMode(voiceEnabled,true);if(!messages.children.length)add('bot',esc(store.welcome||'Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja as opções abaixo.')+catButtons(categories()),store.welcome||'Olá! Como posso ajudar?');setTimeout(()=>input.focus(),120)};
   $('#pubChatClose').onclick=()=>{overlay.classList.remove('open');setConversationMode(false,true)};
   $('#pubSend').onclick=submit;input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit()}});
 
   function updateVoiceOutputUI(){
     const btn=$('#pubVoiceToggle');if(!btn)return;
-    btn.textContent=voiceEnabled?'🔊 Voz ativada':'🔇 Voz desativada';btn.classList.toggle('off',!voiceEnabled);btn.setAttribute('aria-pressed',voiceEnabled?'true':'false');
+    btn.textContent=voiceEnabled?'🔊 Conversa ativada':'🔇 Conversa desativada';btn.classList.toggle('off',!voiceEnabled);btn.setAttribute('aria-pressed',voiceEnabled?'true':'false');
   }
-  $('#pubVoiceToggle').onclick=()=>{voiceEnabled=!voiceEnabled;localStorage.setItem('chatshop_voice_output',voiceEnabled?'on':'off');if(!voiceEnabled){try{speechSynthesis.cancel()}catch(e){}}else speak('Voz ativada.',true);updateVoiceOutputUI()};
+  $('#pubVoiceToggle').onclick=()=>{voiceEnabled=!voiceEnabled;localStorage.setItem('chatshop_voice_output',voiceEnabled?'on':'off');if(!voiceEnabled){setConversationMode(false,true);try{speechSynthesis.cancel()}catch(e){}}else{setConversationMode(true,true);speak('Conversa por voz ativada. Pode falar depois do sinal.',true)}updateVoiceOutputUI()};
   updateVoiceOutputUI();
 
   function makeRecognition(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;const r=new SR();r.lang='pt-BR';r.continuous=false;r.interimResults=false;r.maxAlternatives=1;return r}
@@ -335,9 +334,8 @@ function installOriginalChat(){
     if(!conversationMode){clearTimeout(conversationRestartTimer);if(pubListening&&pubRecognition){try{pubRecognition.stop()}catch(e){}}speechSynthesis?.cancel?.();return}
     overlay.classList.add('open');if(!silent)add('bot','Conversa por voz ativada 🎙️. Pode falar comigo sem apertar o microfone a cada vez.');scheduleConversationListen(300);
   }
-  if(store?.adminControl?.voicePaused){$('#pubMic').style.display='none';$('#pubConversationToggle').style.display='none';$('#pubConversationHint').textContent='Conversa por voz desativada pelo lojista.'}
+  if(store?.adminControl?.voicePaused){voiceEnabled=false;$('#pubMic').style.display='none';if($('#pubVoiceToggle'))$('#pubVoiceToggle').style.display='none';$('#pubConversationHint').textContent='Conversa por voz desativada pelo lojista.';updateVoiceOutputUI()}
   else{
-    $('#pubConversationToggle').onclick=()=>setConversationMode(!conversationMode);
     $('#pubMic').onclick=()=>{if(conversationMode){setConversationMode(false,true);setTimeout(()=>startRecognition(false),120);return}if(pubListening){try{pubRecognition?.stop()}catch(e){}return}startRecognition(false)};
   }
   updateConversationUI();
