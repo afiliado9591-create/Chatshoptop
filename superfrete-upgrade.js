@@ -48,7 +48,22 @@ function ensureSfEditor(){
   box.style.cssText='display:none;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px;padding:12px;margin-top:10px';
   box.innerHTML=`
     <div style="font-weight:900;color:#166534;margin-bottom:9px">📦 SuperFrete</div>
-    <div class="field"><label>CEP de origem da loja</label><input id="sfOriginCep" inputmode="numeric" maxlength="9" placeholder="Ex: 03900-000"><small>CEP de onde os pedidos serão enviados.</small></div>
+    <div class="field"><label>Endereços de origem (até 4)</label><small>Cadastre a loja e os fornecedores. Em cada produto você poderá escolher de onde ele será enviado.</small></div>
+    <div id="sfOrigins" style="display:grid;gap:9px">
+      <div class="sf-origin-row" data-origin="1" style="border:1px solid #d1fae5;background:#fff;border-radius:10px;padding:9px">
+        <b style="font-size:12px;color:#166534">Origem 1 · principal</b>
+        <div class="grid2" style="margin-top:7px"><div class="field"><label>Nome / fornecedor</label><input data-origin-label="1" maxlength="50" placeholder="Ex: Minha loja"></div><div class="field"><label>CEP de origem</label><input data-origin-cep="1" inputmode="numeric" maxlength="9" placeholder="00000-000"></div></div>
+      </div><div class="sf-origin-row" data-origin="2" style="border:1px solid #d1fae5;background:#fff;border-radius:10px;padding:9px">
+        <b style="font-size:12px;color:#166534">Origem 2</b>
+        <div class="grid2" style="margin-top:7px"><div class="field"><label>Nome / fornecedor</label><input data-origin-label="2" maxlength="50" placeholder="Ex: Fornecedor 2"></div><div class="field"><label>CEP de origem</label><input data-origin-cep="2" inputmode="numeric" maxlength="9" placeholder="00000-000"></div></div>
+      </div><div class="sf-origin-row" data-origin="3" style="border:1px solid #d1fae5;background:#fff;border-radius:10px;padding:9px">
+        <b style="font-size:12px;color:#166534">Origem 3</b>
+        <div class="grid2" style="margin-top:7px"><div class="field"><label>Nome / fornecedor</label><input data-origin-label="3" maxlength="50" placeholder="Ex: Fornecedor 3"></div><div class="field"><label>CEP de origem</label><input data-origin-cep="3" inputmode="numeric" maxlength="9" placeholder="00000-000"></div></div>
+      </div><div class="sf-origin-row" data-origin="4" style="border:1px solid #d1fae5;background:#fff;border-radius:10px;padding:9px">
+        <b style="font-size:12px;color:#166534">Origem 4</b>
+        <div class="grid2" style="margin-top:7px"><div class="field"><label>Nome / fornecedor</label><input data-origin-label="4" maxlength="50" placeholder="Ex: Fornecedor 4"></div><div class="field"><label>CEP de origem</label><input data-origin-cep="4" inputmode="numeric" maxlength="9" placeholder="00000-000"></div></div>
+      </div>
+    </div>
     <div class="field"><label>Ambiente</label><select id="sfEnvironment"><option value="production">Produção — frete real</option><option value="sandbox">Sandbox — testes</option></select></div>
     <div class="field"><label>Transportadoras / serviços</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:12px">
       <label><input class="sf-service" type="checkbox" value="1" checked> PAC</label>
@@ -63,7 +78,8 @@ function ensureSfEditor(){
     <div style="font-size:11px;color:#166534;line-height:1.45;margin-top:8px">Depois, informe peso e dimensões em cada produto para o cálculo funcionar.</div>`;
   shipping.appendChild(box);
   $('#shippingMode').addEventListener('change',()=>{updateSfEditorVisibility();try{window.debounce?.()}catch(e){}});
-  ['sfOriginCep','sfEnvironment'].forEach(id=>$('#'+id)?.addEventListener('input',()=>{try{window.debounce?.()}catch(e){}}));
+  $('#sfOrigins')?.querySelectorAll('input').forEach(el=>el.addEventListener('input',()=>{refreshProductOriginOptions();try{window.debounce?.()}catch(e){}}));
+  ['sfEnvironment'].forEach(id=>$('#'+id)?.addEventListener('input',()=>{try{window.debounce?.()}catch(e){}}));
   $$('.sf-service').forEach(x=>x.addEventListener('change',()=>{try{window.debounce?.()}catch(e){}}));
   $('#sfSaveToken').onclick=async()=>{
     const token=$('#sfToken').value.trim(),status=$('#sfTokenStatus'),btn=$('#sfSaveToken');
@@ -84,6 +100,33 @@ function ensureSfEditor(){
   return true;
 }
 
+function collectOrigins(){
+  const rows=[1,2,3,4].map(n=>({
+    id:'origin-'+n,
+    label:String($('[data-origin-label="'+n+'"]')?.value||'').trim()||(n===1?'Origem principal':'Fornecedor '+n),
+    postalCode:digits($('[data-origin-cep="'+n+'"]')?.value)
+  }));
+  return rows.filter((o,i)=>i===0||o.postalCode.length===8);
+}
+function fillOrigins(sf){
+  const saved=Array.isArray(sf?.origins)?sf.origins.slice(0,4):[];
+  if(!saved.length&&sf?.originPostalCode)saved.push({id:'origin-1',label:'Origem principal',postalCode:sf.originPostalCode});
+  [1,2,3,4].forEach(n=>{
+    const o=saved[n-1]||{};
+    const label=$('[data-origin-label="'+n+'"]'),cep=$('[data-origin-cep="'+n+'"]');
+    if(label)label.value=String(o.label||'');
+    if(cep)cep.value=String(o.postalCode||o.cep||'');
+  });
+  refreshProductOriginOptions();
+}
+function refreshProductOriginOptions(){
+  const origins=collectOrigins();
+  $('[data-k="sfOriginId"]').forEach(select=>{
+    const current=select.value||'origin-1';
+    select.innerHTML=origins.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.label)+' · '+esc(o.postalCode||'CEP não informado')+'</option>').join('');
+    select.value=origins.some(o=>o.id===current)?current:'origin-1';
+  });
+}
 function ensureProductDims(){
   $$('#products .product').forEach(card=>{
     if(card.querySelector('[data-sf-dims]'))return;
@@ -93,10 +136,12 @@ function ensureProductDims(){
     wrap.innerHTML=`<div style="font-weight:900;color:#166534;font-size:13px;margin-bottom:8px">📦 Peso e dimensões para o frete</div>
       <div class="grid2"><div class="field"><label>Peso (kg)</label><input data-k="sfWeight" inputmode="decimal" placeholder="Ex: 0,300"></div><div class="field"><label>Altura (cm)</label><input data-k="sfHeight" inputmode="decimal" placeholder="Ex: 4"></div></div>
       <div class="grid2"><div class="field"><label>Largura (cm)</label><input data-k="sfWidth" inputmode="decimal" placeholder="Ex: 20"></div><div class="field"><label>Comprimento (cm)</label><input data-k="sfLength" inputmode="decimal" placeholder="Ex: 28"></div></div>
+      <div class="field"><label>Enviado por / endereço de origem</label><select data-k="sfOriginId"></select><small>Escolha a loja ou o fornecedor responsável pelo envio deste produto.</small></div>
       <small style="color:#166534">Obrigatório somente quando a loja usar SuperFrete.</small>`;
     const desc=card.querySelector('.product-page-description-field');
     if(desc)desc.insertAdjacentElement('afterend',wrap);else card.appendChild(wrap);
-    wrap.querySelectorAll('input').forEach(i=>i.addEventListener('input',()=>{try{window.debounce?.()}catch(e){}}));
+    wrap.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',()=>{try{window.debounce?.()}catch(e){}}));
+    refreshProductOriginOptions();
   });
 }
 function fillProductDims(products){
@@ -105,6 +150,7 @@ function fillProductDims(products){
     const p=products?.[i]||{};
     const set=(k,v)=>{const el=card.querySelector(`[data-k="${k}"]`);if(el)el.value=v?String(v).replace('.',','):''};
     set('sfWeight',p.weight??p.sfWeight);set('sfHeight',p.height??p.sfHeight);set('sfWidth',p.width??p.sfWidth);set('sfLength',p.length??p.sfLength);
+    const origin=card.querySelector('[data-k="sfOriginId"]');if(origin)origin.value=String(p.shippingOriginId||'origin-1');
   });
 }
 function wrapEditorData(){
@@ -115,8 +161,10 @@ function wrapEditorData(){
       const d=old();
       d.shipping=d.shipping&&typeof d.shipping==='object'?d.shipping:{};
       if($('#shippingMode'))d.shipping.mode=$('#shippingMode').value||d.shipping.mode||'free';
+      const origins=collectOrigins();
       d.shipping.superfrete={
-        originPostalCode:digits($('#sfOriginCep')?.value),
+        originPostalCode:origins[0]?.postalCode||'',
+        origins,
         environment:$('#sfEnvironment')?.value==='sandbox'?'sandbox':'production',
         services:selectedServices(),
         tokenCipher:sfTokenCipher||d.shipping?.superfrete?.tokenCipher||''
@@ -128,6 +176,7 @@ function wrapEditorData(){
         p.height=num(c.querySelector('[data-k="sfHeight"]')?.value);
         p.width=num(c.querySelector('[data-k="sfWidth"]')?.value);
         p.length=num(c.querySelector('[data-k="sfLength"]')?.value);
+        p.shippingOriginId=String(c.querySelector('[data-k="sfOriginId"]')?.value||'origin-1');
       });
       return d;
     };
@@ -140,7 +189,7 @@ function wrapEditorData(){
       const sf=data?.shipping?.superfrete||{};
       sfTokenCipher=String(sf.tokenCipher||'');
       if($('#shippingMode')&&data?.shipping?.mode==='superfrete')$('#shippingMode').value='superfrete';
-      if($('#sfOriginCep'))$('#sfOriginCep').value=String(sf.originPostalCode||'');
+      fillOrigins(sf);
       if($('#sfEnvironment'))$('#sfEnvironment').value=sf.environment==='sandbox'?'sandbox':'production';
       setServices(sf.services);
       const st=$('#sfTokenStatus');if(st)st.textContent=sfTokenCipher?'✅ Token SuperFrete já conectado. Cole outro token apenas se quiser trocar.':'';
@@ -151,7 +200,7 @@ function wrapEditorData(){
   }
   if(typeof window.clearForm==='function'&&!window.clearForm.__superfreteWrapped){
     const old=window.clearForm;
-    const fn=function(){const r=old();sfTokenCipher='';setTimeout(()=>{ensureSfEditor();ensureProductDims();if($('#sfOriginCep'))$('#sfOriginCep').value='';if($('#sfEnvironment'))$('#sfEnvironment').value='production';setServices('1,2,17,3,33');if($('#sfTokenStatus'))$('#sfTokenStatus').textContent='';updateSfEditorVisibility()},0);return r};
+    const fn=function(){const r=old();sfTokenCipher='';setTimeout(()=>{ensureSfEditor();ensureProductDims();fillOrigins({origins:[]});if($('#sfEnvironment'))$('#sfEnvironment').value='production';setServices('1,2,17,3,33');if($('#sfTokenStatus'))$('#sfTokenStatus').textContent='';updateSfEditorVisibility()},0);return r};
     fn.__superfreteWrapped=true;window.clearForm=fn;
   }
 }
@@ -211,7 +260,7 @@ async function bootStorefront(){
           const r=await fetch('/api/superfrete-quote.js',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeSlug:deriveSlug(),host:location.hostname,toPostalCode:cep,items})});
           const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Não foi possível calcular o frete.');
           quotes=(j.quotes||[]).filter(x=>Number(x.price)>0);if(!quotes.length)throw new Error('Nenhuma modalidade de frete ficou disponível para este CEP.');
-          status.textContent='Escolha uma opção abaixo:';status.style.color='#166534';renderQuoteOptions();
+          status.textContent=(Number(j.packageCount||1)>1?'Seu pedido será enviado em '+j.packageCount+' pacotes, saindo de endereços diferentes. ':'')+'Escolha uma opção abaixo:';status.style.color='#166534';renderQuoteOptions();
         }catch(e){status.textContent='⚠️ '+e.message;status.style.color='#b91c1c'}finally{btn.disabled=false;btn.textContent='Calcular frete'}
       };
       $('#sfQuoteOptions').addEventListener('change',e=>{const i=Number(e.target.value);if(Number.isInteger(i)&&quotes[i]){selectedQuote=quotes[i];updateTotals()}});
