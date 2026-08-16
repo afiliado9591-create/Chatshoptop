@@ -4,6 +4,11 @@
   const PAGE_TYPE = 'contentPage';
   const DOC_PREFIX = 'content_';
   const PUBLIC_BASE = 'https://alibr.com.br/conteudo/';
+  const OFFICIAL_PAGES = [
+    {title:'Página inicial de apresentação',description:'Apresentação principal do ChatShop.',url:'https://alibr.com.br/site'},
+    {title:'Conheça o ChatShop',description:'Recursos, loja virtual e chat vendedor.',url:'https://alibr.com.br/p/chatshop'},
+    {title:'Política de Privacidade',description:'Página oficial de privacidade da plataforma.',url:'https://alibr.com.br/p/politica-de-privacidade'}
+  ];
   let editingDocId = '';
   let editingCreatedAt = null;
   let uploadedImage = '';
@@ -52,11 +57,22 @@
     box.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
         <div>
-          <h3 style="margin:0 0 3px">📄 Páginas de conteúdo</h3>
-          <small style="color:var(--muted)">Crie páginas públicas para conteúdo, SEO e divulgação. Só o administrador pode editar.</small>
+          <h3 style="margin:0 0 3px">🌐 Landing pages e conteúdos</h3>
+          <small style="color:var(--muted)">Acesse as páginas oficiais do ChatShop e crie novas páginas para SEO e divulgação.</small>
         </div>
         <button class="btn" id="contentNewBtn" type="button">+ Nova página</button>
       </div>
+
+      <section style="border:1px solid #ddd6fe;background:#faf5ff;border-radius:14px;padding:12px;margin-bottom:14px">
+        <div style="font-weight:950;color:#4c1d95;margin-bottom:3px">🚀 Landing pages oficiais</div>
+        <small style="display:block;color:#6b7280;margin-bottom:10px">Estas páginas já estão publicadas. Use “Abrir página” para visualizar ou copiar o endereço.</small>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px">
+          ${OFFICIAL_PAGES.map((page,index)=>`<article style="background:#fff;border:1px solid #e9d5ff;border-radius:11px;padding:11px;display:flex;flex-direction:column;gap:7px">
+            <b>${safe(page.title)}</b><small style="color:#6b7280;flex:1">${safe(page.description)}</small><small style="word-break:break-all;color:#7c3aed">${safe(page.url.replace(/^https?:\/\//,''))}</small>
+            <div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn primary" href="${safe(page.url)}" target="_blank" rel="noopener" style="padding:7px 9px;text-decoration:none">Abrir página</a><button class="btn" type="button" data-copy-official="${index}" style="padding:7px 9px">Copiar link</button></div>
+          </article>`).join('')}
+        </div>
+      </section>
 
       <div id="contentEditorBox" style="border:1px solid var(--line);background:#fafafa;border-radius:12px;padding:12px;margin-bottom:14px">
         <div class="field"><label>Título da página</label><input id="contentTitle" maxlength="140" placeholder="Ex: Como criar uma loja virtual grátis"></div>
@@ -93,6 +109,12 @@
       updateImagePreview();
     });
     el('contentImageFile').addEventListener('change', handleImageFile);
+    box.querySelectorAll('[data-copy-official]').forEach(button => button.onclick = async () => {
+      const page = OFFICIAL_PAGES[Number(button.dataset.copyOfficial)];
+      if(!page) return;
+      try{ await navigator.clipboard.writeText(page.url); say('Link copiado!'); }
+      catch(e){ prompt('Copie o link da página:', page.url); }
+    });
     loadPages();
   }
 
@@ -268,7 +290,7 @@
     button.className = 'btn';
     button.id = 'adminTabConteudo';
     button.type = 'button';
-    button.textContent = '📄 Páginas';
+    button.textContent = '🌐 Landing pages';
     videosTab.insertAdjacentElement('afterend', button);
     button.onclick = () => { if(adminAllowed()) renderShell(); };
     return true;
