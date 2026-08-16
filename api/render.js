@@ -217,6 +217,17 @@ function injectStoreFeatureBootstrap(html, store) {
     sellerAudioUrl: p?.sellerAudioUrl || ''
   }));
   const payload = safeJsonForScript({
+    slug: store.slug || '',
+    storeType: store.storeType || 'affiliate',
+    brand: store.brand || store.storeName || store.name || 'Minha Loja',
+    storeName: store.storeName || '',
+    logo: store.logo || '',
+    mainColor: store.mainColor || '',
+    headerColor: store.headerColor || '',
+    darkColor: store.darkColor || '',
+    accentColor: store.accentColor || '',
+    planTier: store.planTier || store.plan || '',
+    affiliateProgram: store.affiliateProgram || {},
     adminControl: store.adminControl || {},
     products
   });
