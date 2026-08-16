@@ -210,12 +210,6 @@ function injectGridBootstrap(html, store, productSlug='') {
 
 function injectStoreFeatureBootstrap(html, store) {
   if (!store) return html;
-  const products = (Array.isArray(store.products) ? store.products : []).map(p => ({
-    name: p?.name || '',
-    sellerAudioMode: p?.sellerAudioMode || 'off',
-    sellerAudioText: p?.sellerAudioText || '',
-    sellerAudioUrl: p?.sellerAudioUrl || ''
-  }));
   const payload = safeJsonForScript({
     slug: store.slug || '',
     storeType: store.storeType || 'affiliate',
@@ -226,10 +220,14 @@ function injectStoreFeatureBootstrap(html, store) {
     headerColor: store.headerColor || '',
     darkColor: store.darkColor || '',
     accentColor: store.accentColor || '',
+    chatBg: store.chatBg || '',
+    welcome: store.welcome || '',
+    whatsapp: store.whatsapp || '',
     planTier: store.planTier || store.plan || '',
     affiliateProgram: store.affiliateProgram || {},
     adminControl: store.adminControl || {},
-    products
+    qna: Array.isArray(store.qna) ? store.qna : [],
+    products: Array.isArray(store.products) ? store.products : []
   });
   const bootstrap = `<script id=\"chatshopStoreFeatureBootstrap\">window.__CHATSHOP_STORE_FEATURE_DATA=${payload};</script>`;
   return html.replace(/<\/head>/i, `${bootstrap}\n</head>`);
