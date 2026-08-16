@@ -121,10 +121,25 @@ module.exports = async function handler(req, res) {
     const sf = shipping.superfrete && typeof shipping.superfrete === 'object' ? shipping.superfrete : {};
     if (shipping.mode !== 'superfrete') return send(res, 400, { error: 'A SuperFrete não está ativa nesta loja.' });
 
-    const origin = onlyDigits(sf.originPostalCode || sf.originCep || '');
     const destination = onlyDigits(req.body?.toPostalCode || '');
-    if (origin.length !== 8) return send(res, 400, { error: 'O lojista precisa cadastrar um CEP de origem válido.' });
     if (destination.length !== 8) return send(res, 400, { error: 'Digite um CEP de destino válido com 8 números.' });
+
+    const configuredOrigins = (Array.isArray(sf.origins) ? sf.origins : [])
+      .slice(0, 4)
+      .map((origin, index) => ({
+        id: String(origin?.id || 'origin-' + (index + 1)),
+        label: String(origin?.label || 'Origem ' + (index + 1)),
+        postalCode: onlyDigits(origin?.postalCode || origin?.cep || '')
+      }))
+      .filter(origin => origin.postalCode.length === 8);
+
+    if (!configuredOrigins.length) {
+      const legacyPostalCode = onlyDigits(sf.originPostalCode || sf.originCep || '');
+      if (legacyPostalCode.length === 8) {
+        configuredOrigins.push({ id: 'origin-1', label: 'Origem principal', postalCode: legacyPostalCode });
+      }
+    }
+    if (!configuredOrigins.length) return send(res, 400, { error: 'O lojista precisa cadastrar pelo menos um CEP de origem válido.' });
 
     const key = keyFromEnv();
     if (!key) return send(res, 503, { error: 'A integração SuperFrete ainda precisa ser ativada no servidor.', code: 'SUPERFRETE_SECRET_NOT_CONFIGURED' });
@@ -135,60 +150,99 @@ module.exports = async function handler(req, res) {
     const requestedItems = Array.isArray(req.body?.items) ? req.body.items : [];
     if (!requestedItems.length) return send(res, 400, { error: 'A sacola está vazia.' });
 
-    const apiProducts = [];
+    const groups = new Map();
     for (const item of requestedItems.slice(0, 100)) {
       const index = Number(item?.index);
       const quantity = Math.max(1, Math.min(99, Math.floor(asNumber(item?.quantity) || 1)));
-      const p = Number.isInteger(index) && index >= 0 ? products[index] : null;
-      if (!p) continue;
-      const weight = asNumber(p.weight ?? p.sfWeight);
-      const height = asNumber(p.height ?? p.sfHeight);
-      const width = asNumber(p.width ?? p.sfWidth);
-      const length = asNumber(p.length ?? p.sfLength);
+      const product = Number.isInteger(index) && index >= 0 ? products[index] : null;
+      if (!product) continue;
+
+      const weight = asNumber(product.weight ?? product.sfWeight);
+      const height = asNumber(product.height ?? product.sfHeight);
+      const width = asNumber(product.width ?? product.sfWidth);
+      const length = asNumber(product.length ?? product.sfLength);
       if (!(weight > 0 && height > 0 && width > 0 && length > 0)) {
-        return send(res, 400, { error: `O produto "${String(p.name || 'Produto')}" está sem peso ou dimensões para calcular o frete.` });
+        return send(res, 400, { error: `O produto "${String(product.name || 'Produto')}" está sem peso ou dimensões para calcular o frete.` });
       }
-      apiProducts.push({ quantity, weight, height, width, length });
+
+      const requestedOriginId = String(product.shippingOriginId || configuredOrigins[0].id);
+      const origin = configuredOrigins.find(candidate => candidate.id === requestedOriginId) || configuredOrigins[0];
+      if (!groups.has(origin.id)) groups.set(origin.id, { origin, products: [] });
+      groups.get(origin.id).products.push({ quantity, weight, height, width, length });
     }
-    if (!apiProducts.length) return send(res, 400, { error: 'Nenhum produto válido foi encontrado na sacola.' });
+    if (!groups.size) return send(res, 400, { error: 'Nenhum produto válido foi encontrado na sacola.' });
 
     const environment = sf.environment === 'sandbox' ? 'sandbox' : 'production';
     const base = environment === 'sandbox' ? 'https://sandbox.superfrete.com' : 'https://api.superfrete.com';
-    const requestBody = {
-      from: { postal_code: origin },
-      to: { postal_code: destination },
-      services: cleanServices(sf.services),
-      options: {
-        own_hand: false,
-        receipt: false,
-        insurance_value: 0,
-        use_insurance_value: false
-      },
-      products: apiProducts
-    };
-
     const contact = String(process.env.CHATSHOP_CONTACT_EMAIL || 'afiliado9591@gmail.com').trim();
-    const upstream = await fetch(`${base}/api/v0/calculator`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'User-Agent': `ChatShop/1.0 (${contact})`,
-        accept: 'application/json',
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
 
-    let raw;
-    const text = await upstream.text();
-    try { raw = text ? JSON.parse(text) : null; } catch { raw = { message: text }; }
-    if (!upstream.ok) {
-      const message = raw?.message || raw?.error || raw?.errors?.[0]?.message || 'A SuperFrete não conseguiu calcular o frete.';
-      return send(res, upstream.status >= 400 && upstream.status < 500 ? 400 : 502, { error: String(message), details: raw });
+    async function quoteGroup(group) {
+      const requestBody = {
+        from: { postal_code: group.origin.postalCode },
+        to: { postal_code: destination },
+        services: cleanServices(sf.services),
+        options: { own_hand: false, receipt: false, insurance_value: 0, use_insurance_value: false },
+        products: group.products
+      };
+      const upstream = await fetch(`${base}/api/v0/calculator`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'User-Agent': `ChatShop/1.0 (${contact})`,
+          accept: 'application/json',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      const text = await upstream.text();
+      let raw;
+      try { raw = text ? JSON.parse(text) : null; } catch { raw = { message: text }; }
+      if (!upstream.ok) {
+        const message = raw?.message || raw?.error || raw?.errors?.[0]?.message || 'A SuperFrete não conseguiu calcular o frete.';
+        throw new Error(`${group.origin.label}: ${String(message)}`);
+      }
+      return { origin: group.origin, quotes: normalizeQuoteResponse(raw).filter(quote => !quote.error && quote.price > 0) };
     }
 
-    const quotes = normalizeQuoteResponse(raw).filter(q => !q.error || q.price > 0);
-    return send(res, 200, { ok: true, environment, quotes, raw });
+    const packageQuotes = await Promise.all([...groups.values()].map(quoteGroup));
+    if (packageQuotes.some(pkg => !pkg.quotes.length)) {
+      return send(res, 400, { error: 'Nenhuma modalidade de frete ficou disponível para um dos endereços de origem.' });
+    }
+
+    let quotes;
+    if (packageQuotes.length === 1) {
+      quotes = packageQuotes[0].quotes;
+    } else {
+      quotes = packageQuotes[0].quotes.map(firstQuote => {
+        const matching = packageQuotes.map(pkg => pkg.quotes.find(quote => quote.id === firstQuote.id));
+        if (matching.some(quote => !quote)) return null;
+        return {
+          id: firstQuote.id,
+          name: `${firstQuote.name} · ${packageQuotes.length} pacotes`,
+          price: matching.reduce((total, quote) => total + Number(quote.price || 0), 0),
+          days: Math.max(...matching.map(quote => Number(quote.days || 0))),
+          packageCount: packageQuotes.length,
+          packages: packageQuotes.map((pkg, index) => ({
+            originId: pkg.origin.id,
+            originLabel: pkg.origin.label,
+            price: Number(matching[index].price || 0),
+            days: Number(matching[index].days || 0)
+          }))
+        };
+      }).filter(Boolean);
+    }
+
+    if (!quotes.length) {
+      return send(res, 400, { error: 'Não existe uma mesma modalidade disponível para todos os endereços deste pedido.' });
+    }
+
+    return send(res, 200, {
+      ok: true,
+      environment,
+      packageCount: packageQuotes.length,
+      origins: packageQuotes.map(pkg => ({ id: pkg.origin.id, label: pkg.origin.label })),
+      quotes
+    });
   } catch (error) {
     console.error('Erro na cotação SuperFrete:', error);
     const message = String(error?.message || 'Não foi possível calcular o frete agora.');
