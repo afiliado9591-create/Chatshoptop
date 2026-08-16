@@ -150,7 +150,7 @@ function installOriginalChat(){
     </div>`);
 
   const overlay=$('#pubChatOverlay'),messages=$('#pubMessages'),input=$('#pubInput');
-  let lastProduct=null,lastAnnouncedProduct=-1,productContext=null,voiceEnabled=localStorage.getItem('chatshop_voice_output')!=='off',conversationMode=false,conversationSpeaking=false,conversationRestartTimer=null,conversationSpeechTimer=null,pubRecognition=null,pubListening=false;
+  let lastProduct=null,lastAnnouncedProduct=-1,productContext=null,catalogReminderTimer=null,voiceEnabled=localStorage.getItem('chatshop_voice_output')!=='off',conversationMode=false,conversationSpeaking=false,conversationRestartTimer=null,conversationSpeechTimer=null,pubRecognition=null,pubListening=false;
 
   function productWrittenText(p){return String(p?.displayText||p?.cardDescription||'').trim()}
   function productVoiceText(p){return String(p?.voiceText||`${p?.name||'Produto'}, ${money(p?.price)}.`).trim()}
@@ -160,7 +160,24 @@ function installOriginalChat(){
     return `<div class="live-pcard">${img?`<img src="${esc(img)}" alt="${esc(p.name||'Produto')}">`:'<div class="live-noimg">🛍️</div>'}<b>${esc(p.name||'Produto')}</b>${description?`<div class="live-pdesc">${esc(description)}</div>`:''}<div class="live-price">${esc(money(p.price))}</div><button class="live-buy" type="button" data-pub-product="${i}">Comprar</button></div>`;
   }
   function productActions(p,i){return `<button class="live-buy" type="button" data-pub-product="${i}" style="margin-top:10px">Comprar ${esc(p?.name||'este produto')}</button><button class="live-back-catalog" type="button" data-back-catalog>↩ Voltar ao catálogo</button>`}
-  function catalogVoice(text){return String(text||'')+' Se quiser ver mais produtos, volte ao catálogo. Clique no botão Voltar ao catálogo.'}
+  function catalogVoice(text){
+    const base=String(text||'');if(!productContext)return base;
+    productContext.replyCount=(productContext.replyCount||0)+1;
+    if(productContext.replyCount<(productContext.nextCatalogVoiceAt||3))return base;
+    const step=productContext.catalogVoiceStep||4;productContext.nextCatalogVoiceAt+=step;productContext.catalogVoiceStep=step===4?3:4;
+    return base+' Se quiser ver mais produtos, volte ao catálogo. Clique no botão Voltar ao catálogo.';
+  }
+  function scheduleCatalogReminder(){
+    clearTimeout(catalogReminderTimer);if(!productContext||productContext.idleReminderSent)return;
+    const contextId=productContext.contextId;
+    catalogReminderTimer=setTimeout(()=>{
+      if(!productContext||productContext.contextId!==contextId||productContext.idleReminderSent||!overlay.classList.contains('open'))return;
+      const p=products[productContext.index],i=productContext.index;if(!p)return;
+      productContext.idleReminderSent=true;
+      const reminder='Se quiser ver mais produtos, volte ao catálogo. Clique no botão Voltar ao catálogo.';
+      add('bot',reminder+productActions(p,i),reminder);
+    },35000);
+  }
   function productResultHtml(p){const i=products.indexOf(p);return productCard(p,i)}
   function catButtons(list){
     let html='<div class="cat-row"><button type="button" class="cat-chip all-chip" data-cat="__ALL__">Ver todos</button>';
@@ -197,6 +214,7 @@ function installOriginalChat(){
     if(who==='bot'){const b=row.querySelector('.listen-btn');if(b)b.onclick=()=>speak(spoken,true)}
     messages.appendChild(row);messages.scrollTop=messages.scrollHeight;
     if(who==='bot'&&conversationMode&&spoken)setTimeout(()=>speak(spoken),120);
+    if(who==='bot'&&productContext)scheduleCatalogReminder();
   }
   function showLeadForm(){add('bot','Deixe seu WhatsApp e a loja pode entrar em contato com você:<div class="lead-form"><input class="lead-input" inputmode="tel" placeholder="DDD + número"><button type="button" class="lead-submit">Enviar</button></div>')}
   function catalogVoiceText(list){
@@ -272,13 +290,13 @@ function installOriginalChat(){
     }
     add('bot','Não encontrei um produto exato. Tente escrever o nome ou escolha uma opção abaixo:'+catButtons(categories()));
   }
-  function submit(){const text=input.value.trim();if(!text)return;add('user',esc(text));input.value='';saveMessage(text,productContext||{});setTimeout(()=>reply(text),250)}
+  function submit(){const text=input.value.trim();if(!text)return;clearTimeout(catalogReminderTimer);if(productContext)productContext.idleReminderSent=false;add('user',esc(text));input.value='';saveMessage(text,productContext||{});setTimeout(()=>reply(text),250)}
 
   function openChatForProduct(index){
     const i=Number(index),p=products[i];if(!Number.isInteger(i)||!p)return;
     const id=productId(p,i),changed=!productContext||productContext.productId!==id;
     activeProduct=i;lastProduct=p;lastAnnouncedProduct=i;
-    productContext={productId:id,productName:String(p.name||'Produto'),contextId:id+'-'+Date.now().toString(36),index:i};
+    clearTimeout(catalogReminderTimer);productContext={productId:id,productName:String(p.name||'Produto'),contextId:id+'-'+Date.now().toString(36),index:i,replyCount:0,nextCatalogVoiceAt:3,catalogVoiceStep:4,idleReminderSent:false};
     overlay.classList.add('open');
     if(changed)messages.innerHTML='';
     const name=String(p.name||'este produto'),description=productWrittenText(p).slice(0,240);
@@ -293,7 +311,7 @@ function installOriginalChat(){
 
   messages.addEventListener('click',e=>{
     const back=e.target.closest('[data-back-catalog]');
-    if(back){setConversationMode(false,true);try{speechSynthesis.cancel()}catch(err){};productContext=null;activeProduct=-1;lastProduct=null;lastAnnouncedProduct=-1;overlay.classList.remove('open');return}
+    if(back){clearTimeout(catalogReminderTimer);setConversationMode(false,true);try{speechSynthesis.cancel()}catch(err){};productContext=null;activeProduct=-1;lastProduct=null;lastAnnouncedProduct=-1;overlay.classList.remove('open');return}
     const prod=e.target.closest('[data-pub-product]');
     if(prod){
       const i=Number(prod.dataset.pubProduct);activeProduct=i;lastProduct=products[i]||null;overlay.classList.remove('open');
@@ -306,7 +324,7 @@ function installOriginalChat(){
   });
 
   $('#pubChatToggle').onclick=()=>{if(activeProduct>=0&&products[activeProduct]){openChatForProduct(activeProduct);return}overlay.classList.add('open');setConversationMode(voiceEnabled,true);if(!messages.children.length)add('bot',esc(store.welcome||'Olá! 💛 Seja bem-vinda(o). Escreva o nome do produto que procura ou veja as opções abaixo.')+catButtons(categories()),store.welcome||'Olá! Como posso ajudar?');setTimeout(()=>input.focus(),120)};
-  $('#pubChatClose').onclick=()=>{overlay.classList.remove('open');setConversationMode(false,true)};
+  $('#pubChatClose').onclick=()=>{clearTimeout(catalogReminderTimer);overlay.classList.remove('open');setConversationMode(false,true)};
   $('#pubSend').onclick=submit;input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit()}});
 
   function updateVoiceOutputUI(){
