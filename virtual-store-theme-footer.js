@@ -2,8 +2,8 @@
 (function(){
 'use strict';
 
-const data=window.__CHATSHOP_STORE_DATA||null;
-if(!data||data.storeType!=='virtual')return;
+const data=window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||null;
+if(!data)return;
 
 function validColor(v,fallback){return /^#[0-9a-f]{6}$/i.test(String(v||''))?String(v):fallback}
 function contrast(hex){
@@ -61,11 +61,11 @@ function affiliateFooterLink(){
 
 function footerHtml(){
   const affiliateLink=affiliateFooterLink();
-  return `<footer class="vst-footer"><div class="vst-footer-inner"><div class="vst-footer-logo">${logo?`<img src="${esc(logo)}" alt="${esc(brand)}">`:esc(brand.charAt(0).toUpperCase())}</div><div class="vst-footer-brand">${esc(brand)}</div><div class="vst-footer-sub">Loja virtual · Atendimento online</div><nav class="vst-footer-links" aria-label="Informações da loja"><a href="/quem-somos">Quem somos</a><a href="/politica-de-privacidade">Política de privacidade</a>${affiliateLink}</nav><div class="vst-footer-line"></div><div class="vst-footer-note">Compre seus produtos com praticidade pelo ChatShop.</div></div></footer>`;
+  return `<footer class="vst-footer"><div class="vst-footer-inner"><div class="vst-footer-logo">${logo?`<img src="${esc(logo)}" alt="${esc(brand)}">`:esc(brand.charAt(0).toUpperCase())}</div><div class="vst-footer-brand">${esc(brand)}</div><div class="vst-footer-sub">${data.storeType==='virtual'?'Loja virtual':'Catálogo online'} · Atendimento online</div><nav class="vst-footer-links" aria-label="Informações da loja"><a href="/quem-somos">Quem somos</a><a href="/politica-de-privacidade">Política de privacidade</a>${affiliateLink}</nav><div class="vst-footer-line"></div><div class="vst-footer-note">Compre seus produtos com praticidade pelo ChatShop.</div></div></footer>`;
 }
 
 function install(){
-  const page=document.querySelector('.csv-page,.vs-page');
+  const page=document.querySelector('.csv-page,.vs-page,.catalog,#catalog');
   if(!page)return false;
   installStyle();
   if(!page.querySelector('.vst-footer'))page.insertAdjacentHTML('beforeend',footerHtml());
