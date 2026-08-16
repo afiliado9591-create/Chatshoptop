@@ -190,7 +190,7 @@ function publicProducts(){return Array.isArray(featureData?.products)?featureDat
 function stopPublicPlayback(){
   try{speechSynthesis.cancel()}catch(e){}
   if(currentPublicAudio){try{currentPublicAudio.pause();currentPublicAudio.currentTime=0}catch(e){}currentPublicAudio=null}
-  if(currentPublicButton){currentPublicButton.innerHTML='🔊 Detalhes do produto';currentPublicButton=null}
+  if(currentPublicButton){currentPublicButton.innerHTML=currentPublicButton.classList.contains('seller-audio-single')?'▶ Ouvir descrição':'🔊 Detalhes do produto';currentPublicButton=null}
 }
 function playSellerAudio(p,btn){
   const mode=String(p?.sellerAudioMode||'off');
@@ -221,13 +221,16 @@ function addGridAudioButtons(){
   });
 }
 function addSingleAudioButtons(){
-  if(controlsOf().sellerAudioPaused)return;
+  if(controlsOf().sellerAudioPaused||document.body.classList.contains('store-grid-layout'))return;
   const ps=publicProducts();
   document.querySelectorAll('.pub-slide').forEach((slide,i)=>{
-    if(slide.querySelector('.seller-audio-btn')||!ps[i]||!hasSellerAudio(ps[i]))return;
-    const b=document.createElement('button');b.type='button';b.className='seller-audio-btn seller-audio-single';b.innerHTML='🔊 Detalhes do produto';
-    b.onclick=e=>{e.preventDefault();e.stopPropagation();playSellerAudio(ps[i],b)};
-    const overlay=slide.querySelector('.pub-slide-overlay');if(overlay)overlay.insertBefore(b,overlay.firstChild);
+    if(slide.querySelector('.seller-audio-btn'))return;
+    const name=slide.querySelector('.pub-slide-textbox b')?.textContent?.trim();
+    const product=ps.find(p=>String(p?.name||'').trim()===name)||ps[i];
+    if(!product||!hasSellerAudio(product))return;
+    const b=document.createElement('button');b.type='button';b.className='seller-audio-btn seller-audio-single';b.innerHTML='▶ Ouvir descrição';b.setAttribute('aria-label','Ouvir descrição do produto');
+    b.onclick=e=>{e.preventDefault();e.stopPropagation();playSellerAudio(product,b)};
+    slide.appendChild(b);
   });
 }
 
@@ -252,7 +255,7 @@ function applyPublicControls(){
 function installPublic(){
   if(!featureData)return false;
   if(!$('sellerAudioPublicStyle')){
-    const st=document.createElement('style');st.id='sellerAudioPublicStyle';st.textContent=`.seller-audio-btn{position:absolute!important;left:8px!important;right:8px!important;bottom:8px!important;z-index:6!important;border:0!important;border-radius:999px!important;padding:10px 12px!important;background:#16a34a!important;color:#fff!important;font-size:12px!important;font-weight:900!important;box-shadow:0 3px 12px rgba(0,0,0,.25)!important;cursor:pointer!important;pointer-events:auto!important}.seller-audio-single{position:relative!important;left:auto!important;right:auto!important;bottom:auto!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;margin:0 0 10px!important;max-width:260px!important}`;document.head.appendChild(st)
+    const st=document.createElement('style');st.id='sellerAudioPublicStyle';st.textContent=`.seller-audio-btn{position:absolute!important;left:8px!important;right:8px!important;bottom:8px!important;z-index:6!important;border:0!important;border-radius:999px!important;padding:10px 12px!important;background:#16a34a!important;color:#fff!important;font-size:12px!important;font-weight:900!important;box-shadow:0 3px 12px rgba(0,0,0,.25)!important;cursor:pointer!important;pointer-events:auto!important}.seller-audio-single{position:absolute!important;left:50%!important;right:auto!important;top:50%!important;bottom:auto!important;transform:translate(-50%,-50%)!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;width:max-content!important;max-width:calc(100% - 40px)!important;margin:0!important;padding:14px 20px!important;background:rgba(22,163,74,.94)!important;font-size:14px!important;white-space:nowrap!important;z-index:8!important}`;document.head.appendChild(st)
   }
   applyPublicControls();
   new MutationObserver(()=>applyPublicControls()).observe(document.body,{childList:true,subtree:true});
