@@ -4,6 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gerador ChatShop</title>
+<script>
+(function(){
+  const host=location.hostname.toLowerCase();
+  const base='alibr.com.br';
+  const suffix='.'+base;
+  const subdomain=host.endsWith(suffix)?host.slice(0,-suffix.length):'';
+  const publicSubdomain=!!subdomain&&subdomain!=='www'&&!subdomain.includes('.');
+  const reserved=['localhost',base,'www.'+base];
+  const customDomain=!subdomain&&!reserved.includes(host)&&!host.endsWith('.vercel.app');
+  if(publicSubdomain||customDomain)document.documentElement.classList.add('store-public-boot');
+})();
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -52,6 +64,7 @@
 .pub-video-frame.horizontal{aspect-ratio:16/9;max-width:640px}
 .pub-video-frame iframe{width:100%;height:100%;border:0}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.preview{min-height:650px}#liveApp{grid-template-columns:1fr;grid-template-rows:1fr 190px}.live-catalog{display:flex;gap:10px;overflow-x:auto}.live-catalog h2{display:none}.live-card{min-width:145px;margin:0}.live-card img,.live-card .live-noimg{height:85px}}
+html.store-public-boot #authScreen,html.store-public-boot #genApp{display:none!important}
 #authScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .authBox{background:#fff;border-radius:16px;padding:28px 26px;max-width:380px;width:100%;box-shadow:0 8px 30px #312e8120}
 .authBox h1{font-size:20px;margin:0 0 4px}.authBox p{font-size:13px;color:var(--muted);margin:0 0 18px}
