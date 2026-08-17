@@ -11,7 +11,7 @@ function readBootstrapData(){
     const marker=id==='chatshopDirectVirtualBootstrap'?'window.__CHATSHOP_STORE_DATA=':'window.__CHATSHOP_STORE_FEATURE_DATA=';
     const start=text.indexOf(marker);
     if(start<0)continue;
-    const raw=text.slice(start+marker.length).trim().replace(/;\\s*$/,'');
+    const raw=text.slice(start+marker.length).trim().replace(/;\s*$/,'');
     try{return JSON.parse(raw)}catch(e){console.warn('bootstrap data parse:',id,e)}
   }
   return window.__CHATSHOP_STORE_FEATURE_DATA||null;
