@@ -128,6 +128,7 @@ function installOriginalChat(){
   .cat-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cat-chip{border:1px solid var(--store-main);background:#fff;color:var(--store-main);padding:6px 11px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer}.cat-chip.all-chip{background:var(--store-main);color:#fff}.cat-chip.lead-chip{background:#25D366;border-color:#25D366;color:#fff}
   .vcd-product-seller{width:100%;border:0;border-radius:999px;background:var(--store-main,#7A2E3B);color:#fff;padding:11px 13px;margin:9px 0;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.16)}.vcd-product-seller-card{margin:8px 10px 10px;width:calc(100% - 20px);padding:9px 8px;font-size:12px}.live-pcard{width:220px;margin-top:8px}.live-pcard img{width:100%;height:125px;object-fit:contain;border-radius:8px;background:#f6f6f6}.live-pdesc{font-size:12px;line-height:1.4;color:#4b5563;margin:5px 0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.live-noimg{height:125px;display:grid;place-items:center;background:#f3f4f6;border-radius:8px;font-size:36px}.live-price{color:var(--store-main);font-weight:800;margin:4px 0}.live-buy{display:block;text-align:center;background:var(--store-main);color:#fff;text-decoration:none;padding:8px;border-radius:8px;font-weight:700;font-size:12px;border:0;width:100%;cursor:pointer}.lead-form{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.lead-input{flex:1;min-width:150px;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:13px}.lead-submit{border:0;background:var(--store-main);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer}`;
   fallback.textContent+=`.live-back-catalog{display:block;width:100%;margin-top:7px;padding:8px;border:1px solid var(--store-main);border-radius:8px;background:#fff;color:var(--store-main);font-size:12px;font-weight:900;cursor:pointer}`;
+  fallback.textContent+=`.csv-head,.vs-head{z-index:60!important}`;
   document.head.appendChild(fallback);
 
   const logo=safeImage(store.logo);
@@ -337,8 +338,14 @@ function installOriginalChat(){
     if(back){e.preventDefault();e.stopPropagation();closeChatAndReturnCatalog();return}
     const prod=e.target.closest('[data-pub-product]');
     if(prod){
-      const i=Number(prod.dataset.pubProduct);activeProduct=i;lastProduct=products[i]||null;overlay.classList.remove('open');
-      const btn=$(`[data-product="${i}"]`);if(btn)btn.click();injectDescription(i);return;
+      const i=Number(prod.dataset.pubProduct),p=products[i];if(!Number.isInteger(i)||!p)return;
+      closeChatAndReturnCatalog();
+      setTimeout(()=>{
+        activeProduct=i;lastProduct=p;lastAnnouncedProduct=i;
+        const btn=$(`[data-product="${i}"]`);if(btn)btn.click();
+        injectDescription(i);
+      },100);
+      return;
     }
     const chip=e.target.closest('.cat-chip');
     if(chip){const c=chip.dataset.cat;if(c==='__ALL__')showAllProducts();else if(c==='__LEAD__')showLeadForm();else showCategory(c);return}
