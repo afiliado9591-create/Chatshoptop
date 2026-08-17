@@ -1,4 +1,4 @@
-/* ChatShop: mini produtos relacionados na pagina de vendas da Loja Virtual. */
+/* ChatShop: order bump com mini produtos na pagina de vendas da Loja Virtual. */
 (function(){
 'use strict';
 
@@ -6,6 +6,7 @@ const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+let autoAdding=false;
 
 function readData(){
   if(window.__CHATSHOP_STORE_DATA)return window.__CHATSHOP_STORE_DATA;
@@ -49,16 +50,18 @@ function installStyle(main){
   style.id='virtualCrossSellStyle';
   style.textContent=`
     .vxs-wrap{margin:16px 0 4px;padding:13px 12px 12px;border:1px solid #ececec;border-radius:14px;background:#fff;box-shadow:0 2px 9px rgba(0,0,0,.06)}
-    .vxs-title{font-size:13px;font-weight:900;color:#1f2937;margin:0 0 9px}
+    .vxs-title{font-size:13px;font-weight:900;color:#1f2937;margin:0 0 3px}.vxs-sub{font-size:10.5px;color:#6b7280;margin:0 0 9px}
     .vxs-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-    .vxs-item{min-width:0;border:1px solid #e5e7eb;border-radius:10px;background:#fff;padding:5px;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
-    .vxs-item:active{transform:scale(.97)}
+    .vxs-item{position:relative;min-width:0;border:1px solid #e5e7eb;border-radius:10px;background:#fff;padding:5px;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent;display:block}
+    .vxs-item:active{transform:scale(.97)}.vxs-item.selected{border-color:${main};box-shadow:0 0 0 2px ${main}22;background:#fffafb}
+    .vxs-check{position:absolute;top:8px;right:8px;z-index:2;width:20px;height:20px;accent-color:${main};cursor:pointer}
     .vxs-img,.vxs-noimg{width:100%;aspect-ratio:1/1;border-radius:7px;background:#f5f5f5;display:grid;place-items:center;overflow:hidden}
-    .vxs-img img{width:100%;height:100%;object-fit:cover;display:block}
-    .vxs-noimg{font-size:22px;color:#9ca3af}
+    .vxs-img img{width:100%;height:100%;object-fit:cover;display:block}.vxs-noimg{font-size:22px;color:#9ca3af}
     .vxs-name{font-size:10px;line-height:1.18;font-weight:800;color:#374151;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .vxs-price{font-size:10px;line-height:1.15;font-weight:900;color:${main};margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    @media(max-width:430px){.vxs-wrap{margin-top:14px;padding:11px 9px}.vxs-grid{gap:6px}.vxs-item{padding:4px}.vxs-name,.vxs-price{font-size:9.5px}}
+    .vxs-picked{display:none;font-size:9px;font-weight:900;color:${main};margin-top:4px}.vxs-item.selected .vxs-picked{display:block}
+    body.vxs-auto-adding #csvProduct,body.vxs-auto-adding #vsProductModal{visibility:hidden!important;pointer-events:none!important}
+    @media(max-width:430px){.vxs-wrap{margin-top:14px;padding:11px 9px}.vxs-grid{gap:6px}.vxs-item{padding:4px}.vxs-name,.vxs-price{font-size:9.5px}.vxs-check{top:6px;right:6px;width:19px;height:19px}}
   `;
   document.head.appendChild(style);
 }
@@ -73,17 +76,52 @@ function currentIndex(products,slugs,scope){
   if(explicit!==undefined&&explicit!==null&&explicit!==''){
     const i=Number(explicit);if(Number.isInteger(i)&&products[i])return i;
   }
-  const nameEl=scope?.querySelector('.sg-name,.cgc-name,.csv-detail-name,.vs-detail-name,.csv-name');
+  const nameEl=scope?.querySelector('.sg-name,.cgc-name,.csv-dname,.csv-detail-name,.vs-detail-name,.csv-name');
   const shown=norm(nameEl?.textContent||'');
   if(shown){const i=products.findIndex(p=>norm(p?.name)===shown);if(i>=0)return i;}
   return -1;
 }
 
 function detailScope(){
-  return $('.sg-detail-wrap') || $('.cgc-detail,.cgc-detail-wrap') || $('#vsProductBody') || $('.csv-product-detail,.csv-detail-wrap') || null;
+  return $('.sg-detail-wrap') || $('.cgc-detail,.cgc-detail-wrap') || $('#csvProductBody') || $('#vsProductBody') || $('.csv-product-detail,.csv-detail-wrap') || null;
 }
 function anchorIn(scope){
-  return scope.querySelector('.sg-buy,.cgc-buy,#vsAdd,.vs-add,.csv-buy,.csv-add') || scope.querySelector('.sg-card,.cgc-card,.vs-detail-name,.csv-detail-name') || scope.lastElementChild;
+  return scope.querySelector('#csvAdd,.csv-add,#vsAdd,.vs-add,.sg-buy,.cgc-buy,.csv-buy') || scope.querySelector('.sg-card,.cgc-card,.vs-detail-name,.csv-dname,.csv-detail-name') || scope.lastElementChild;
+}
+
+function selectedBumps(scope){
+  return $$('.vxs-check:checked',scope||document).map(x=>Number(x.value)).filter(Number.isInteger);
+}
+function markSelection(input){
+  const item=input.closest('.vxs-item');if(item)item.classList.toggle('selected',input.checked);
+}
+
+function addOneThroughExistingCart(index){
+  const csvOpen=$(`#csvGrid [data-product="${index}"]`);
+  if(csvOpen){
+    csvOpen.click();
+    const add=$('#csvAdd');
+    if(add){add.click();return true;}
+  }
+  const vsOpen=$(`#vsGrid [data-product="${index}"]`);
+  if(vsOpen){
+    vsOpen.click();
+    const add=$('#vsAdd');
+    if(add){add.click();return true;}
+  }
+  return false;
+}
+function addBumps(indices){
+  const unique=[...new Set(indices)].filter(i=>i>=0);
+  if(!unique.length)return;
+  autoAdding=true;document.body.classList.add('vxs-auto-adding');
+  let added=0;
+  unique.forEach(i=>{if(addOneThroughExistingCart(i))added++;});
+  document.body.classList.remove('vxs-auto-adding');autoAdding=false;
+  if(added){
+    const toast=$('#csvToast,#vsToast');
+    if(toast){toast.textContent=added===1?'Produto extra adicionado à sacola':'Produtos extras adicionados à sacola';toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800);}
+  }
 }
 
 function render(){
@@ -105,19 +143,28 @@ function render(){
   installStyle(main);
   const wrap=document.createElement('section');
   wrap.className='vxs-wrap';
-  wrap.setAttribute('aria-label','Produtos relacionados');
-  wrap.innerHTML='<div class="vxs-title">Você também pode gostar</div><div class="vxs-grid">'+related.map(({p,i})=>{
+  wrap.setAttribute('aria-label','Adicionar produtos extras ao pedido');
+  wrap.innerHTML='<div class="vxs-title">Leve junto</div><div class="vxs-sub">Marque um produto extra para adicionar junto à sacola.</div><div class="vxs-grid">'+related.map(({p,i})=>{
     const img=safeImage(p),name=String(p?.name||'Produto').trim()||'Produto';
-    return `<button type="button" class="vxs-item" data-vxs-index="${i}" aria-label="Ver ${esc(name)}"><div class="vxs-img">${img?`<img src="${esc(img)}" alt="${esc(name)}">`:'<div class="vxs-noimg">🛍️</div>'}</div><div class="vxs-name">${esc(name)}</div>${p?.price?`<div class="vxs-price">${esc(price(p.price))}</div>`:''}</button>`;
+    return `<label class="vxs-item" aria-label="Adicionar ${esc(name)} ao pedido"><input class="vxs-check" type="checkbox" value="${i}"><div class="vxs-img">${img?`<img src="${esc(img)}" alt="${esc(name)}">`:'<div class="vxs-noimg">🛍️</div>'}</div><div class="vxs-name">${esc(name)}</div>${p?.price?`<div class="vxs-price">${esc(price(p.price))}</div>`:''}<div class="vxs-picked">✓ Vai junto</div></label>`;
   }).join('')+'</div>';
-  wrap.addEventListener('click',e=>{
-    const item=e.target.closest('[data-vxs-index]');if(!item)return;
-    const i=Number(item.dataset.vxsIndex);if(!Number.isInteger(i)||!products[i])return;
-    location.href='/produto/'+encodeURIComponent(slugs[i]||('produto-'+(i+1)));
-  });
+  wrap.addEventListener('change',e=>{if(e.target.classList.contains('vxs-check'))markSelection(e.target);});
   const anchor=anchorIn(scope);
   if(anchor&&anchor.parentNode)anchor.insertAdjacentElement('afterend',wrap);else scope.appendChild(wrap);
 }
+
+/* Captura o clique antes do manipulador original fechar o modal. Depois que o
+   produto principal entra na sacola, usa os mesmos controles internos da Loja
+   Virtual para inserir os itens marcados, preservando o carrinho/checkout atual. */
+document.addEventListener('click',e=>{
+  if(autoAdding)return;
+  const add=e.target.closest('#csvAdd,.csv-add,#vsAdd,.vs-add');
+  if(!add)return;
+  const scope=add.closest('#csvProductBody,#vsProductBody,.csv-product-detail,.csv-detail-wrap')||document;
+  const bumps=selectedBumps(scope);
+  if(!bumps.length)return;
+  setTimeout(()=>addBumps(bumps),40);
+},true);
 
 let timer=null;
 function schedule(){clearTimeout(timer);timer=setTimeout(render,70);}
