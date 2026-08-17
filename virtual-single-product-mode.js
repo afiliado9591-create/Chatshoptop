@@ -77,8 +77,8 @@ function installPublished(storeData){
     style.textContent='body.chatshop-virtual-single-product .vs-hero,body.chatshop-virtual-single-product .vs-grid{display:none!important}body.chatshop-virtual-single-product .vs-page{min-height:100dvh!important}body.chatshop-virtual-single-product #vsProductModal{background:#f8fafc!important;align-items:flex-start!important;padding-top:64px!important}body.chatshop-virtual-single-product #vsProductModal .vs-sheet{max-width:760px!important;max-height:calc(100dvh - 64px)!important;border-radius:0!important}body.chatshop-virtual-single-product #vsProductModal .vs-close{display:none!important}';
     document.head.appendChild(style);
     button.click();
-    const name=products[index]?.name||'Produto';
-    try{history.replaceState({chatshopSingleProduct:index},'', '/produto/'+encodeURIComponent(productSlug(name))+location.search)}catch(e){}
+    // Mantém o domínio raiz no modo produto único. Rotas /produto podem não existir em domínios próprios.
+    try{history.replaceState({chatshopSingleProduct:index},'', location.pathname==='/'?('/'+location.search):('/'+location.search))}catch(e){}
     const keepOpen=new MutationObserver(()=>{if(!modal.classList.contains('open')&&!cart?.classList.contains('open'))setTimeout(()=>button.click(),40)});
     keepOpen.observe(modal,{attributes:true,attributeFilter:['class']});
     cart&&keepOpen.observe(cart,{attributes:true,attributeFilter:['class']});
