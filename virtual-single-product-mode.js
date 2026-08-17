@@ -113,10 +113,10 @@ function installPublished(storeData){
     const style=document.createElement('style');style.id='virtualSingleProductPublishedStyle';
     style.textContent='body.chatshop-virtual-single-product .vs-hero,body.chatshop-virtual-single-product .vs-grid,body.chatshop-virtual-single-product .csv-hero,body.chatshop-virtual-single-product .csv-grid{display:none!important}body.chatshop-virtual-single-product .vs-page,body.chatshop-virtual-single-product .csv-page{min-height:100dvh!important}body.chatshop-virtual-single-product #vsProductModal,body.chatshop-virtual-single-product #csvProduct{background:#f8fafc!important;align-items:flex-start!important;padding-top:64px!important}body.chatshop-virtual-single-product #vsProductModal .vs-sheet,body.chatshop-virtual-single-product #csvProduct .csv-sheet{max-width:760px!important;max-height:calc(100dvh - 64px)!important;border-radius:0!important}body.chatshop-virtual-single-product #vsProductModal .vs-close,body.chatshop-virtual-single-product #csvProduct .csv-close{display:none!important}';
     document.head.appendChild(style);
-    [250,700,1400,2400].forEach(delay=>setTimeout(()=>{if(!modal.classList.contains('open')&&!modal.classList.contains('on'))button.click()},delay));
+    [250,700,1400,2400].forEach(delay=>setTimeout(()=>{if(!modal.classList.contains('open')&&!modal.classList.contains('on'))button.click();if(modal.id==='csvProduct')modal.classList.add('on')},delay));
     // Mantém o domínio raiz no modo produto único. Rotas /produto podem não existir em domínios próprios.
     try{history.replaceState({chatshopSingleProduct:index},'', location.pathname==='/'?('/'+location.search):('/'+location.search))}catch(e){}
-    const keepOpen=new MutationObserver(()=>{if(!modal.classList.contains('open')&&!cart?.classList.contains('open'))setTimeout(()=>button.click(),40)});
+    const keepOpen=new MutationObserver(()=>{const productOpen=modal.classList.contains('open')||modal.classList.contains('on'),cartOpen=cart&&(cart.classList.contains('open')||cart.classList.contains('on'));if(!productOpen&&!cartOpen)setTimeout(()=>{button.click();if(modal.id==='csvProduct')modal.classList.add('on')},40)});
     keepOpen.observe(modal,{attributes:true,attributeFilter:['class']});
     cart&&keepOpen.observe(cart,{attributes:true,attributeFilter:['class']});
   })();
