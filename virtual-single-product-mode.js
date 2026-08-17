@@ -15,6 +15,8 @@ setTimeout(function earlySingleProductRecovery(){
     document.documentElement.dataset.singleProductData='ready';
     if(typeof renderPublishedStore==='function'){
       renderPublishedStore(value,null);
+      const auth=document.getElementById('authScreen'),gen=document.getElementById('genApp'),root=document.getElementById('storefrontScreen');
+      if(auth)auth.style.display='none';if(gen)gen.style.display='none';if(root)root.style.display='block';
       document.documentElement.classList.remove('chatshop-virtual-pending');
       document.documentElement.dataset.singleProductRender='ready';
     }
@@ -105,11 +107,11 @@ function installPublished(storeData){
   let tries=0;
   (function open(){
     tries++;
-    const page=$('.vs-page'),button=$('[data-product="'+index+'"]'),modal=$('#vsProductModal'),cart=$('#vsCartModal');
+    const page=$('.vs-page,.csv-page'),button=$('[data-product="'+index+'"]'),modal=$('#vsProductModal,#csvProduct'),cart=$('#vsCartModal,#csvCart');
     if(!page||!button||!modal){if(tries<100)setTimeout(open,80);return}
     document.body.classList.add('chatshop-virtual-single-product');
     const style=document.createElement('style');style.id='virtualSingleProductPublishedStyle';
-    style.textContent='body.chatshop-virtual-single-product .vs-hero,body.chatshop-virtual-single-product .vs-grid{display:none!important}body.chatshop-virtual-single-product .vs-page{min-height:100dvh!important}body.chatshop-virtual-single-product #vsProductModal{background:#f8fafc!important;align-items:flex-start!important;padding-top:64px!important}body.chatshop-virtual-single-product #vsProductModal .vs-sheet{max-width:760px!important;max-height:calc(100dvh - 64px)!important;border-radius:0!important}body.chatshop-virtual-single-product #vsProductModal .vs-close{display:none!important}';
+    style.textContent='body.chatshop-virtual-single-product .vs-hero,body.chatshop-virtual-single-product .vs-grid,body.chatshop-virtual-single-product .csv-hero,body.chatshop-virtual-single-product .csv-grid{display:none!important}body.chatshop-virtual-single-product .vs-page,body.chatshop-virtual-single-product .csv-page{min-height:100dvh!important}body.chatshop-virtual-single-product #vsProductModal,body.chatshop-virtual-single-product #csvProduct{background:#f8fafc!important;align-items:flex-start!important;padding-top:64px!important}body.chatshop-virtual-single-product #vsProductModal .vs-sheet,body.chatshop-virtual-single-product #csvProduct .csv-sheet{max-width:760px!important;max-height:calc(100dvh - 64px)!important;border-radius:0!important}body.chatshop-virtual-single-product #vsProductModal .vs-close,body.chatshop-virtual-single-product #csvProduct .csv-close{display:none!important}';
     document.head.appendChild(style);
     button.click();
     // Mantém o domínio raiz no modo produto único. Rotas /produto podem não existir em domínios próprios.
