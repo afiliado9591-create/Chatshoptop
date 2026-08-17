@@ -1,7 +1,27 @@
 /* ChatShop: opção de Loja Virtual com um único produto, preservando sacola e checkout. */
 (function(){
 'use strict';
-document.documentElement.dataset.singleProductScript='20260817-1815';
+document.documentElement.dataset.singleProductScript='20260817-1945';
+setTimeout(function earlySingleProductRecovery(){
+  try{
+    const el=document.getElementById('chatshopDirectVirtualBootstrap');
+    const text=el&&el.textContent||'';
+    const marker='window.__CHATSHOP_STORE_DATA=';
+    const start=text.indexOf(marker);
+    if(start<0)return;
+    const value=JSON.parse(text.slice(start+marker.length).trim().replace(/;\s*$/,''));
+    window.__CHATSHOP_STORE_DATA=value;
+    window.__CHATSHOP_DIRECT_STORE_ACTIVE=true;
+    document.documentElement.dataset.singleProductData='ready';
+    if(typeof renderPublishedStore==='function'){
+      renderPublishedStore(value,null);
+      document.documentElement.classList.remove('chatshop-virtual-pending');
+      document.documentElement.dataset.singleProductRender='ready';
+    }
+  }catch(error){
+    document.documentElement.dataset.singleProductError=String(error&&error.message||error).slice(0,160);
+  }
+},300);
 
 function readBootstrapData(){
   const direct=window.__CHATSHOP_STORE_DATA||null;
