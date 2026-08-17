@@ -157,7 +157,10 @@ module.exports = async function handler(req, res) {
       const product = Number.isInteger(index) && index >= 0 ? products[index] : null;
       if (!product) continue;
 
-      const weight = asNumber(product.weight ?? product.sfWeight);
+      const savedWeight = asNumber(product.weight ?? product.sfWeight);
+      // Compatibilidade: muitos lojistas informam 400 para representar 400 g,
+      // embora o campo da SuperFrete use quilogramas.
+      const weight = savedWeight > 30 ? savedWeight / 1000 : savedWeight;
       const height = asNumber(product.height ?? product.sfHeight);
       const width = asNumber(product.width ?? product.sfWidth);
       const length = asNumber(product.length ?? product.sfLength);
