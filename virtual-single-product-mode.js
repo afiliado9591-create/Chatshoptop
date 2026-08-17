@@ -1,7 +1,7 @@
 /* ChatShop: catálogo vertical da Loja Virtual, um produto por tela, preservando sacola e checkout. */
 (function(){
 'use strict';
-document.documentElement.dataset.singleProductScript='20260817-2300-virtual-tiktok-no-header';
+document.documentElement.dataset.singleProductScript='20260817-2315-virtual-tiktok-no-top-menu';
 setTimeout(function earlySingleProductRecovery(){
   try{
     const el=document.getElementById('chatshopDirectVirtualBootstrap');
@@ -114,7 +114,7 @@ function installPublished(storeData){
     style.textContent=`
       body.chatshop-virtual-tiktok{overflow:hidden!important;background:#111!important}
       body.chatshop-virtual-tiktok .csv-page,body.chatshop-virtual-tiktok .vs-page{height:100dvh!important;min-height:100dvh!important;overflow:hidden!important;background:#111!important}
-      body.chatshop-virtual-tiktok .csv-head,body.chatshop-virtual-tiktok .vs-head{display:none!important}
+      body.chatshop-virtual-tiktok .csv-head,body.chatshop-virtual-tiktok .vs-head,body.chatshop-virtual-tiktok #chatshopGridTop,body.chatshop-virtual-tiktok #chatshopGridMenu,body.chatshop-virtual-tiktok .pub-cat-menu,body.chatshop-virtual-tiktok .category-menu,body.chatshop-virtual-tiktok .catalog-categories{display:none!important}
       body.chatshop-virtual-tiktok .csv-title small{color:#f3f4f6!important}
       body.chatshop-virtual-tiktok .csv-hero,body.chatshop-virtual-tiktok .vs-hero{display:none!important}
       body.chatshop-virtual-tiktok .csv-grid,body.chatshop-virtual-tiktok .vs-grid{height:100dvh!important;display:block!important;overflow-y:auto!important;overflow-x:hidden!important;padding:0!important;margin:0!important;max-width:none!important;scroll-snap-type:y mandatory!important;overscroll-behavior-y:contain!important}
