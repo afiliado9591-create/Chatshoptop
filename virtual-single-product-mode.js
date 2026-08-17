@@ -1,7 +1,7 @@
-/* ChatShop: opção de Loja Virtual com um único produto, preservando sacola e checkout. */
+/* ChatShop: catálogo vertical da Loja Virtual, um produto por tela, preservando sacola e checkout. */
 (function(){
 'use strict';
-document.documentElement.dataset.singleProductScript='20260817-1945';
+document.documentElement.dataset.singleProductScript='20260817-2200-virtual-swipe';
 setTimeout(function earlySingleProductRecovery(){
   try{
     const el=document.getElementById('chatshopDirectVirtualBootstrap');
@@ -17,19 +17,6 @@ setTimeout(function earlySingleProductRecovery(){
       renderPublishedStore(value,null);
       const auth=document.getElementById('authScreen'),gen=document.getElementById('genApp'),root=document.getElementById('storefrontScreen');
       if(auth)auth.style.display='none';if(gen)gen.style.display='none';if(root)root.style.display='block';
-      const chosen=Math.min(Math.max(0,Number(value.virtualFeaturedProduct)||0),Math.max(0,(value.products||[]).length-1));
-      const ensureCurrentProduct=()=>{
-        const currentButton=document.querySelector('[data-product="'+chosen+'"]');
-        const currentModal=document.querySelector('#csvProduct,#vsProductModal');
-        if(!currentButton||!currentModal)return;
-        if(!currentModal.classList.contains('on')&&!currentModal.classList.contains('open'))currentButton.click();
-        setTimeout(()=>{if(currentModal.id==='csvProduct'&&currentModal.querySelector('#csvProductBody')?.children.length)currentModal.classList.add('on')},60);
-      };
-      if(root&&!root.__singleProductObserver){
-        root.__singleProductObserver=new MutationObserver(()=>setTimeout(ensureCurrentProduct,80));
-        root.__singleProductObserver.observe(root,{childList:true,subtree:true});
-      }
-      [350,900,1800,3200,5200].forEach(delay=>setTimeout(ensureCurrentProduct,delay));
       document.documentElement.classList.remove('chatshop-virtual-pending');
       document.documentElement.dataset.singleProductRender='ready';
     }
