@@ -413,10 +413,9 @@ function injectProductSellerButtons(){
       target.appendChild(makeProductSellerButton(i,true));
     }
   });
-  const body=$('#vsProductBody')||$('#csvProductBody');if(!body||activeProduct<0||!products[activeProduct])return;
-  let b=body.querySelector('.vcd-product-seller:not(.vcd-product-seller-card)');
-  if(!b){b=makeProductSellerButton(activeProduct,false);const price=body.querySelector('.vs-detail-price,.csv-dprice');if(price)price.insertAdjacentElement('afterend',b);else body.appendChild(b)}
-  b.dataset.chatProduct=String(activeProduct);b.onclick=e=>{e.preventDefault();e.stopPropagation();window.__CHATSHOP_OPEN_PRODUCT_CHAT?.(activeProduct)};
+  // Na página detalhada, mantém o foco em escolher variação e adicionar à sacola.
+  // O atendimento contextual continua disponível nos cards do catálogo.
+  document.querySelectorAll('#vsProductBody .vcd-product-seller:not(.vcd-product-seller-card),#csvProductBody .vcd-product-seller:not(.vcd-product-seller-card)').forEach(button=>button.remove());
 }
 function bindProductDescription(){
   document.addEventListener('click',e=>{const b=e.target.closest('[data-product]');if(!b)return;const i=Number(b.dataset.product);if(Number.isInteger(i)){activeProduct=i;injectDescription(i);setTimeout(injectProductSellerButtons,40)}},true);
