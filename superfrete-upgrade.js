@@ -122,7 +122,7 @@ function fillOrigins(sf){
 }
 function refreshProductOriginOptions(){
   const origins=collectOrigins();
-  $('[data-k="sfOriginId"]').forEach(select=>{
+  $$('[data-k="sfOriginId"]').forEach(select=>{
     const current=select.value||'origin-1';
     select.innerHTML=origins.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.label)+' · '+esc(o.postalCode||'CEP não informado')+'</option>').join('');
     select.value=origins.some(o=>o.id===current)?current:'origin-1';
