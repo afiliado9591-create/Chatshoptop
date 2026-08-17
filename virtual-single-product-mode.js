@@ -94,7 +94,23 @@ function wrapPublishedRenderer(){
       renderVirtualPublished=wrapped;
     }
   }catch(e){console.warn('virtual single published:',e)}
-  installPublished(data);
+  if(window.__CHATSHOP_DIRECT_STORE_ACTIVE&&data&&!$('.vs-page')){
+    let tries=0;
+    (function renderDirect(){
+      tries++;
+      try{
+        if(typeof renderPublishedStore==='function'){
+          renderPublishedStore(data,null);
+          document.documentElement.classList.remove('chatshop-virtual-pending');
+          return;
+        }
+      }catch(e){console.warn('virtual direct render:',e)}
+      if(tries<80)setTimeout(renderDirect,50);
+      else document.documentElement.classList.remove('chatshop-virtual-pending');
+    })();
+  }else{
+    installPublished(data);
+  }
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{installEditor();wrapPublishedRenderer()},{once:true});
