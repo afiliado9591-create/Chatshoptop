@@ -273,6 +273,29 @@ function installPublic(){
   return true;
 }
 
+async function adminExportStoreHtml(slug){
+  if(!adminAllowed()||!window.firebase?.auth?.().currentUser)throw new Error('Acesso exclusivo do administrador.');
+  const token=await firebase.auth().currentUser.getIdToken();
+  const response=await fetch('/api/admin-store-html.js',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},body:JSON.stringify({slug})});
+  const text=await response.text();
+  if(!response.ok)throw new Error((()=>{try{return JSON.parse(text).error}catch(e){return text}})()||'Não foi possível gerar o HTML.');
+  return text;
+}
+async function copyAdminStoreHtml(slug,button){
+  const original=button.textContent;button.disabled=true;button.textContent='Copiando...';
+  try{const html=await adminExportStoreHtml(slug);await navigator.clipboard.writeText(html);say('HTML da loja copiado!')}
+  catch(e){console.error(e);say(e.message||'Não foi possível copiar o HTML.')}
+  finally{button.disabled=false;button.textContent=original}
+}
+async function downloadAdminStoreHtml(slug,button){
+  const original=button.textContent;button.disabled=true;button.textContent='Baixando...';
+  try{const html=await adminExportStoreHtml(slug),url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=slug+'-index.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);say('HTML da loja baixado!')}
+  catch(e){console.error(e);say(e.message||'Não foi possível baixar o HTML.')}
+  finally{button.disabled=false;button.textContent=original}
+}
+window.__CHATSHOP_ADMIN_COPY_STORE_HTML=copyAdminStoreHtml;
+window.__CHATSHOP_ADMIN_DOWNLOAD_STORE_HTML=downloadAdminStoreHtml;
+
 async function showAdminStores(){
   if(!adminAllowed()||!window.db)return;
   const box=$('adminConteudo');if(!box)return;
@@ -287,7 +310,7 @@ async function showAdminStores(){
     list.innerHTML=stores.map(s=>{
       const c=s.adminControl||{},host=s.customDomain||`${s.slug||s.id}.alibr.com.br`,url=`https://${host}/`,email=emails[s.ownerUid]||'e-mail não encontrado';
       return `<div data-admin-store="${safe(s.id)}" style="border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:11px;background:#fff">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><b>${safe(s.brand||s.slug||s.id)}</b><div style="font-size:11px;color:var(--muted);margin-top:2px">${safe(email)} · ${safe(host)}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn admin-store-preview" data-url="${safe(url)}" style="padding:7px 9px">👁 Ver loja</button><a class="btn" href="${safe(url)}" target="_blank" rel="noopener" style="padding:7px 9px;text-decoration:none">↗ Abrir</a></div></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><b>${safe(s.brand||s.slug||s.id)}</b><div style="font-size:11px;color:var(--muted);margin-top:2px">${safe(email)} · ${safe(host)}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn admin-store-preview" data-url="${safe(url)}" style="padding:7px 9px">👁 Ver loja</button><a class="btn" href="${safe(url)}" target="_blank" rel="noopener" style="padding:7px 9px;text-decoration:none">↗ Abrir</a><button type="button" class="btn admin-store-copy-html" data-slug="${safe(s.slug||s.id)}" style="padding:7px 9px">📋 Copiar HTML</button><button type="button" class="btn success admin-store-download-html" data-slug="${safe(s.slug||s.id)}" style="padding:7px 9px">⬇️ Baixar HTML</button></div></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:7px;margin-top:11px;font-size:12px">
           <label><input type="checkbox" data-ctrl="storePaused" ${c.storePaused?'checked':''}> ⏸️ Pausar loja inteira</label>
           <label><input type="checkbox" data-ctrl="sellerAudioPaused" ${c.sellerAudioPaused?'checked':''}> 🔊 Pausar vendedor em áudio</label>
@@ -302,6 +325,8 @@ async function showAdminStores(){
     }).join('');
     list.querySelectorAll('[data-admin-store]').forEach(card=>{
       card.querySelector('.admin-store-preview').onclick=()=>{const wrap=card.querySelector('.admin-store-frame'),frame=wrap.querySelector('iframe'),url=card.querySelector('.admin-store-preview').dataset.url;if(wrap.style.display==='none'){frame.src=url;wrap.style.display='block'}else{wrap.style.display='none';frame.src='about:blank'}};
+      card.querySelector('.admin-store-copy-html').onclick=e=>copyAdminStoreHtml(e.currentTarget.dataset.slug,e.currentTarget);
+      card.querySelector('.admin-store-download-html').onclick=e=>downloadAdminStoreHtml(e.currentTarget.dataset.slug,e.currentTarget);
       card.querySelector('.admin-store-save').onclick=async()=>{
         const btn=card.querySelector('.admin-store-save');btn.disabled=true;btn.textContent='Salvando...';
         const ctrl={};card.querySelectorAll('[data-ctrl]').forEach(x=>ctrl[x.dataset.ctrl]=x.checked);
