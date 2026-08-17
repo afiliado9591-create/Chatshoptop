@@ -276,7 +276,7 @@ function installPublic(){
 async function adminExportStoreHtml(slug){
   if(!adminAllowed()||!window.firebase?.auth?.().currentUser)throw new Error('Acesso exclusivo do administrador.');
   const token=await firebase.auth().currentUser.getIdToken();
-  const response=await fetch('/api/admin-store-html.js',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},body:JSON.stringify({slug})});
+  const response=await fetch('/api/app-superfrete.js?adminExport=1',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},body:JSON.stringify({slug})});
   const text=await response.text();
   if(!response.ok)throw new Error((()=>{try{return JSON.parse(text).error}catch(e){return text}})()||'Não foi possível gerar o HTML.');
   return text;
