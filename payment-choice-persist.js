@@ -20,15 +20,19 @@ function bind(){
 }
 function adjustSeller(){
   const btn=$('#pubChatToggle');if(!btn)return;
-  const cartOpen=$('#csvCart')?.classList.contains('on');
-  if(cartOpen){btn.style.setProperty('bottom','84px','important');btn.style.setProperty('right','12px','important');btn.style.setProperty('z-index','45','important')}
-  else{btn.style.removeProperty('bottom');btn.style.removeProperty('right');btn.style.removeProperty('z-index')}
+  const cartOpen=$('#csvCart')?.classList.contains('on')||$('#vsCart')?.classList.contains('on');
+  if(cartOpen){
+    btn.style.setProperty('display','none','important');
+    const overlay=$('#pubChatOverlay');if(overlay){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true')}
+  }else{
+    btn.style.removeProperty('display');
+  }
 }
-function installStyle(){if($('#paymentPersistStyle'))return;const st=document.createElement('style');st.id='paymentPersistStyle';st.textContent='@media(max-width:520px){#csvCart.on~#pubChatToggle,#pubChatToggle.cart-open{bottom:84px!important;right:12px!important;z-index:45!important}}';document.head.appendChild(st)}
+function installStyle(){if($('#paymentPersistStyle'))return;const st=document.createElement('style');st.id='paymentPersistStyle';st.textContent='#csvCart.on~#pubChatToggle,#vsCart.on~#pubChatToggle,#pubChatToggle.cart-open{display:none!important}';document.head.appendChild(st)}
 function tick(){bind();adjustSeller()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{installStyle();tick()});else{installStyle();tick()}
 let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(tick,40)}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
-document.addEventListener('click',e=>{if(e.target.closest('#csvBag,[data-close="cart"]'))setTimeout(adjustSeller,20)},true);
+document.addEventListener('click',e=>{if(e.target.closest('#csvBag,#vsBag,[data-close="cart"]'))setTimeout(adjustSeller,20)},true);
 
 /* Regrava a escolha depois da publicação, quando o slug da nova loja já existe.
    Isso evita a loja publicada voltar para o fallback "whatsapp". */
