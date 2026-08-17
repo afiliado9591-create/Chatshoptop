@@ -1,0 +1,1 @@
+Forca novo deploy de producao para publicar o order bump da Loja Virtual.
