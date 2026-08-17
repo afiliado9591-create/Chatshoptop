@@ -1,6 +1,7 @@
 /* ChatShop: opção de Loja Virtual com um único produto, preservando sacola e checkout. */
 (function(){
 'use strict';
+document.documentElement.dataset.singleProductScript='20260817-1815';
 
 function readBootstrapData(){
   const direct=window.__CHATSHOP_STORE_DATA||null;
@@ -16,6 +17,7 @@ function readBootstrapData(){
   return window.__CHATSHOP_STORE_FEATURE_DATA||null;
 }
 const data=readBootstrapData();
+if(data){window.__CHATSHOP_STORE_DATA=window.__CHATSHOP_STORE_DATA||data;window.__CHATSHOP_DIRECT_STORE_ACTIVE=window.__CHATSHOP_DIRECT_STORE_ACTIVE||!!document.getElementById('chatshopDirectVirtualBootstrap');}
 const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
