@@ -2,7 +2,20 @@
 (function(){
 'use strict';
 
-const data=window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||null;
+function readBootstrapData(){
+  const direct=window.__CHATSHOP_STORE_DATA||null;
+  if(direct)return direct;
+  for(const id of ['chatshopDirectVirtualBootstrap','chatshopStoreFeatureBootstrap']){
+    const text=document.getElementById(id)?.textContent||'';
+    const marker=id==='chatshopDirectVirtualBootstrap'?'window.__CHATSHOP_STORE_DATA=':'window.__CHATSHOP_STORE_FEATURE_DATA=';
+    const start=text.indexOf(marker);
+    if(start<0)continue;
+    const raw=text.slice(start+marker.length).trim().replace(/;\\s*$/,'');
+    try{return JSON.parse(raw)}catch(e){console.warn('bootstrap data parse:',id,e)}
+  }
+  return window.__CHATSHOP_STORE_FEATURE_DATA||null;
+}
+const data=readBootstrapData();
 const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -94,7 +107,7 @@ function wrapPublishedRenderer(){
       renderVirtualPublished=wrapped;
     }
   }catch(e){console.warn('virtual single published:',e)}
-  if(window.__CHATSHOP_DIRECT_STORE_ACTIVE&&data&&!$('.vs-page')){
+  if((window.__CHATSHOP_DIRECT_STORE_ACTIVE||$('#chatshopDirectVirtualBootstrap'))&&data&&!$('.vs-page')){
     let tries=0;
     (function renderDirect(){
       tries++;
