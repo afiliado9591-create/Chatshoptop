@@ -79,11 +79,9 @@ function footerTarget(){
   const virtualPage=document.querySelector('.csv-page,.vs-page');
   if(virtualPage)return virtualPage;
   const feed=document.getElementById('pubFeed');
-  if(feed){
-    const grid=data.homeLayout==='grid'||document.body.classList.contains('chatshop-grid-clean')||document.body.classList.contains('store-grid-layout');
-    if(!grid){feed.querySelector(':scope > .vst-footer')?.remove();return null}
-    return feed;
-  }
+  // Todos os formatos do ChatShop recebem o rodapé padrão.
+  // No catálogo em tela cheia, ele aparece como a última tela da rolagem.
+  if(feed)return feed;
   return document.querySelector('.catalog,#catalog');
 }
 function install(){
