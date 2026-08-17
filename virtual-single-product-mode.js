@@ -61,10 +61,12 @@ function installEditor(){
 }
 
 function productSlug(value){return norm(value).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90)||'produto'}
-function installPublished(){
-  if(!data||data.storeType!=='virtual'||data.virtualDisplayMode!=='single')return;
-  const products=Array.isArray(data.products)?data.products:[];
-  const index=Math.min(Math.max(0,Number(data.virtualFeaturedProduct)||0),Math.max(0,products.length-1));
+function installPublished(storeData){
+  const publishedData=storeData||window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||null;
+  if(!publishedData||publishedData.storeType!=='virtual'||publishedData.virtualDisplayMode!=='single')return;
+  if(document.body.classList.contains('chatshop-virtual-single-product'))return;
+  const products=Array.isArray(publishedData.products)?publishedData.products:[];
+  const index=Math.min(Math.max(0,Number(publishedData.virtualFeaturedProduct)||0),Math.max(0,products.length-1));
   let tries=0;
   (function open(){
     tries++;
@@ -83,6 +85,18 @@ function installPublished(){
   })();
 }
 
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{installEditor();installPublished()},{once:true});
-else{installEditor();installPublished()}
+function wrapPublishedRenderer(){
+  try{
+    if(typeof renderVirtualPublished==='function'&&!renderVirtualPublished.__virtualSingleWrapped){
+      const original=renderVirtualPublished;
+      const wrapped=function(value,ref){const result=original(value,ref);setTimeout(()=>installPublished(value),0);return result};
+      wrapped.__virtualSingleWrapped=true;
+      renderVirtualPublished=wrapped;
+    }
+  }catch(e){console.warn('virtual single published:',e)}
+  installPublished(data);
+}
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{installEditor();wrapPublishedRenderer()},{once:true});
+else{installEditor();wrapPublishedRenderer()}
 })();
