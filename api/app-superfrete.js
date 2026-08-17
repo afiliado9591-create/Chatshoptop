@@ -108,7 +108,7 @@ module.exports = async function handler(request, response) {
     const planAccessTag = '<script src="/plan-access-control.js?v=20260816-1635-admin-premium"></script>';
     const storeAffiliateProgramTag = '<script src="/store-affiliate-program.js?v=20260815-2355"></script>';
     const mercadoPagoOauthTag = '<script src="/mercadopago-oauth-ui.js?v=20260814-1825"></script>';
-    const paymentChoicePersistTag = '<script src="/payment-choice-persist.js?v=20260815-0930"></script>';
+    const paymentChoicePersistTag = '<script src="/payment-choice-persist.js?v=20260817-1048-hide-checkout-chat"></script>';
     const virtualPaymentFixTag = '<script src="/virtual-payment-fix.js?v=20260815-1525"></script>';
     let inject = '';
     if (!html.includes('/virtual-shipping-upgrade.js')) inject += virtualTag + '\n';
