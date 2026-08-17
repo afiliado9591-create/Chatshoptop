@@ -141,7 +141,7 @@ module.exports = async function handler(request, response) {
     const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260817-1115-dual-product-audio"></script>';
     const ownerMetricsTag = '<script src="/store-owner-metrics.js?v=20260814-0500"></script>';
     const virtualCategoryMenuTag = '<script src="/virtual-category-menu.js?v=20260814-0523"></script>';
-    const virtualThemeFooterTag = '<script src="/virtual-store-theme-footer.js?v=20260817-1500-dridalia-standard"></script>';
+    const virtualThemeFooterTag = '<script src="/virtual-store-theme-footer.js?v=20260817-1535-all-chatshops"></script>';
     const customDomainChatTag = '<script src="/custom-domain-chat.js?v=20260815-0955"></script>';
     const storePagesTag = '<script src="/store-pages-ui.js?v=20260817-1500-standard-footer-pages"></script>';
     const adminPublicPagesTag = '<script src="/admin-public-pages.js?v=20260814-1350"></script>';
