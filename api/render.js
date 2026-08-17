@@ -165,7 +165,7 @@ function forceScript(html, filename, version) {
 }
 
 function injectUpgrades(html, storefrontMode, layout) {
-  const version = '20260817-1115-dual-product-audio';
+  const version = '20260817-1305-admin-store-export';
   const scripts = [
     'catalog-editor-upgrade.js',
     'store-layout-upgrade.js',
