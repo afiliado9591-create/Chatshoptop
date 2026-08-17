@@ -1,7 +1,7 @@
 /* ChatShop: catálogo vertical da Loja Virtual, um produto por tela, preservando sacola e checkout. */
 (function(){
 'use strict';
-document.documentElement.dataset.singleProductScript='20260817-2410-virtual-match-rafa';
+document.documentElement.dataset.singleProductScript='20260817-2430-virtual-rafa-category-filter';
 setTimeout(function earlySingleProductRecovery(){
   try{
     const el=document.getElementById('chatshopDirectVirtualBootstrap');
@@ -165,7 +165,7 @@ function installPublished(storeData){
       const rail=document.createElement('nav');rail.className='vts-categories';rail.setAttribute('aria-label','Categorias');
       categoryValues.forEach((category,categoryIndex)=>{
         const button=document.createElement('button');button.type='button';button.className='vts-category'+(categoryIndex===0?' active':'');button.textContent=category;
-        button.onclick=()=>{rail.querySelectorAll('.vts-category').forEach(x=>x.classList.remove('active'));button.classList.add('active');const targetIndex=category==='Todas'?0:products.findIndex(p=>String(p.category||'').trim()===category);const destination=Math.max(0,targetIndex),target=cards[destination];if(target){grid.style.scrollBehavior='auto';grid.scrollTop=target.offsetTop;requestAnimationFrame(()=>{grid.scrollTop=target.offsetTop});window.__CHATSHOP_ACTIVE_PRODUCT=products[destination]||null;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=destination}};
+        button.onclick=()=>{rail.querySelectorAll('.vts-category').forEach(x=>x.classList.remove('active'));button.classList.add('active');const targetIndex=category==='Todas'?0:products.findIndex(p=>String(p.category||'').trim()===category);const destination=Math.max(0,targetIndex);cards.forEach((card,cardIndex)=>{const matches=category==='Todas'||String(products[cardIndex]?.category||'').trim()===category;card.style.setProperty('display',matches?'block':'none','important')});grid.scrollTop=0;const target=cards[destination];if(target){window.__CHATSHOP_ACTIVE_PRODUCT=products[destination]||null;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=destination}};
         rail.appendChild(button);
       });
       document.body.appendChild(rail);
