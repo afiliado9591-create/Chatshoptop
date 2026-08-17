@@ -1,7 +1,7 @@
 /* ChatShop: catálogo vertical da Loja Virtual, um produto por tela, preservando sacola e checkout. */
 (function(){
 'use strict';
-document.documentElement.dataset.singleProductScript='20260817-2315-virtual-tiktok-no-top-menu';
+document.documentElement.dataset.singleProductScript='20260817-2340-virtual-tiktok-category-card';
 setTimeout(function earlySingleProductRecovery(){
   try{
     const el=document.getElementById('chatshopDirectVirtualBootstrap');
@@ -46,6 +46,7 @@ const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLo
 
 function selectedMode(){return $('input[name="virtualDisplayMode"]:checked')?.value||'catalog';}
 function selectedProduct(){return Number($('#virtualFeaturedProduct')?.value||0);}
+function selectedCardColor(){return String($('#virtualCardColor')?.value||'#ffffff');}
 function isVirtual(){return ($('#storeType')?.value||data?.storeType)==='virtual';}
 
 function productNames(){
@@ -71,6 +72,7 @@ function installEditor(){
   box.id='virtualSingleProductField';box.className='field';
   box.style.cssText='margin-top:10px;padding:12px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px';
   box.innerHTML='<label style="font-size:13px">🛒 Formato da Loja Virtual</label><div style="display:grid;gap:8px;margin-top:8px"><label style="display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid #d1fae5;border-radius:10px;padding:10px"><input type="radio" name="virtualDisplayMode" value="catalog" checked><span><b>Catálogo completo</b><small style="display:block;color:#6b7280">Mostra todos os produtos da loja.</small></span></label><label style="display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid #d1fae5;border-radius:10px;padding:10px"><input type="radio" name="virtualDisplayMode" value="single"><span><b>1 produto por tela</b><small style="display:block;color:#6b7280">Catálogo vertical: o cliente arrasta para cima para ver o próximo produto.</small></span></label></div><div id="virtualFeaturedProductWrap" style="display:none;margin-top:10px"><label style="font-size:12px;font-weight:800">Produto principal</label><select id="virtualFeaturedProduct" style="width:100%;margin-top:6px;border:1px solid #d1d5db;border-radius:10px;padding:10px;background:#fff"></select><small style="display:block;color:#6b7280;margin-top:5px">Este produto será aberto automaticamente quando o cliente entrar na loja.</small></div>';
+  box.insertAdjacentHTML('beforeend','<div id="virtualCardColorWrap" style="margin-top:10px"><label style="font-size:12px;font-weight:800">🎨 Cor do cartão com nome e preço</label><div style="display:flex;align-items:center;gap:10px;margin-top:6px"><input id="virtualCardColor" type="color" value="#ffffff" style="width:54px;height:42px;border:1px solid #d1d5db;border-radius:9px;padding:3px;background:#fff"><small style="color:#6b7280">Escolha a cor do cartão exibido sobre o produto.</small></div></div>');
   typeField.insertAdjacentElement('afterend',box);
   $('#storeType').addEventListener('change',updateEditorVisibility);
   box.addEventListener('change',()=>{updateEditorVisibility();try{if(typeof debounce==='function')debounce()}catch(e){}});
@@ -81,17 +83,17 @@ function installEditor(){
   try{
     if(typeof collect==='function'&&!collect.__virtualSingleWrapped){
       const original=collect;
-      const wrapped=function(){const value=original();value.virtualDisplayMode=selectedMode();value.virtualFeaturedProduct=selectedProduct();return value};
+      const wrapped=function(){const value=original();value.virtualDisplayMode=selectedMode();value.virtualFeaturedProduct=selectedProduct();value.virtualCardColor=selectedCardColor();return value};
       wrapped.__virtualSingleWrapped=true;collect=wrapped;
     }
     if(typeof populateForm==='function'&&!populateForm.__virtualSingleWrapped){
       const original=populateForm;
-      const wrapped=async function(value){const result=await original(value);const mode=value?.virtualDisplayMode==='single'?'single':'catalog';const radio=$('input[name="virtualDisplayMode"][value="'+mode+'"]');if(radio)radio.checked=true;refreshProductSelect(value?.virtualFeaturedProduct||0);updateEditorVisibility();return result};
+      const wrapped=async function(value){const result=await original(value);const mode=value?.virtualDisplayMode==='single'?'single':'catalog';const radio=$('input[name="virtualDisplayMode"][value="'+mode+'"]');if(radio)radio.checked=true;refreshProductSelect(value?.virtualFeaturedProduct||0);const cardColor=$('#virtualCardColor');if(cardColor)cardColor.value=/^#[0-9a-f]{6}$/i.test(value?.virtualCardColor||'')?value.virtualCardColor:'#ffffff';updateEditorVisibility();return result};
       wrapped.__virtualSingleWrapped=true;populateForm=wrapped;
     }
     if(typeof clearForm==='function'&&!clearForm.__virtualSingleWrapped){
       const original=clearForm;
-      const wrapped=function(){const result=original();const radio=$('input[name="virtualDisplayMode"][value="catalog"]');if(radio)radio.checked=true;refreshProductSelect(0);updateEditorVisibility();return result};
+      const wrapped=function(){const result=original();const radio=$('input[name="virtualDisplayMode"][value="catalog"]');if(radio)radio.checked=true;refreshProductSelect(0);const cardColor=$('#virtualCardColor');if(cardColor)cardColor.value='#ffffff';updateEditorVisibility();return result};
       wrapped.__virtualSingleWrapped=true;clearForm=wrapped;
     }
   }catch(e){console.warn('virtual single editor:',e)}
@@ -110,19 +112,20 @@ function installPublished(storeData){
     document.body.classList.add('chatshop-virtual-single-product','chatshop-virtual-swipe','chatshop-virtual-tiktok');
     const products=Array.isArray(publishedData.products)?publishedData.products:[];
     const main=String(publishedData.main||publishedData.primaryColor||'#c9145b');
+    const cardColor=/^#[0-9a-f]{6}$/i.test(String(publishedData.virtualCardColor||''))?String(publishedData.virtualCardColor):'#ffffff';
     const style=document.createElement('style');style.id='virtualSingleProductPublishedStyle';
     style.textContent=`
-      body.chatshop-virtual-tiktok{overflow:hidden!important;background:#111!important}
-      body.chatshop-virtual-tiktok .csv-page,body.chatshop-virtual-tiktok .vs-page{height:100dvh!important;min-height:100dvh!important;overflow:hidden!important;background:#111!important}
-      body.chatshop-virtual-tiktok .csv-head,body.chatshop-virtual-tiktok .vs-head,body.chatshop-virtual-tiktok #chatshopGridTop,body.chatshop-virtual-tiktok #chatshopGridMenu,body.chatshop-virtual-tiktok .pub-cat-menu,body.chatshop-virtual-tiktok .category-menu,body.chatshop-virtual-tiktok .catalog-categories{display:none!important}
+      body.chatshop-virtual-tiktok{overflow:hidden!important;background:#fff!important}
+      body.chatshop-virtual-tiktok .csv-page,body.chatshop-virtual-tiktok .vs-page{height:100dvh!important;min-height:100dvh!important;overflow:hidden!important;background:#fff!important}
+      body.chatshop-virtual-tiktok .csv-head,body.chatshop-virtual-tiktok .vs-head,body.chatshop-virtual-tiktok #chatshopGridTop,body.chatshop-virtual-tiktok #chatshopGridMenu,body.chatshop-virtual-tiktok .pub-cat-menu,body.chatshop-virtual-tiktok .vcm-menu,body.chatshop-virtual-tiktok .category-menu,body.chatshop-virtual-tiktok .catalog-categories{display:none!important}
       body.chatshop-virtual-tiktok .csv-title small{color:#f3f4f6!important}
       body.chatshop-virtual-tiktok .csv-hero,body.chatshop-virtual-tiktok .vs-hero{display:none!important}
       body.chatshop-virtual-tiktok .csv-grid,body.chatshop-virtual-tiktok .vs-grid{height:100dvh!important;display:block!important;overflow-y:auto!important;overflow-x:hidden!important;padding:0!important;margin:0!important;max-width:none!important;scroll-snap-type:y mandatory!important;overscroll-behavior-y:contain!important}
-      body.chatshop-virtual-tiktok .csv-card,body.chatshop-virtual-tiktok .vs-card{position:relative!important;height:100dvh!important;min-height:100dvh!important;scroll-snap-align:start!important;scroll-snap-stop:always!important;border:0!important;border-radius:0!important;box-shadow:none!important;display:block!important;overflow:hidden!important;background:#111!important}
+      body.chatshop-virtual-tiktok .csv-card,body.chatshop-virtual-tiktok .vs-card{position:relative!important;height:100dvh!important;min-height:100dvh!important;scroll-snap-align:start!important;scroll-snap-stop:always!important;border:0!important;border-radius:0!important;box-shadow:none!important;display:block!important;overflow:hidden!important;background:#fff!important}
       body.chatshop-virtual-tiktok .csv-photo,body.chatshop-virtual-tiktok .vs-card-img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;aspect-ratio:auto!important;background:#f7f3f3!important;display:block!important}
-      body.chatshop-virtual-tiktok .csv-photo:after,body.chatshop-virtual-tiktok .vs-card-img:after{content:"";position:absolute;inset:40% 0 0;background:linear-gradient(transparent,rgba(0,0,0,.74));pointer-events:none}
+      body.chatshop-virtual-tiktok .csv-photo:after,body.chatshop-virtual-tiktok .vs-card-img:after{content:"";position:absolute;inset:40% 0 0;background:transparent!important;display:none!important;pointer-events:none}
       body.chatshop-virtual-tiktok .csv-photo img,body.chatshop-virtual-tiktok .vs-card-img img{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center top!important}
-      body.chatshop-virtual-tiktok .csv-body,body.chatshop-virtual-tiktok .vs-card-body{position:absolute!important;left:20px!important;right:86px!important;bottom:104px!important;z-index:8!important;padding:16px!important;border-radius:20px!important;background:rgba(255,255,255,.88)!important;backdrop-filter:blur(8px)!important;color:#111827!important}
+      body.chatshop-virtual-tiktok .csv-body,body.chatshop-virtual-tiktok .vs-card-body{position:absolute!important;left:20px!important;right:86px!important;bottom:104px!important;z-index:8!important;padding:16px!important;border-radius:20px!important;background:${cardColor}!important;backdrop-filter:none!important;color:#111827!important}
       body.chatshop-virtual-tiktok .csv-name,body.chatshop-virtual-tiktok .vs-card-name{font-size:22px!important;line-height:1.15!important;min-height:0!important;font-weight:900!important}
       body.chatshop-virtual-tiktok .csv-price,body.chatshop-virtual-tiktok .vs-card-price{font-size:24px!important;margin:8px 0 12px!important}
       body.chatshop-virtual-tiktok .csv-open,body.chatshop-virtual-tiktok .vs-open{width:auto!important;min-width:180px!important;border-radius:999px!important;font-size:17px!important;padding:14px 22px!important;background:${main}!important}
@@ -160,7 +163,7 @@ function installPublished(storeData){
       const rail=document.createElement('nav');rail.className='vts-categories';rail.setAttribute('aria-label','Categorias');
       categoryValues.forEach((category,categoryIndex)=>{
         const button=document.createElement('button');button.type='button';button.className='vts-category'+(categoryIndex===0?' active':'');button.textContent=category;
-        button.onclick=()=>{rail.querySelectorAll('.vts-category').forEach(x=>x.classList.remove('active'));button.classList.add('active');const targetIndex=category==='Todas'?0:products.findIndex(p=>String(p.category||'').trim()===category);cards[Math.max(0,targetIndex)]?.scrollIntoView({behavior:'smooth',block:'start'})};
+        button.onclick=()=>{rail.querySelectorAll('.vts-category').forEach(x=>x.classList.remove('active'));button.classList.add('active');const targetIndex=category==='Todas'?0:products.findIndex(p=>String(p.category||'').trim()===category);const destination=Math.max(0,targetIndex),target=cards[destination];if(target){grid.scrollTo({top:target.offsetTop,behavior:'smooth'});window.__CHATSHOP_ACTIVE_PRODUCT=products[destination]||null;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=destination}};
         rail.appendChild(button);
       });
       document.body.appendChild(rail);
