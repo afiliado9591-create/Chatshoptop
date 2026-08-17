@@ -306,13 +306,14 @@ async function bootStorefront(){
         const cep=digits($('#sfDestCep')?.value||lastCep),status=$('#sfCalcStatus'),btn=$('#sfCalcBtn');lastCep=formatCep(cep);if($('#sfDestCep'))$('#sfDestCep').value=lastCep;
         if(cep.length!==8){status.textContent='Digite um CEP válido com 8 números.';status.style.color='#b91c1c';return}
         btn.disabled=true;btn.textContent='Calculando…';status.textContent='';selectedQuote=null;quotes=[];renderQuoteOptions();updateTotals();
+        const controller=new AbortController(),timeoutId=setTimeout(()=>controller.abort(),18000);
         try{
           const items=cart.map(x=>({index:x.index,quantity:x.qty}));
-          const r=await fetch('/api/superfrete-quote.js',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeSlug:deriveSlug(),host:location.hostname,toPostalCode:cep,destinationPostalCode:cep,items})});
+          const r=await fetch('/api/superfrete-quote.js',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeSlug:deriveSlug(),host:location.hostname,toPostalCode:cep,destinationPostalCode:cep,items}),signal:controller.signal});
           const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Não foi possível calcular o frete.');
           quotes=(j.quotes||[]).filter(x=>Number(x.price)>0);if(!quotes.length)throw new Error('Nenhuma modalidade de frete ficou disponível para este CEP.');
           status.textContent=(Number(j.packageCount||1)>1?'Seu pedido será enviado em '+j.packageCount+' pacotes, saindo de endereços diferentes. ':'')+'Escolha uma opção abaixo:';status.style.color='#166534';renderQuoteOptions();
-        }catch(e){status.textContent='⚠️ '+e.message;status.style.color='#b91c1c'}finally{btn.disabled=false;btn.textContent='Calcular frete'}
+        }catch(e){status.textContent='⚠️ '+(e?.name==='AbortError'?'A SuperFrete demorou para responder. Tente calcular novamente em alguns instantes.':e.message);status.style.color='#b91c1c'}finally{clearTimeout(timeoutId);btn.disabled=false;btn.textContent='Calcular frete'}
       };
       $('#sfQuoteOptions').addEventListener('change',e=>{const i=Number(e.target.value);if(Number.isInteger(i)&&quotes[i]){selectedQuote=quotes[i];updateTotals()}});
     }else{if($('#sfDestCep'))$('#sfDestCep').value=formatCep(lastCep);if($('#sfAddress'))$('#sfAddress').value=lastAddress;renderQuoteOptions()}

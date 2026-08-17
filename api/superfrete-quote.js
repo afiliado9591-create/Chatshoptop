@@ -184,16 +184,29 @@ module.exports = async function handler(req, res) {
         options: { own_hand: false, receipt: false, insurance_value: 0, use_insurance_value: false },
         products: group.products
       };
-      const upstream = await fetch(`${base}/api/v0/calculator`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'User-Agent': `ChatShop/1.0 (${contact})`,
-          accept: 'application/json',
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      let upstream;
+      try {
+        upstream = await fetch(`${base}/api/v0/calculator`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'User-Agent': `ChatShop/1.0 (${contact})`,
+            accept: 'application/json',
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        });
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          throw new Error(`${group.origin.label}: a SuperFrete demorou para responder. Tente novamente em alguns instantes.`);
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
+      }
       const text = await upstream.text();
       let raw;
       try { raw = text ? JSON.parse(text) : null; } catch { raw = { message: text }; }
