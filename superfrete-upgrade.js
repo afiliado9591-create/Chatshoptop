@@ -15,6 +15,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 function num(v){let s=String(v??'').trim().replace(/[^0-9,.-]/g,'');if(!s)return 0;if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');const n=Number(s);return Number.isFinite(n)?n:0}
 function money(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
 function digits(v){return String(v||'').replace(/\D/g,'')}
+function formatCep(v){const d=digits(v).slice(0,8);return d.length>5?d.slice(0,5)+'-'+d.slice(5):d}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
 /* ========================= EDITOR ========================= */
@@ -78,7 +79,7 @@ function ensureSfEditor(){
     <div style="font-size:11px;color:#166534;line-height:1.45;margin-top:8px">Depois, informe peso e dimensões em cada produto para o cálculo funcionar.</div>`;
   shipping.appendChild(box);
   $('#shippingMode').addEventListener('change',()=>{updateSfEditorVisibility();try{window.debounce?.()}catch(e){}});
-  $('#sfOrigins')?.querySelectorAll('input').forEach(el=>el.addEventListener('input',()=>{refreshProductOriginOptions();try{window.debounce?.()}catch(e){}}));
+  $('#sfOrigins')?.querySelectorAll('input').forEach(el=>el.addEventListener('input',e=>{if(e.target.matches('[data-origin-cep]')){const formatted=formatCep(e.target.value);if(e.target.value!==formatted)e.target.value=formatted}refreshProductOriginOptions();try{window.debounce?.()}catch(err){}}));
   ['sfEnvironment'].forEach(id=>$('#'+id)?.addEventListener('input',()=>{try{window.debounce?.()}catch(e){}}));
   $$('.sf-service').forEach(x=>x.addEventListener('change',()=>{try{window.debounce?.()}catch(e){}}));
   $('#sfSaveToken').onclick=async()=>{
@@ -115,7 +116,7 @@ function fillOrigins(sf){
     const o=saved[n-1]||{};
     const label=$('[data-origin-label="'+n+'"]'),cep=$('[data-origin-cep="'+n+'"]');
     if(label)label.value=String(o.label||'');
-    if(cep)cep.value=String(o.postalCode||o.cep||'');
+    if(cep)cep.value=formatCep(o.postalCode||o.cep||'');
   });
   refreshProductOriginOptions();
 }
@@ -180,7 +181,7 @@ function wrapEditorData(){
       });
       return d;
     };
-    fn.__superfreteWrapped=true;window.collect=fn;
+    fn.__superfreteWrapped=true;window.collect=fn;try{collect=fn}catch(e){}
   }
   if(typeof window.populateForm==='function'&&!window.populateForm.__superfreteWrapped){
     const old=window.populateForm;
@@ -193,15 +194,15 @@ function wrapEditorData(){
       if($('#sfEnvironment'))$('#sfEnvironment').value=sf.environment==='sandbox'?'sandbox':'production';
       setServices(sf.services);
       const st=$('#sfTokenStatus');if(st)st.textContent=sfTokenCipher?'✅ Token SuperFrete já conectado. Cole outro token apenas se quiser trocar.':'';
-      requestAnimationFrame(()=>fillProductDims(Array.isArray(data?.products)?data.products:[]));
+      requestAnimationFrame(()=>{fillOrigins(sf);fillProductDims(Array.isArray(data?.products)?data.products:[])});
       updateSfEditorVisibility();return r;
     };
-    fn.__superfreteWrapped=true;window.populateForm=fn;
+    fn.__superfreteWrapped=true;window.populateForm=fn;try{populateForm=fn}catch(e){}
   }
   if(typeof window.clearForm==='function'&&!window.clearForm.__superfreteWrapped){
     const old=window.clearForm;
     const fn=function(){const r=old();sfTokenCipher='';setTimeout(()=>{ensureSfEditor();ensureProductDims();fillOrigins({origins:[]});if($('#sfEnvironment'))$('#sfEnvironment').value='production';setServices('1,2,17,3,33');if($('#sfTokenStatus'))$('#sfTokenStatus').textContent='';updateSfEditorVisibility()},0);return r};
-    fn.__superfreteWrapped=true;window.clearForm=fn;
+    fn.__superfreteWrapped=true;window.clearForm=fn;try{clearForm=fn}catch(e){}
   }
 }
 async function bootEditor(){
@@ -248,23 +249,23 @@ async function bootStorefront(){
     let box=$('#sfDeliveryBox');
     if(!box){box=document.createElement('div');box.id='sfDeliveryBox';box.style.cssText='margin-top:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px';box.innerHTML=`<b style="color:#166534">📦 Calcular frete com SuperFrete</b><label style="display:block;font-size:12px;font-weight:900;margin:10px 0 5px">CEP de entrega</label><input id="sfDestCep" inputmode="numeric" maxlength="9" placeholder="00000-000" style="width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:10px;font:inherit"><button id="sfCalcBtn" type="button" style="width:100%;border:0;background:#166534;color:#fff;border-radius:9px;padding:10px;margin-top:8px;font-weight:900">Calcular frete</button><div id="sfCalcStatus" style="font-size:12px;margin-top:8px"></div><div id="sfQuoteOptions"></div><label style="display:block;font-size:12px;font-weight:900;margin:10px 0 5px">Endereço completo de entrega</label><input id="sfAddress" placeholder="Rua, número, bairro, cidade - UF" style="width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:10px;font:inherit"><div style="display:flex;justify-content:space-between;margin-top:10px;font-size:13px"><span>Total com frete</span><b id="sfCartTotal">${money(subtotal())}</b></div>`;
       const anchor=body.querySelector('.csv-summary')||body.querySelector('.vs-total')||body.querySelector('#csvCheckout')||body.querySelector('#vsCheckout');if(anchor)anchor.insertAdjacentElement('beforebegin',box);else body.appendChild(box);
-      $('#sfDestCep').value=lastCep;$('#sfAddress').value=lastAddress;
-      $('#sfDestCep').addEventListener('input',e=>{lastCep=e.target.value;selectedQuote=null;updateTotals()});
+      $('#sfDestCep').value=formatCep(lastCep);$('#sfAddress').value=lastAddress;
+      $('#sfDestCep').addEventListener('input',e=>{lastCep=formatCep(e.target.value);if(e.target.value!==lastCep)e.target.value=lastCep;selectedQuote=null;updateTotals()});
       $('#sfAddress').addEventListener('input',e=>lastAddress=e.target.value);
       $('#sfCalcBtn').onclick=async()=>{
-        const cep=digits($('#sfDestCep').value),status=$('#sfCalcStatus'),btn=$('#sfCalcBtn');lastCep=$('#sfDestCep').value;
+        const cep=digits($('#sfDestCep')?.value||lastCep),status=$('#sfCalcStatus'),btn=$('#sfCalcBtn');lastCep=formatCep(cep);if($('#sfDestCep'))$('#sfDestCep').value=lastCep;
         if(cep.length!==8){status.textContent='Digite um CEP válido com 8 números.';status.style.color='#b91c1c';return}
         btn.disabled=true;btn.textContent='Calculando…';status.textContent='';selectedQuote=null;quotes=[];renderQuoteOptions();updateTotals();
         try{
           const items=cart.map(x=>({index:x.index,quantity:x.qty}));
-          const r=await fetch('/api/superfrete-quote.js',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeSlug:deriveSlug(),host:location.hostname,toPostalCode:cep,items})});
+          const r=await fetch('/api/superfrete-quote.js',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeSlug:deriveSlug(),host:location.hostname,toPostalCode:cep,destinationPostalCode:cep,items})});
           const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Não foi possível calcular o frete.');
           quotes=(j.quotes||[]).filter(x=>Number(x.price)>0);if(!quotes.length)throw new Error('Nenhuma modalidade de frete ficou disponível para este CEP.');
           status.textContent=(Number(j.packageCount||1)>1?'Seu pedido será enviado em '+j.packageCount+' pacotes, saindo de endereços diferentes. ':'')+'Escolha uma opção abaixo:';status.style.color='#166534';renderQuoteOptions();
         }catch(e){status.textContent='⚠️ '+e.message;status.style.color='#b91c1c'}finally{btn.disabled=false;btn.textContent='Calcular frete'}
       };
       $('#sfQuoteOptions').addEventListener('change',e=>{const i=Number(e.target.value);if(Number.isInteger(i)&&quotes[i]){selectedQuote=quotes[i];updateTotals()}});
-    }else{if($('#sfDestCep'))$('#sfDestCep').value=lastCep;if($('#sfAddress'))$('#sfAddress').value=lastAddress;renderQuoteOptions()}
+    }else{if($('#sfDestCep'))$('#sfDestCep').value=formatCep(lastCep);if($('#sfAddress'))$('#sfAddress').value=lastAddress;renderQuoteOptions()}
     updateTotals();
   }
   function checkout(){
