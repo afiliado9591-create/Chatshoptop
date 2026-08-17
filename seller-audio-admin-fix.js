@@ -37,7 +37,7 @@ async function showAdminStoresFixed(){
       return `<div data-admin-store-fixed="${safe(s.id)}" style="border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:11px;background:#fff">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
           <div><b>${safe(s.brand||s.slug||s.id)}</b><div style="font-size:11px;color:var(--muted);margin-top:2px">${safe(email)} · ${safe(host)}</div></div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn admin-store-preview-fixed" data-url="${safe(url)}" style="padding:7px 9px">👁 Ver loja</button><a class="btn" href="${safe(url)}" target="_blank" rel="noopener" style="padding:7px 9px;text-decoration:none">↗ Abrir</a></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn admin-store-preview-fixed" data-url="${safe(url)}" style="padding:7px 9px">👁 Ver loja</button><a class="btn" href="${safe(url)}" target="_blank" rel="noopener" style="padding:7px 9px;text-decoration:none">↗ Abrir</a><button type="button" class="btn admin-store-copy-html-fixed" data-slug="${safe(s.slug||s.id)}" style="padding:7px 9px">📋 Copiar HTML</button><button type="button" class="btn success admin-store-download-html-fixed" data-slug="${safe(s.slug||s.id)}" style="padding:7px 9px">⬇️ Baixar HTML</button></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px;margin-top:12px;font-size:12px">
           <label><input type="checkbox" data-ctrl="storePaused" ${c.storePaused?'checked':''}> ⏸️ Pausar loja inteira</label>
@@ -65,6 +65,8 @@ async function showAdminStoresFixed(){
           wrap.style.display='none';frame.src='about:blank';preview.textContent='👁 Ver loja';
         }
       };
+      card.querySelector('.admin-store-copy-html-fixed').onclick=e=>window.__CHATSHOP_ADMIN_COPY_STORE_HTML?.(e.currentTarget.dataset.slug,e.currentTarget);
+      card.querySelector('.admin-store-download-html-fixed').onclick=e=>window.__CHATSHOP_ADMIN_DOWNLOAD_STORE_HTML?.(e.currentTarget.dataset.slug,e.currentTarget);
       const save=card.querySelector('.admin-store-save-fixed');
       save.onclick=async()=>{
         save.disabled=true;save.textContent='Salvando...';
