@@ -98,7 +98,7 @@ module.exports = async function handler(request, response) {
     const virtualChatTag = '<script src="/virtual-chat-description-fix.js?v=20260817-1058-product-focus"></script>';
     const singleProductVideoTag = '<script src="/single-product-video.js?v=20260816-1325-product-video"></script>';
     const virtualScrollTag = '<script src="/virtual-scroll-fix.js?v=20260813-2147"></script>';
-    const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260813-2302"></script>';
+    const virtualSellerAudioTag = '<script src="/virtual-seller-audio.js?v=20260817-1115-dual-product-audio"></script>';
     const ownerMetricsTag = '<script src="/store-owner-metrics.js?v=20260814-0500"></script>';
     const virtualCategoryMenuTag = '<script src="/virtual-category-menu.js?v=20260814-0523"></script>';
     const virtualThemeFooterTag = '<script src="/virtual-store-theme-footer.js?v=20260816-1810-single-fullscreen"></script>';

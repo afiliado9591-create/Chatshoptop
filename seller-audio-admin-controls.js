@@ -75,7 +75,12 @@ function audioSection(){
   <div data-audio-pane="upload" style="display:none"><div class="field"><label>Enviar arquivo de áudio</label><input type="file" accept="audio/*" class="seller-audio-file"><small>MP3, M4A, WAV, WebM e outros formatos de áudio. Até 8 MB.</small></div></div>
   <div data-audio-pane="record" style="display:none"><button type="button" class="btn success seller-audio-record">🎙️ Começar gravação</button><small style="display:block;margin-top:7px;color:var(--muted)">Grave diretamente pelo microfone do celular. A gravação para automaticamente em 60 segundos.</small></div>
   <input type="hidden" data-seller-audio-url value=""><div class="seller-audio-status" style="font-size:11px;color:#15803d;font-weight:800;margin-top:7px"></div>
-  <button type="button" class="btn seller-audio-remove" style="margin-top:8px;padding:7px 10px">Remover áudio</button>`;
+  <button type="button" class="btn seller-audio-remove" style="margin-top:8px;padding:7px 10px">Remover áudio</button>
+  <div style="border-top:1px solid #86efac;margin:14px 0 10px;padding-top:12px">
+    <div style="font-weight:900;color:#15803d;font-size:13px;margin-bottom:7px">🛒 Áudio da página de venda</div>
+    <div class="field"><label>Chamada para colocar o produto na sacola</label><textarea data-sales-audio-text rows="4" placeholder="Ex: Escolha a cor logo abaixo, ajuste a quantidade e toque em Adicionar à sacola para continuar sua compra."></textarea><small>Este texto será falado somente no botão verde da página detalhada do produto.</small></div>
+    <button type="button" class="btn seller-sales-audio-preview">🔊 Testar chamada de compra</button>
+  </div>`;
   return wrap;
 }
 
@@ -89,7 +94,9 @@ function upgradeProductCard(card){
   const mode=section.querySelector('[data-seller-audio-mode]');
   mode.onchange=()=>{setModeUI(card);try{debounce()}catch(e){}};
   section.querySelector('.seller-audio-preview').onclick=()=>speakText(section.querySelector('[data-seller-audio-text]').value);
+  section.querySelector('.seller-sales-audio-preview').onclick=()=>speakText(section.querySelector('[data-sales-audio-text]').value);
   section.querySelector('[data-seller-audio-text]').addEventListener('input',()=>{try{debounce()}catch(e){}});
+  section.querySelector('[data-sales-audio-text]').addEventListener('input',()=>{try{debounce()}catch(e){}});
   section.querySelector('.seller-audio-file').onchange=async e=>{
     const f=e.target.files&&e.target.files[0]; if(!f)return;
     mode.value='upload'; setModeUI(card);
@@ -149,6 +156,7 @@ function wrapCollect(){
       p.sellerAudioMode=c.querySelector('[data-seller-audio-mode]')?.value||'off';
       p.sellerAudioText=c.querySelector('[data-seller-audio-text]')?.value.trim()||'';
       p.sellerAudioUrl=c.querySelector('[data-seller-audio-url]')?.value.trim()||'';
+      p.sellerSalesAudioText=c.querySelector('[data-sales-audio-text]')?.value.trim()||'';
     });
     return data;
   }
@@ -168,6 +176,7 @@ async function hydrateExisting(){
       mode.value=['tts','upload','record'].includes(p.sellerAudioMode)?p.sellerAudioMode:'off';
       c.querySelector('[data-seller-audio-text]').value=p.sellerAudioText||'';
       c.querySelector('[data-seller-audio-url]').value=p.sellerAudioUrl||'';
+      c.querySelector('[data-sales-audio-text]').value=p.sellerSalesAudioText||'';
       const status=c.querySelector('.seller-audio-status');if(status&&p.sellerAudioUrl)status.textContent='✅ Áudio salvo';
       setModeUI(c);
     });

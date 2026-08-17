@@ -24,17 +24,22 @@ function money(v){
   let n=Number(s.replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.'));
   return Number.isFinite(n)&&n>0?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):s;
 }
-function fallbackText(p){
+function fallbackText(p,context='catalog'){
+  const name=clean(p?.name)||'Produto';
+  if(context==='sale'){
+    const sales=clean(p?.sellerSalesAudioText);
+    if(sales)return sales;
+    return `${name}. Escolha a cor, ajuste a quantidade e toque em Adicionar à sacola para continuar sua compra.`;
+  }
   const t=clean(p?.sellerAudioText)||clean(p?.voiceText)||clean(p?.cardDescription)||clean(p?.displayText);
   if(t) return t;
-  const name=clean(p?.name)||'Produto';
   const price=money(p?.price);
   return price?`${name}. ${price}. Toque em Ver produto para conferir todos os detalhes.`:`${name}. Toque em Ver produto para conferir todos os detalhes.`;
 }
 function stopPlayback(){
   try{speechSynthesis.cancel()}catch(e){}
   if(currentAudio){try{currentAudio.pause();currentAudio.currentTime=0}catch(e){} currentAudio=null;}
-  if(currentButton){currentButton.innerHTML='🔊 Detalhes do produto';currentButton=null;}
+  if(currentButton){currentButton.innerHTML=currentButton.classList.contains('virtual-seller-audio-detail')?'🔊 Como comprar':'🔊 Detalhes do produto';currentButton=null;}
 }
 function speak(text){
   const t=clean(text); if(!t){stopPlayback();return;}
@@ -46,11 +51,12 @@ function speak(text){
     speechSynthesis.speak(u);
   }catch(e){stopPlayback()}
 }
-function playProduct(p,btn){
+function playProduct(p,btn,context='catalog'){
   if(currentButton===btn){stopPlayback();return;}
   stopPlayback();
   currentButton=btn;
   btn.innerHTML='⏹️ Parar áudio';
+  if(context==='sale'){speak(fallbackText(p,'sale'));return}
   const mode=clean(p?.sellerAudioMode||'off');
   const url=clean(p?.sellerAudioUrl);
   if((mode==='upload'||mode==='record')&&url){
@@ -58,12 +64,12 @@ function playProduct(p,btn){
       const a=new Audio(url);
       currentAudio=a;
       a.onended=stopPlayback;
-      a.onerror=()=>{currentAudio=null;speak(fallbackText(p))};
-      a.play().catch(()=>{currentAudio=null;speak(fallbackText(p))});
+      a.onerror=()=>{currentAudio=null;speak(fallbackText(p,'catalog'))};
+      a.play().catch(()=>{currentAudio=null;speak(fallbackText(p,'catalog'))});
       return;
     }catch(e){}
   }
-  speak(fallbackText(p));
+  speak(fallbackText(p,'catalog'));
 }
 function fallbackFromCard(card){
   const name=clean(card.querySelector('.vs-card-name,.csv-name,.cgc-name')?.textContent)||'Produto';
@@ -89,13 +95,14 @@ function makeButton(resolveProduct,cls){
   const b=document.createElement('button');
   b.type='button';
   b.className='virtual-seller-audio-btn '+cls;
-  b.innerHTML='🔊 Detalhes do produto';
-  b.setAttribute('aria-label','Ouvir detalhes do produto');
+  const sale=cls.includes('virtual-seller-audio-detail');
+  b.innerHTML=sale?'🔊 Como comprar':'🔊 Detalhes do produto';
+  b.setAttribute('aria-label',sale?'Ouvir como comprar':'Ouvir detalhes do produto');
   b.onclick=e=>{
     e.preventDefault();
     e.stopPropagation();
     const p=resolveProduct();
-    if(p) playProduct(p,b);
+    if(p) playProduct(p,b,sale?'sale':'catalog');
   };
   return b;
 }
