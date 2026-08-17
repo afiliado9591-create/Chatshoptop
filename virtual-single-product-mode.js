@@ -16,7 +16,7 @@ function readBootstrapData(){
   }
   return window.__CHATSHOP_STORE_FEATURE_DATA||null;
 }
-const data=readBootstrapData();
+let data=readBootstrapData();
 if(data){window.__CHATSHOP_STORE_DATA=window.__CHATSHOP_STORE_DATA||data;window.__CHATSHOP_DIRECT_STORE_ACTIVE=window.__CHATSHOP_DIRECT_STORE_ACTIVE||!!document.getElementById('chatshopDirectVirtualBootstrap');}
 const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
@@ -101,6 +101,8 @@ function installPublished(storeData){
 }
 
 function wrapPublishedRenderer(){
+  data=data||readBootstrapData();
+  if(data){window.__CHATSHOP_STORE_DATA=window.__CHATSHOP_STORE_DATA||data;window.__CHATSHOP_DIRECT_STORE_ACTIVE=window.__CHATSHOP_DIRECT_STORE_ACTIVE||!!document.getElementById('chatshopDirectVirtualBootstrap');}
   try{
     if(typeof renderVirtualPublished==='function'&&!renderVirtualPublished.__virtualSingleWrapped){
       const original=renderVirtualPublished;
