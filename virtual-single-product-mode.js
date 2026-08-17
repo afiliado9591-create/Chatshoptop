@@ -1,7 +1,7 @@
 /* ChatShop: catálogo vertical da Loja Virtual, um produto por tela, preservando sacola e checkout. */
 (function(){
 'use strict';
-document.documentElement.dataset.singleProductScript='20260817-2510-virtual-only-palette-menu';
+document.documentElement.dataset.singleProductScript='20260817-2530-virtual-live-card-menu';
 setTimeout(function earlySingleProductRecovery(){
   try{
     const el=document.getElementById('chatshopDirectVirtualBootstrap');
@@ -139,7 +139,7 @@ function installPublished(storeData){
       body.chatshop-virtual-tiktok .vts-action span{position:absolute;right:64px;background:rgba(17,24,39,.82);color:#fff;padding:6px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;opacity:0;pointer-events:none}
       body.chatshop-virtual-tiktok .vts-action:focus span,body.chatshop-virtual-tiktok .vts-action:active span{opacity:1}
       body.chatshop-virtual-tiktok .vts-categories{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:32;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-height:66dvh;overflow:auto;padding:2px}
-      body.chatshop-virtual-tiktok .seller-audio-btn,body.chatshop-virtual-tiktok .vts-audio{display:none!important}
+      body.chatshop-virtual-tiktok .virtual-seller-audio-btn,body.chatshop-virtual-tiktok .seller-audio-btn,body.chatshop-virtual-tiktok .vts-audio{display:none!important}
       body.chatshop-virtual-tiktok .vts-category{pointer-events:auto!important;touch-action:manipulation;cursor:pointer;border:0;border-radius:999px;background:rgba(255,255,255,.96);color:${categoryColor};font-weight:900;padding:10px 14px;box-shadow:0 3px 12px rgba(0,0,0,.22);white-space:nowrap}
       body.chatshop-virtual-tiktok .vts-category.active{background:${categoryColor};color:${categoryText}}
       body.chatshop-virtual-tiktok #pubChatToggle{bottom:18px!important;right:16px!important;z-index:40!important}
@@ -169,7 +169,7 @@ function installPublished(storeData){
       const rail=document.createElement('nav');rail.className='vts-categories';rail.setAttribute('aria-label','Categorias');
       categoryValues.forEach((category,categoryIndex)=>{
         const button=document.createElement('button');button.type='button';button.className='vts-category'+(categoryIndex===0?' active':'');button.textContent=category;
-        button.onclick=event=>{event.preventDefault();event.stopPropagation();rail.querySelectorAll('.vts-category').forEach(x=>x.classList.remove('active'));button.classList.add('active');const targetIndex=category==='Todas'?0:products.findIndex(p=>String(p.category||'').trim()===category);const destination=Math.max(0,targetIndex);cards.forEach((card,cardIndex)=>{const matches=category==='Todas'||String(products[cardIndex]?.category||'').trim()===category;card.style.setProperty('display',matches?'block':'none','important')});grid.scrollTop=0;const target=cards[destination];if(target){window.__CHATSHOP_ACTIVE_PRODUCT=products[destination]||null;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=destination}};
+        button.onclick=event=>{event.preventDefault();event.stopPropagation();rail.querySelectorAll('.vts-category').forEach(x=>x.classList.remove('active'));button.classList.add('active');const targetIndex=category==='Todas'?0:products.findIndex(p=>String(p.category||'').trim()===category);const destination=Math.max(0,targetIndex),liveCards=$('.csv-card,.vs-card',grid);liveCards.forEach((card,cardIndex)=>{const matches=category==='Todas'||String(products[cardIndex]?.category||'').trim()===category;card.style.setProperty('display',matches?'block':'none','important')});grid.scrollTop=0;const target=liveCards[destination];if(target){window.__CHATSHOP_ACTIVE_PRODUCT=products[destination]||null;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=destination}};
         rail.appendChild(button);
       });
       document.body.appendChild(rail);
