@@ -131,6 +131,7 @@ module.exports = async function handler(request, response) {
     html = removeScript(html, 'payment-choice-persist.js');
     html = removeScript(html, 'virtual-store-theme-footer.js');
     html = removeScript(html, 'virtual-chat-description-fix.js');
+    html = removeScript(html, 'virtual-cross-sell.js');
 
     const virtualTag = '<script src="/virtual-shipping-upgrade.js?v=20260813-1707"></script>';
     const superfreteDomainFixTag = '<script src="/superfrete-domain-fix.js?v=20260814-1058"></script>';
@@ -150,6 +151,7 @@ module.exports = async function handler(request, response) {
     const mercadoPagoOauthTag = '<script src="/mercadopago-oauth-ui.js?v=20260814-1825"></script>';
     const paymentChoicePersistTag = '<script src="/payment-choice-persist.js?v=20260817-1048-hide-checkout-chat"></script>';
     const virtualPaymentFixTag = '<script src="/virtual-payment-fix.js?v=20260815-1525"></script>';
+    const virtualCrossSellTag = '<script src="/virtual-cross-sell.js?v=20260817-1853"></script>';
     let inject = '';
     if (!html.includes('/virtual-shipping-upgrade.js')) inject += virtualTag + '\n';
     inject += superfreteDomainFixTag + '\n';
@@ -169,6 +171,7 @@ module.exports = async function handler(request, response) {
     inject += mercadoPagoOauthTag + '\n';
     inject += paymentChoicePersistTag + '\n';
     inject += virtualPaymentFixTag + '\n';
+    inject += virtualCrossSellTag + '\n';
     if (inject) {
       const pos = html.toLowerCase().lastIndexOf('</body>');
       html = pos >= 0 ? html.slice(0, pos) + inject + html.slice(pos) : html + '\n' + inject;
