@@ -4,6 +4,7 @@
 
 const data=window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||null;
 if(!data)return;
+const FOOTER_STANDARD='dridalia-v1';
 
 function validColor(v,fallback){return /^#[0-9a-f]{6}$/i.test(String(v||''))?String(v):fallback}
 function contrast(hex){
@@ -70,8 +71,8 @@ function affiliateFooterLink(){
 function footerHtml(){
   const affiliateLink=affiliateFooterLink();
   const phone=String(data.whatsapp||'').replace(/\D/g,'');
-  const contactLink=phone?'<a href="https://wa.me/'+esc(phone)+'" target="_blank" rel="noopener">Fale conosco</a>':'';
-  return `<footer class="vst-footer"><div class="vst-footer-inner"><div class="vst-footer-logo">${logo?`<img src="${esc(logo)}" alt="${esc(brand)}">`:esc(brand.charAt(0).toUpperCase())}</div><div class="vst-footer-brand">${esc(brand)}</div><div class="vst-footer-sub">${data.storeType==='virtual'?'Loja virtual':'Catálogo online'} · Atendimento online</div><nav class="vst-footer-links" aria-label="Menu do rodapé"><a href="/">Início</a><a href="/">Produtos</a><a href="/quem-somos">Quem somos</a><a href="/politica-de-privacidade">Política de privacidade</a>${contactLink}${affiliateLink}</nav><div class="vst-footer-line"></div><div class="vst-footer-note">Compre seus produtos com praticidade pelo ChatShop.</div></div></footer>`;
+  const contactLink=phone?'<a href="https://wa.me/'+esc(phone)+'" target="_blank" rel="noopener">Fale conosco</a>':'<a href="#" data-vst-contact>Fale conosco</a>';
+  return `<footer class="vst-footer" data-footer-standard="${FOOTER_STANDARD}"><div class="vst-footer-inner"><div class="vst-footer-logo">${logo?`<img src="${esc(logo)}" alt="${esc(brand)}">`:esc(brand.charAt(0).toUpperCase())}</div><div class="vst-footer-brand">${esc(brand)}</div><div class="vst-footer-sub">${data.storeType==='virtual'?'Loja virtual':'Catálogo online'} · Atendimento online</div><nav class="vst-footer-links" aria-label="Menu do rodapé"><a href="/">Início</a><a href="/">Produtos</a><a href="/quem-somos">Quem somos</a><a href="/politica-de-privacidade">Política de privacidade</a>${contactLink}${affiliateLink}</nav><div class="vst-footer-line"></div><div class="vst-footer-note">Compre seus produtos com praticidade pelo ChatShop.</div></div></footer>`;
 }
 
 function footerTarget(){
@@ -89,7 +90,17 @@ function install(){
   const page=footerTarget();
   if(!page)return false;
   installStyle();
-  if(!page.querySelector(':scope > .vst-footer'))page.insertAdjacentHTML('beforeend',footerHtml());
+  Array.from(page.children).filter(el=>el.tagName==='FOOTER'&&!el.classList.contains('vst-footer')).forEach(el=>el.remove());
+  const current=page.querySelector(':scope > .vst-footer');
+  if(!current||current.dataset.footerStandard!==FOOTER_STANDARD){
+    current?.remove();
+    page.insertAdjacentHTML('beforeend',footerHtml());
+  }
+  const contact=page.querySelector(':scope > .vst-footer [data-vst-contact]');
+  if(contact&&!contact.dataset.bound){
+    contact.dataset.bound='1';
+    contact.onclick=e=>{e.preventDefault();const chat=document.getElementById('pubChatToggle');if(chat)chat.click();else location.href='/'};
+  }
   return true;
 }
 

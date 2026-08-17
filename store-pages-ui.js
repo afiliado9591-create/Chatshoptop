@@ -22,7 +22,7 @@ function ensure(){
   if(!publish)return;
   const d=defaults(),box=document.createElement('div');box.id='storePublicPagesSettings';box.className='section';
   box.innerHTML=`<h2>📄 Páginas da loja</h2>
-  <p style="font-size:12px;color:var(--muted);margin-top:-4px">Preencha as páginas que aparecerão dentro do domínio da sua loja.</p>
+  <p style="font-size:12px;color:var(--muted);margin-top:-4px">Preencha as páginas do rodapé padrão da sua loja. O modelo visual é igual para todas as lojas virtuais.</p>
   <div class="field"><label>Título da página Quem somos</label><input id="storeAboutTitle" value="${d.aboutTitle}"></div>
   <div class="field"><label>Texto Quem somos</label><textarea id="storeAboutText" rows="5" placeholder="Conte a história da loja, o que vende, onde está localizada e seus diferenciais."></textarea></div>
   <div class="field"><label>Política de Privacidade da loja</label><textarea id="storePrivacyText" rows="7">${d.privacyText}</textarea><small>Informe também como o cliente pode entrar em contato para tratar seus dados.</small></div>
