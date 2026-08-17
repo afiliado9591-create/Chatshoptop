@@ -1,7 +1,7 @@
 /* ChatShop: catálogo vertical da Loja Virtual, um produto por tela, preservando sacola e checkout. */
 (function(){
 'use strict';
-document.documentElement.dataset.singleProductScript='20260817-2530-virtual-live-card-menu';
+document.documentElement.dataset.singleProductScript='20260817-2600-virtual-live-menu-production';
 setTimeout(function earlySingleProductRecovery(){
   try{
     const el=document.getElementById('chatshopDirectVirtualBootstrap');
@@ -138,7 +138,7 @@ function installPublished(storeData){
       body.chatshop-virtual-tiktok .vts-action{width:58px;height:58px;border:0;border-radius:50%;background:rgba(255,255,255,.94);color:#111827;box-shadow:0 5px 18px rgba(0,0,0,.28);font-size:23px;display:grid;place-items:center;cursor:pointer}
       body.chatshop-virtual-tiktok .vts-action span{position:absolute;right:64px;background:rgba(17,24,39,.82);color:#fff;padding:6px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;opacity:0;pointer-events:none}
       body.chatshop-virtual-tiktok .vts-action:focus span,body.chatshop-virtual-tiktok .vts-action:active span{opacity:1}
-      body.chatshop-virtual-tiktok .vts-categories{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:32;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-height:66dvh;overflow:auto;padding:2px}
+      body.chatshop-virtual-tiktok .vts-categories{pointer-events:auto!important;isolation:isolate;position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:32;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-height:66dvh;overflow:auto;padding:2px}
       body.chatshop-virtual-tiktok .virtual-seller-audio-btn,body.chatshop-virtual-tiktok .seller-audio-btn,body.chatshop-virtual-tiktok .vts-audio{display:none!important}
       body.chatshop-virtual-tiktok .vts-category{pointer-events:auto!important;touch-action:manipulation;cursor:pointer;border:0;border-radius:999px;background:rgba(255,255,255,.96);color:${categoryColor};font-weight:900;padding:10px 14px;box-shadow:0 3px 12px rgba(0,0,0,.22);white-space:nowrap}
       body.chatshop-virtual-tiktok .vts-category.active{background:${categoryColor};color:${categoryText}}
