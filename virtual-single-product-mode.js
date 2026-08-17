@@ -132,4 +132,7 @@ function wrapPublishedRenderer(){
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{installEditor();wrapPublishedRenderer()},{once:true});
 else{installEditor();wrapPublishedRenderer()}
+// Domínios próprios podem receber este arquivo depois do DOMContentLoaded.
+setTimeout(()=>{installEditor();wrapPublishedRenderer()},100);
+setTimeout(()=>wrapPublishedRenderer(),800);
 })();
