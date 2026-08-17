@@ -58,8 +58,48 @@ function removeScript(html, filename) {
   return html.replace(re, '');
 }
 
+async function adminEmailFromToken(idToken) {
+  if (!idToken) return '';
+  const result = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + API_KEY, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ idToken })
+  });
+  if (!result.ok) return '';
+  const data = await result.json();
+  return String(data?.users?.[0]?.email || '').trim().toLowerCase();
+}
+
+async function handleAdminStoreExport(request, response) {
+  if (request.method !== 'POST') return response.status(405).json({ error: 'Método não permitido.' });
+  const authorization = String(request.headers.authorization || '');
+  const token = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
+  const email = await adminEmailFromToken(token);
+  if (!['jeanaguiar636@gmail.com'].includes(email)) return response.status(403).json({ error: 'Acesso exclusivo do administrador.' });
+  const slug = String(request.body?.slug || '').trim().toLowerCase();
+  if (!/^[a-z0-9-]{3,80}$/.test(slug)) return response.status(400).json({ error: 'Identificador da loja inválido.' });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const upstream = await fetch('https://' + slug + '.' + BASE_DOMAIN + '/', {
+      headers: { accept: 'text/html', 'user-agent': 'ChatShop Admin Export/1.0' },
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    if (!upstream.ok) return response.status(502).json({ error: 'Não foi possível carregar o HTML publicado desta loja.' });
+    const html = await upstream.text();
+    response.setHeader('Content-Type', 'text/html; charset=utf-8');
+    response.setHeader('Cache-Control', 'no-store, private');
+    response.setHeader('Content-Disposition', 'inline; filename="' + slug + '-index.html"');
+    return response.status(200).send(html);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 module.exports = async function handler(request, response) {
   try {
+    if (String(request.query?.adminExport || '') === '1') return await handleAdminStoreExport(request, response);
     const forwardedHost = request.headers['x-forwarded-host'];
     const rawHost = Array.isArray(forwardedHost) ? forwardedHost[0] : (forwardedHost || request.headers.host || '');
     const host = normalizeHost(rawHost);
