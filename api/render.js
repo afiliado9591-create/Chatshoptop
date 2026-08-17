@@ -201,7 +201,7 @@ function injectUpgrades(html, storefrontMode, layout) {
     html = forceScript(html, 'seller-audio-upload-fix.js', version);
   }
   html = forceScript(html, 'product-seller-button-control.js', version);
-  html = forceScript(html, 'virtual-single-product-mode.js', '20260817-2430-virtual-rafa-category-filter');
+  html = forceScript(html, 'virtual-single-product-mode.js', '20260817-2445-virtual-rafa-category-production');
   return html;
 }
 
