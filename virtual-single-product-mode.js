@@ -74,7 +74,7 @@ function refreshProductSelect(preferred){
 function updateEditorVisibility(){
   const box=$('#virtualSingleProductField');if(!box)return;
   box.style.display=isVirtual()?'block':'none';
-  $('#virtualFeaturedProductWrap').style.display=selectedMode()==='single'?'block':'none';
+  $('#virtualFeaturedProductWrap').style.display='none';
   if(isVirtual())refreshProductSelect();
 }
 function installEditor(){
@@ -83,7 +83,7 @@ function installEditor(){
   const box=document.createElement('div');
   box.id='virtualSingleProductField';box.className='field';
   box.style.cssText='margin-top:10px;padding:12px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px';
-  box.innerHTML='<label style="font-size:13px">🛒 Formato da Loja Virtual</label><div style="display:grid;gap:8px;margin-top:8px"><label style="display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid #d1fae5;border-radius:10px;padding:10px"><input type="radio" name="virtualDisplayMode" value="catalog" checked><span><b>Catálogo completo</b><small style="display:block;color:#6b7280">Mostra todos os produtos da loja.</small></span></label><label style="display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid #d1fae5;border-radius:10px;padding:10px"><input type="radio" name="virtualDisplayMode" value="single"><span><b>Página de um produto só</b><small style="display:block;color:#6b7280">Abre somente o produto escolhido, com variações, sacola, frete e checkout.</small></span></label></div><div id="virtualFeaturedProductWrap" style="display:none;margin-top:10px"><label style="font-size:12px;font-weight:800">Produto principal</label><select id="virtualFeaturedProduct" style="width:100%;margin-top:6px;border:1px solid #d1d5db;border-radius:10px;padding:10px;background:#fff"></select><small style="display:block;color:#6b7280;margin-top:5px">Este produto será aberto automaticamente quando o cliente entrar na loja.</small></div>';
+  box.innerHTML='<label style="font-size:13px">🛒 Formato da Loja Virtual</label><div style="display:grid;gap:8px;margin-top:8px"><label style="display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid #d1fae5;border-radius:10px;padding:10px"><input type="radio" name="virtualDisplayMode" value="catalog" checked><span><b>Catálogo completo</b><small style="display:block;color:#6b7280">Mostra todos os produtos da loja.</small></span></label><label style="display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid #d1fae5;border-radius:10px;padding:10px"><input type="radio" name="virtualDisplayMode" value="single"><span><b>1 produto por tela</b><small style="display:block;color:#6b7280">Catálogo vertical: o cliente arrasta para cima para ver o próximo produto.</small></span></label></div><div id="virtualFeaturedProductWrap" style="display:none;margin-top:10px"><label style="font-size:12px;font-weight:800">Produto principal</label><select id="virtualFeaturedProduct" style="width:100%;margin-top:6px;border:1px solid #d1d5db;border-radius:10px;padding:10px;background:#fff"></select><small style="display:block;color:#6b7280;margin-top:5px">Este produto será aberto automaticamente quando o cliente entrar na loja.</small></div>';
   typeField.insertAdjacentElement('afterend',box);
   $('#storeType').addEventListener('change',updateEditorVisibility);
   box.addEventListener('change',()=>{updateEditorVisibility();try{if(typeof debounce==='function')debounce()}catch(e){}});
@@ -115,26 +115,32 @@ function installPublished(storeData){
   const publishedData=storeData||window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||null;
   if(!publishedData||publishedData.storeType!=='virtual'||publishedData.virtualDisplayMode!=='single')return;
   if(document.body.classList.contains('chatshop-virtual-single-product'))return;
-  const products=Array.isArray(publishedData.products)?publishedData.products:[];
-  const index=Math.min(Math.max(0,Number(publishedData.virtualFeaturedProduct)||0),Math.max(0,products.length-1));
   let tries=0;
-  (function open(){
+  (function applySwipe(){
     tries++;
-    const page=$('.vs-page,.csv-page'),button=$('[data-product="'+index+'"]'),modal=$('#vsProductModal,#csvProduct'),cart=$('#vsCartModal,#csvCart');
-    if(!page||!button||!modal){if(tries<100)setTimeout(open,80);return}
-    document.body.classList.add('chatshop-virtual-single-product');
+    const page=$('.csv-page,.vs-page'),grid=$('.csv-grid,.vs-grid');
+    if(!page||!grid){if(tries<120)setTimeout(applySwipe,80);return}
+    document.body.classList.add('chatshop-virtual-single-product','chatshop-virtual-swipe');
     const style=document.createElement('style');style.id='virtualSingleProductPublishedStyle';
-    style.textContent='body.chatshop-virtual-single-product .vs-hero,body.chatshop-virtual-single-product .vs-grid,body.chatshop-virtual-single-product .csv-hero,body.chatshop-virtual-single-product .csv-grid{display:none!important}body.chatshop-virtual-single-product .vs-page,body.chatshop-virtual-single-product .csv-page{min-height:100dvh!important}body.chatshop-virtual-single-product #vsProductModal,body.chatshop-virtual-single-product #csvProduct{background:#f8fafc!important;align-items:flex-start!important;padding-top:64px!important}body.chatshop-virtual-single-product #vsProductModal .vs-sheet,body.chatshop-virtual-single-product #csvProduct .csv-sheet{max-width:760px!important;max-height:calc(100dvh - 64px)!important;border-radius:0!important}body.chatshop-virtual-single-product #vsProductModal .vs-close,body.chatshop-virtual-single-product #csvProduct .csv-close{display:none!important}';
+    style.textContent=`
+      body.chatshop-virtual-swipe{overflow:hidden!important;background:#f8fafc!important}
+      body.chatshop-virtual-swipe .csv-page,body.chatshop-virtual-swipe .vs-page{height:100dvh!important;min-height:100dvh!important;overflow:hidden!important}
+      body.chatshop-virtual-swipe .csv-hero,body.chatshop-virtual-swipe .vs-hero{display:none!important}
+      body.chatshop-virtual-swipe .csv-grid,body.chatshop-virtual-swipe .vs-grid{height:calc(100dvh - 64px)!important;display:block!important;overflow-y:auto!important;overflow-x:hidden!important;padding:0!important;scroll-snap-type:y mandatory!important;overscroll-behavior-y:contain!important}
+      body.chatshop-virtual-swipe .csv-card,body.chatshop-virtual-swipe .vs-card{height:calc(100dvh - 64px)!important;min-height:calc(100dvh - 64px)!important;scroll-snap-align:start!important;scroll-snap-stop:always!important;border:0!important;border-radius:0!important;box-shadow:none!important;display:flex!important;flex-direction:column!important;background:#fff!important}
+      body.chatshop-virtual-swipe .csv-photo,body.chatshop-virtual-swipe .vs-card-img{flex:1 1 auto!important;min-height:0!important;aspect-ratio:auto!important;background:#fff!important}
+      body.chatshop-virtual-swipe .csv-photo img,body.chatshop-virtual-swipe .vs-card-img img{width:100%!important;height:100%!important;object-fit:contain!important}
+      body.chatshop-virtual-swipe .csv-body,body.chatshop-virtual-swipe .vs-card-body{flex:0 0 auto!important;padding:14px 18px 22px!important;background:#fff!important}
+      body.chatshop-virtual-swipe .csv-name,body.chatshop-virtual-swipe .vs-card-name{font-size:20px!important;min-height:0!important}
+      body.chatshop-virtual-swipe .csv-price,body.chatshop-virtual-swipe .vs-card-price{font-size:22px!important}
+      body.chatshop-virtual-swipe .csv-open,body.chatshop-virtual-swipe .vs-open{font-size:16px!important;padding:14px!important}
+      body.chatshop-virtual-swipe .vst-footer{min-height:calc(100dvh - 64px)!important;scroll-snap-align:start!important}
+    `;
     document.head.appendChild(style);
-    [250,700,1400,2400].forEach(delay=>setTimeout(()=>{if(!modal.classList.contains('open')&&!modal.classList.contains('on'))button.click();if(modal.id==='csvProduct')modal.classList.add('on')},delay));
-    // Mantém o domínio raiz no modo produto único. Rotas /produto podem não existir em domínios próprios.
-    try{history.replaceState({chatshopSingleProduct:index},'', location.pathname==='/'?('/'+location.search):('/'+location.search))}catch(e){}
-    const keepOpen=new MutationObserver(()=>{const productOpen=modal.classList.contains('open')||modal.classList.contains('on'),cartOpen=cart&&(cart.classList.contains('open')||cart.classList.contains('on'));if(!productOpen&&!cartOpen)setTimeout(()=>{button.click();if(modal.id==='csvProduct')modal.classList.add('on')},40)});
-    keepOpen.observe(modal,{attributes:true,attributeFilter:['class']});
-    cart&&keepOpen.observe(cart,{attributes:true,attributeFilter:['class']});
+    const hint=document.createElement('div');hint.textContent='⬆️ Arraste para ver o próximo produto';hint.style.cssText='position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:25;background:rgba(17,24,39,.78);color:#fff;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:800;pointer-events:none';
+    document.body.appendChild(hint);setTimeout(()=>hint.remove(),4500);
   })();
 }
-
 function wrapPublishedRenderer(){
   data=data||readBootstrapData();
   if(data){window.__CHATSHOP_STORE_DATA=window.__CHATSHOP_STORE_DATA||data;window.__CHATSHOP_DIRECT_STORE_ACTIVE=window.__CHATSHOP_DIRECT_STORE_ACTIVE||!!document.getElementById('chatshopDirectVirtualBootstrap');}
