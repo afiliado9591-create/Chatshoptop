@@ -121,7 +121,7 @@ module.exports = async function handler(req, res) {
     const sf = shipping.superfrete && typeof shipping.superfrete === 'object' ? shipping.superfrete : {};
     if (shipping.mode !== 'superfrete') return send(res, 400, { error: 'A SuperFrete não está ativa nesta loja.' });
 
-    const destination = onlyDigits(req.body?.toPostalCode || '');
+    const destination = onlyDigits(req.body?.toPostalCode || req.body?.destinationPostalCode || req.body?.cep || '');
     if (destination.length !== 8) return send(res, 400, { error: 'Digite um CEP de destino válido com 8 números.' });
 
     const configuredOrigins = (Array.isArray(sf.origins) ? sf.origins : [])
