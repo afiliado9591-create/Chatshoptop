@@ -178,7 +178,8 @@ function injectUpgrades(html, storefrontMode, layout) {
     'seller-audio-admin-controls.js',
     'seller-audio-admin-fix.js',
     'seller-audio-upload-fix.js',
-    'product-seller-button-control.js'
+    'product-seller-button-control.js',
+    'virtual-single-product-mode.js'
   ];
   scripts.forEach(name => { html = removeScript(html, name); });
 
@@ -200,6 +201,7 @@ function injectUpgrades(html, storefrontMode, layout) {
     html = forceScript(html, 'seller-audio-upload-fix.js', version);
   }
   html = forceScript(html, 'product-seller-button-control.js', version);
+  html = forceScript(html, 'virtual-single-product-mode.js', '20260817-1700-single-checkout');
   return html;
 }
 
@@ -242,6 +244,8 @@ function injectStoreFeatureBootstrap(html, store) {
     planTier: store.planTier || store.plan || '',
     affiliateProgram: store.affiliateProgram || {},
     adminControl: store.adminControl || {},
+    virtualDisplayMode: store.virtualDisplayMode || 'catalog',
+    virtualFeaturedProduct: Number(store.virtualFeaturedProduct) || 0,
     qna: Array.isArray(store.qna) ? store.qna : [],
     products: Array.isArray(store.products) ? store.products : []
   });
