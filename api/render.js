@@ -201,7 +201,7 @@ function injectUpgrades(html, storefrontMode, layout) {
     html = forceScript(html, 'seller-audio-upload-fix.js', version);
   }
   html = forceScript(html, 'product-seller-button-control.js', version);
-  html = forceScript(html, 'virtual-single-product-mode.js', '20260817-1655-custom-domain-root');
+  html = forceScript(html, 'virtual-single-product-mode.js', '20260817-1715-direct-virtual');
   return html;
 }
 
@@ -223,6 +223,13 @@ function injectGridBootstrap(html, store, productSlug='') {
   const payload = safeJsonForScript(store);
   const requested = safeJsonForScript(productSlug || '');
   const bootstrap = `<style id=\"chatshopGridBootstrapStyle\">html.chatshop-grid-pending body{background:#f5f5f5!important}html.chatshop-grid-pending #storefrontScreen{visibility:hidden!important}</style>\n<script id=\"chatshopGridBootstrap\">document.documentElement.classList.add('chatshop-grid-pending');window.__CHATSHOP_GRID_DIRECT_ACTIVE=true;window.__CHATSHOP_HOME_LAYOUT='grid';window.__CHATSHOP_STORE_DATA=${payload};window.__CHATSHOP_PRODUCT_SLUG=${requested};</script>`;
+  return html.replace(/<\/head>/i, `${bootstrap}\n</head>`);
+}
+
+function injectDirectVirtualBootstrap(html, store) {
+  if (!store || store.storeType !== 'virtual') return html;
+  const payload = safeJsonForScript(store);
+  const bootstrap = `<style id="chatshopDirectVirtualStyle">html.chatshop-virtual-pending body{background:#f8fafc!important}html.chatshop-virtual-pending #storefrontScreen{visibility:hidden!important}</style>\n<script id="chatshopDirectVirtualBootstrap">document.documentElement.classList.add('chatshop-virtual-pending');window.__CHATSHOP_DIRECT_STORE_ACTIVE=true;window.__CHATSHOP_STORE_DATA=${payload};</script>`;
   return html.replace(/<\/head>/i, `${bootstrap}\n</head>`);
 }
 
@@ -295,6 +302,10 @@ module.exports = async function handler(request, response) {
     if (layout === 'grid') {
       html = disableLegacyStoreAutoload(html);
       html = injectGridBootstrap(html, store, requestedProduct ? productSlugs[productIndex] : '');
+    } else if (store?.storeType === 'virtual') {
+      // Domínios próprios não devem consultar a loja uma segunda vez no navegador.
+      html = disableLegacyStoreAutoload(html);
+      html = injectDirectVirtualBootstrap(html, store);
     }
 
     const fallbackTitle = slug ? prettySlug(slug) : 'Loja online';
