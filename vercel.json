@@ -2,11 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/content.js": {
-      "includeFiles": [
-        "index.html",
-        "virtual-chat-description-fix.js",
-        "qna-source-patcher.js"
-      ]
+      "includeFiles": "{index.html,virtual-chat-description-fix.js,qna-source-patcher.js}"
     }
   },
   "headers": [
