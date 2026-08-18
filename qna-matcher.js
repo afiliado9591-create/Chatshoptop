@@ -44,8 +44,9 @@ function score(query,candidate){
   let s=.50*st.dice+.25*st.coverage+.15*st.precision+.10*char;
   const qi=intentTerms(st.qa),ci=intentTerms(st.ca);
   if(qi.length&&ci.length&&!qi.some(x=>ci.includes(x)))s*=.62;
-  if(st.hit===1&&Math.max(st.qa.length,st.ca.length)>=3)s*=.72;
+  if(st.hit===1&&Math.max(st.qa.length,st.ca.length)>=2)s*=.64;
   if(st.qa.length===1&&st.ca.length>1)s*=.55;
+  if(st.ca.length===1&&st.qa.length>1)s=Math.min(s,.49);
   return Math.max(0,Math.min(1,s));
 }
 function candidateText(item){return String(item?.question||item?.text||item?.keyword||'');}
@@ -84,7 +85,11 @@ function selfTest(){
     {question:'Tem frete grátis?',answer:'GRATIS'}
   ];
   const cases=[['entrega em sp?','SP'],['vocês entregam em são paulo?','SP'],['manda para todo brasil?','BR'],['qual demora para chegar?','PRAZO'],['qual prazo de entrega?','PRAZO'],['quanto é o frete?','CUSTO'],['o frete é grátis?','GRATIS'],['frete',null],['entrega',null]];
-  return cases.map(([input,want])=>{const r=bestMatch(input,q,{debug:false});const got=r.accepted?r.match.item.answer:null;return{input,want,got,score:r.best?Number(r.best.score.toFixed(3)):0,reason:r.reason,pass:got===want}});
+  const rows=cases.map(([input,want])=>{const r=bestMatch(input,q,{debug:false});const got=r.accepted?r.match.item.answer:null;return{input,want,got,score:r.best?Number(r.best.score.toFixed(3)):0,reason:r.reason,pass:got===want}});
+  const isolated=[{question:'entrega',answer:'SINGLE'}];
+  const oneWord=bestMatch('qual o prazo de entrega?',isolated,{debug:false});
+  rows.push({input:'single-word-candidate guard',want:null,got:oneWord.accepted?oneWord.match.item.answer:null,score:oneWord.best?Number(oneWord.best.score.toFixed(3)):0,reason:oneWord.reason,pass:!oneWord.accepted});
+  return rows;
 }
 global.ChatShopQnaMatcher={normalize,tokens,score,bestMatch,selfTest,DEFAULT_THRESHOLD};
 })(typeof window!=='undefined'?window:globalThis);
