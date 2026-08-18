@@ -21,6 +21,10 @@
         {
           "key": "Cache-Control",
           "value": "no-store, max-age=0"
+        },
+        {
+          "key": "X-ChatShop-QnA-Version",
+          "value": "similarity-v2"
         }
       ]
     }
