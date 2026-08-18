@@ -1,3 +1,4 @@
+const {servePatchedSource}=require('../qna-source-patcher.js');
 const PROJECT_ID = 'chatshop-97ea3';
 const API_KEY = 'AIzaSyBZlCM-6l_iV_GTirvTwUumKM3ZGRvgxt8';
 const BASE_DOMAIN = 'www.alibr.com.br';
@@ -56,6 +57,9 @@ async function getPlatformSeo(){
 
 module.exports = async function handler(req,res){
   try{
+    const qnaSource=String(req.query?.qnaSource||'');
+    if(qnaSource && servePatchedSource(req,res,qnaSource)) return;
+
     const slug = cleanSlug(req.query && req.query.slug);
     if(!slug){ res.status(404).send('Página não encontrada.'); return; }
     const page = await getPage(slug);
