@@ -4,7 +4,11 @@ const path = require('path');
 const MATCHER_TAG = '<script src="/qna-matcher.js?v=20260817-similarity-v1" defer></script>';
 
 function patchIndex(html) {
-  if (!html.includes('/qna-matcher.js?')) html = html.replace('</body>', MATCHER_TAG + '\n</body>');
+  if (!html.includes('/qna-matcher.js?')) {
+    const bodyClose = html.lastIndexOf('</body>');
+    if (bodyClose < 0) throw new Error('Fechamento </body> não encontrado no index.html');
+    html = html.slice(0, bodyClose) + MATCHER_TAG + '\n' + html.slice(bodyClose);
+  }
   const legacyPattern = /\s*\/\/ 1\) Pergunta específica de um produto \(mais prioritária que tudo\).*?const qnaHit=qna\.find\(item=>\(item\.keywords\|\|\[\]\)\.some\(k=>query\.includes\(storeNorm\(k\)\)\)\);\s*if\(qnaHit\)\{ add\('bot',storeEsc\(qnaHit\.answer\)\); return; \}/s;
   const replacement = `
     // Q&A por similaridade de frase completa. O contexto do produto vem primeiro.
