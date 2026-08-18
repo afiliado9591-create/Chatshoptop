@@ -122,6 +122,13 @@ module.exports = async function handler(request, response) {
     const upstream = await fetch(target, { headers: { accept: 'text/html', 'x-chatshop-proxy': 'superfrete' } });
     let html = await upstream.text();
 
+    // Catálogo de afiliados: herda o link-base cadastrado pelo admin.
+    // O campo continua editável para o afiliado substituir pelo próprio link.
+    html = html.replace(
+      "price:p.price||'', link:'https://', fromCatalog:true",
+      "price:p.price||'', link:p.baseLink||'https://', fromCatalog:true"
+    );
+
     html = removeScript(html, 'superfrete-domain-fix.js');
     html = removeScript(html, 'superfrete-upgrade.js');
     html = removeScript(html, 'plan-access-control.js');
