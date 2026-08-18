@@ -9,9 +9,26 @@
           "value": "no-store, max-age=0"
         }
       ]
+    },
+    {
+      "source": "/qna-matcher.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     }
   ],
   "routes": [
+    {
+      "src": "/index.html",
+      "dest": "/api/qna-patched-source.js?file=index"
+    },
+    {
+      "src": "/virtual-chat-description-fix.js",
+      "dest": "/api/qna-patched-source.js?file=virtual"
+    },
     {
       "src": "/site/?",
       "dest": "/api/public-page.js?slug=inicio"
