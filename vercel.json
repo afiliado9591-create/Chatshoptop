@@ -23,11 +23,11 @@
   "routes": [
     {
       "src": "/index.html",
-      "dest": "/api/qna-patched-source.js?file=index"
+      "dest": "/api/content.js?qnaSource=index"
     },
     {
       "src": "/virtual-chat-description-fix.js",
-      "dest": "/api/qna-patched-source.js?file=virtual"
+      "dest": "/api/content.js?qnaSource=virtual"
     },
     {
       "src": "/site/?",
