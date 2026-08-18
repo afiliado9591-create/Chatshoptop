@@ -54,11 +54,9 @@ async function syncLoggedUser(){
     const snap=await ref.get();
     const plan=(typeof isAdmin!=='undefined'&&isAdmin===true)?'profissional':((snap.exists&&snap.data().plan)||currentPlan()||'aprendiz');
     const c=cap(plan);
-    await ref.set({productLimit:c.products,chatLimit:c.chats,planPolicyVersion:'2026-08-14'}, {merge:true});
+    await ref.set({productLimit:c.products,chatLimit:c.chats,planPolicyVersion:'2026-08-18-upload-lock'}, {merge:true});
     try{myPlan=plan;myProductLimit=c.products;myChatLimit=c.chats}catch(e){}
 
-    // Marca as lojas do usuário com o plano atual. Isso permite ao site público
-    // aplicar os recursos corretos sem depender do painel aberto.
     try{
       const stores=await db.collection(typeof COLECAO!=='undefined'?COLECAO:'chatshops').where('ownerUid','==',myUid).get();
       const featureData={...c.features};
@@ -85,6 +83,56 @@ function showClosestFieldByText(text){
 function sectionByHeading(text){
   const wanted=String(text).toLowerCase();
   return [...document.querySelectorAll('#editorView .section')].find(s=>String(s.querySelector('h2')?.textContent||'').toLowerCase().includes(wanted));
+}
+
+function openImageUploadUpgrade(){
+  try{
+    if(typeof toast==='function') toast('Upload de imagem disponível a partir do plano Básico.');
+  }catch(e){}
+  try{
+    if(typeof window.abrirPlanos==='function') window.abrirPlanos();
+    else if(typeof abrirPlanos==='function') abrirPlanos();
+  }catch(e){console.warn('Não consegui abrir os planos',e)}
+}
+
+function installAprendizImageUploadLock(){
+  if(document.documentElement.dataset.aprendizImageUploadLock==='1')return;
+  document.documentElement.dataset.aprendizImageUploadLock='1';
+
+  document.addEventListener('click',function(e){
+    if(!isFree())return;
+    const target=e.target;
+    if(!target || !target.closest)return;
+    const editor=target.closest('#editorView');
+    if(!editor)return;
+
+    const fileInput=target.closest('input[type="file"]');
+    const imageUploadBox=target.closest('.upload-box');
+    const uploadTab=target.closest('.tab');
+    const isImageFile=fileInput && fileInput.closest('.product') && (fileInput.closest('.upload-box') || String(fileInput.accept||'').toLowerCase().includes('image'));
+    const isImageUploadArea=imageUploadBox && imageUploadBox.closest('.product');
+    const isUploadTab=uploadTab && uploadTab.closest('.product') && /upload|enviar imagem|galeria|dispositivo/i.test(String(uploadTab.textContent||''));
+
+    if(isImageFile || isImageUploadArea || isUploadTab){
+      e.preventDefault();
+      e.stopPropagation();
+      if(typeof e.stopImmediatePropagation==='function')e.stopImmediatePropagation();
+      openImageUploadUpgrade();
+    }
+  },true);
+
+  document.addEventListener('change',function(e){
+    if(!isFree())return;
+    const input=e.target;
+    if(!input || !input.matches || !input.matches('input[type="file"]'))return;
+    const isImageFile=input.closest('.product') && (input.closest('.upload-box') || String(input.accept||'').toLowerCase().includes('image'));
+    if(!isImageFile)return;
+    input.value='';
+    e.preventDefault();
+    e.stopPropagation();
+    if(typeof e.stopImmediatePropagation==='function')e.stopImmediatePropagation();
+    openImageUploadUpgrade();
+  },true);
 }
 
 function applyEditorAccess(){
@@ -251,6 +299,7 @@ function install(){
   patchDashboard();
   patchOpenEditor();
   installPlanModal();
+  installAprendizImageUploadLock();
   applyEditorAccess();
   decorateDashboard();
   publicStorePolicy();
