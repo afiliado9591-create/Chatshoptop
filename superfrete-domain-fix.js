@@ -121,6 +121,11 @@ document.addEventListener('click', async function(e){
   try{ btn.click(); } finally { setTimeout(()=>{republishGuard=false},0); }
 }, true);
 
+function fixPublishButtonLabel(){
+  const btn = document.getElementById('publishBtn');
+  if(btn && btn.textContent !== '🚀 Publicar ChatShop') btn.textContent = '🚀 Publicar ChatShop';
+}
+
 function fixVisibleShippingText(){
   const store = window.__CHATSHOP_STORE_DATA;
   if(store?.shipping?.mode !== 'superfrete') return;
@@ -133,7 +138,11 @@ function fixVisibleShippingText(){
   }
 }
 
+fixPublishButtonLabel();
 fixVisibleShippingText();
-const observer = new MutationObserver(fixVisibleShippingText);
-observer.observe(document.documentElement, { childList:true, subtree:true });
+const observer = new MutationObserver(()=>{
+  fixPublishButtonLabel();
+  fixVisibleShippingText();
+});
+observer.observe(document.documentElement, { childList:true, subtree:true, characterData:true });
 })();
