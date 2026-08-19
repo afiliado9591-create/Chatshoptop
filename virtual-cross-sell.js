@@ -21,6 +21,9 @@ function readData(){
   return null;
 }
 
+function normalizedStoreType(data){
+  return norm(data?.storeType||data?.type||'').replace(/[^a-z]/g,'');
+}
 function slugBase(value){
   return norm(value).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90)||'produto';
 }
@@ -72,21 +75,36 @@ function currentIndex(products,slugs,scope){
     let wanted='';try{wanted=decodeURIComponent(m[1]).toLowerCase();}catch(e){wanted=String(m[1]||'').toLowerCase();}
     const bySlug=slugs.indexOf(wanted);if(bySlug>=0)return bySlug;
   }
-  const explicit=scope?.querySelector('[data-product-index]')?.dataset?.productIndex || scope?.querySelector('[data-i]')?.dataset?.i || scope?.querySelector('[data-product]')?.dataset?.product;
+  try{
+    const qp=new URLSearchParams(location.search).get('product');
+    if(qp!==null&&qp!==''){
+      const qi=Number(qp);
+      if(Number.isInteger(qi)&&products[qi])return qi;
+      const qs=slugBase(qp);
+      const byQuery=slugs.indexOf(qs);if(byQuery>=0)return byQuery;
+    }
+  }catch(e){}
+  const explicit=scope?.querySelector('[data-product-index]')?.dataset?.productIndex || scope?.querySelector('[data-i]')?.dataset?.i || scope?.querySelector('[data-product]')?.dataset?.product || scope?.dataset?.productIndex || scope?.dataset?.product;
   if(explicit!==undefined&&explicit!==null&&explicit!==''){
     const i=Number(explicit);if(Number.isInteger(i)&&products[i])return i;
   }
-  const nameEl=scope?.querySelector('.sg-name,.cgc-name,.csv-dname,.csv-detail-name,.vs-detail-name,.csv-name');
+  const nameEl=scope?.querySelector('.sg-name,.cgc-name,.csv-dname,.csv-detail-name,.vs-detail-name,.csv-name,[data-product-name],h1,h2');
   const shown=norm(nameEl?.textContent||'');
-  if(shown){const i=products.findIndex(p=>norm(p?.name)===shown);if(i>=0)return i;}
+  if(shown){
+    let i=products.findIndex(p=>norm(p?.name)===shown);if(i>=0)return i;
+    i=products.findIndex(p=>{const n=norm(p?.name);return n&&shown&&(shown.includes(n)||n.includes(shown));});if(i>=0)return i;
+  }
   return -1;
 }
 
 function detailScope(){
-  return $('.sg-detail-wrap') || $('.cgc-detail,.cgc-detail-wrap') || $('#csvProductBody') || $('#vsProductBody') || $('.csv-product-detail,.csv-detail-wrap') || null;
+  const known=$('.sg-detail-wrap') || $('.cgc-detail,.cgc-detail-wrap') || $('#csvProductBody') || $('#vsProductBody') || $('.csv-product-detail,.csv-detail-wrap');
+  if(known)return known;
+  const buy=$('#csvAdd,.csv-add,#vsAdd,.vs-add,.sg-buy,.cgc-buy,.csv-buy,[data-add-cart]');
+  return buy?.closest('section,article,main,.modal,.sheet,.product-detail,div')||null;
 }
 function anchorIn(scope){
-  return scope.querySelector('#csvAdd,.csv-add,#vsAdd,.vs-add,.sg-buy,.cgc-buy,.csv-buy') || scope.querySelector('.sg-card,.cgc-card,.vs-detail-name,.csv-dname,.csv-detail-name') || scope.lastElementChild;
+  return scope.querySelector('#csvAdd,.csv-add,#vsAdd,.vs-add,.sg-buy,.cgc-buy,.csv-buy,[data-add-cart]') || scope.querySelector('.sg-card,.cgc-card,.vs-detail-name,.csv-dname,.csv-detail-name,[data-product-name]') || scope.lastElementChild;
 }
 
 function selectedBumps(scope){
@@ -126,7 +144,9 @@ function addBumps(indices){
 
 function render(){
   const data=readData();
-  if(!data||data.storeType!=='virtual')return;
+  if(!data)return;
+  const type=normalizedStoreType(data);
+  if(type&&type!=='virtual'&&type!=='lojavirtual')return;
   const products=Array.isArray(data.products)?data.products:[];
   if(products.length<2)return;
   const scope=detailScope();
@@ -134,8 +154,8 @@ function render(){
   if(scope.querySelector('.vxs-wrap'))return;
 
   const slugs=buildSlugs(products);
-  const active=currentIndex(products,slugs,scope);
-  if(active<0)return;
+  let active=currentIndex(products,slugs,scope);
+  if(active<0)active=0;
   const related=products.map((p,i)=>({p,i})).filter(x=>x.i!==active).slice(0,4);
   if(!related.length)return;
 
@@ -153,14 +173,11 @@ function render(){
   if(anchor&&anchor.parentNode)anchor.insertAdjacentElement('afterend',wrap);else scope.appendChild(wrap);
 }
 
-/* Captura o clique antes do manipulador original fechar o modal. Depois que o
-   produto principal entra na sacola, usa os mesmos controles internos da Loja
-   Virtual para inserir os itens marcados, preservando o carrinho/checkout atual. */
 document.addEventListener('click',e=>{
   if(autoAdding)return;
-  const add=e.target.closest('#csvAdd,.csv-add,#vsAdd,.vs-add');
+  const add=e.target.closest('#csvAdd,.csv-add,#vsAdd,.vs-add,[data-add-cart]');
   if(!add)return;
-  const scope=add.closest('#csvProductBody,#vsProductBody,.csv-product-detail,.csv-detail-wrap')||document;
+  const scope=add.closest('#csvProductBody,#vsProductBody,.csv-product-detail,.csv-detail-wrap,.product-detail')||document;
   const bumps=selectedBumps(scope);
   if(!bumps.length)return;
   setTimeout(()=>addBumps(bumps),40);
@@ -172,5 +189,5 @@ new MutationObserver(schedule).observe(document.documentElement,{childList:true,
 document.addEventListener('click',schedule,true);
 window.addEventListener('popstate',schedule);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
-setTimeout(schedule,350);setTimeout(schedule,1000);
+setTimeout(schedule,250);setTimeout(schedule,700);setTimeout(schedule,1500);
 })();
