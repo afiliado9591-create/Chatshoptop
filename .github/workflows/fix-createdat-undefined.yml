@@ -1,0 +1,37 @@
+name: Fix legacy createdAt publish
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-createdat-undefined.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fix undefined createdAt for legacy stores
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          old = "createdAt: existing.exists ? existing.data().createdAt : firebase.firestore.FieldValue.serverTimestamp(),"
+          new = "createdAt: (existing.exists && existing.data().createdAt) ? existing.data().createdAt : firebase.firestore.FieldValue.serverTimestamp(),"
+          if old not in text:
+              raise SystemExit('Trecho createdAt esperado não encontrado; nenhuma alteração feita.')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Corrigir createdAt ausente em lojas antigas"
+          git push origin HEAD:main
