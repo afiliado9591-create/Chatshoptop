@@ -1,0 +1,47 @@
+name: Fix subdomain publish ownership
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-subdomain-publish.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch legacy subdomain ownership validation
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          old = """    const ref = db.collection(COLECAO).doc(slug);\n    const existing = await ref.get();\n    if(existing.exists && existing.data().ownerUid !== myUid){\n      statusEl.innerHTML = `⚠️ O endereço <b>${slug}.${DOMINIO_BASE}</b> já está em uso por outra loja. Escolha outro subdomínio.`;\n      btn.disabled = false; btn.textContent = '🚀 Publicar Chatbot (gera o subdomínio)';\n      return;\n    }\n"""
+
+          new = """    const ref = db.collection(COLECAO).doc(slug);\n    const existing = await ref.get();\n    const existingData = existing.exists ? existing.data() : null;\n    // Compatibilidade com lojas antigas criadas antes do ownerUid:\n    // somente o administrador pode reivindicar um documento legado sem dono.\n    // Lojas que já possuem ownerUid continuam protegidas contra sobrescrita.\n    const legacySemDono = existing.exists && !existingData?.ownerUid;\n    const podeReivindicarLegado = legacySemDono && isAdmin;\n    if(existing.exists && existingData?.ownerUid !== myUid && !podeReivindicarLegado){\n      statusEl.innerHTML = `⚠️ O endereço <b>${slug}.${DOMINIO_BASE}</b> já está em uso por outra loja. Escolha outro subdomínio.`;\n      btn.disabled = false; btn.textContent = '🚀 Publicar Chatbot (gera o subdomínio)';\n      return;\n    }\n"""
+
+          if old not in text:
+              raise SystemExit('Trecho esperado de publicação não encontrado; nenhuma alteração foi feita.')
+
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Corrigir publicação de subdomínios legados"
+          git push origin HEAD:main
