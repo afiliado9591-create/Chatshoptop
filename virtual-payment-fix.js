@@ -37,7 +37,7 @@ function fixDescription(){
 }
 function numericPrice(v){let s=String(v??'').replace(/[^0-9,.-]/g,'');if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');const n=Number(s);return Number.isFinite(n)?n:0}
 function cartItems(){
-  return $('.csv-item').map(row=>{
+  return $$('.csv-item').map(row=>{
     const name=$('b',row)?.textContent?.trim()||'';const detail=$('small',row)?.textContent||'';
     const q=detail.match(/Qtd:\s*(\d+)/i);const c=detail.match(/Cor:\s*([^·]+?)(?:\s*·|$)/i);
     return {name,qty:q?Number(q[1]):1,color:c?c[1].trim():''};
