@@ -129,6 +129,14 @@ module.exports = async function handler(request, response) {
       "price:p.price||'', link:p.baseLink||'https://', fromCatalog:true"
     );
 
+    // Ao editar uma loja existente, o próprio slug aberto no editor não pode
+    // ser tratado como endereço de outra loja. A proteção continua ativa para
+    // qualquer slug diferente do que foi aberto no painel.
+    html = html.replace(
+      "if(existing.exists && existingData?.ownerUid !== myUid && !podeReivindicarLegado){",
+      "const editandoMesmoSlug = !!mySlug && slug === mySlug;\n    if(existing.exists && existingData?.ownerUid !== myUid && !podeReivindicarLegado && !editandoMesmoSlug){"
+    );
+
     // O seletor Loja Virtual deve aparecer para todos. O bloqueio por plano
     // acontece ao tentar selecionar a opção, e não escondendo o recurso.
     html = html.replace(/<\/head>/i, '<style id="sellerFirstPlanUi">#editorView .field:has(#storeType){display:flex!important}</style></head>');
