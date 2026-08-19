@@ -37,8 +37,6 @@ window.fetch = async function(input, init){
   const url = typeof input === 'string' ? input : String(input?.url || '');
   let nextInit = init ? { ...init } : {};
 
-  /* Ao calcular o frete, envie o slug real da loja mesmo quando o cliente
-     estiver em um dominio proprio como www.minhaloja.com.br. */
   if(url.includes('/api/superfrete-quote.js') && nextInit.body){
     try{
       const body = JSON.parse(nextInit.body);
@@ -57,7 +55,6 @@ window.fetch = async function(input, init){
   let parsedBody = null;
   try{ parsedBody = nextInit.body ? JSON.parse(nextInit.body) : null; }catch(e){}
   const customQuery = isCustomDomainQuery(url, parsedBody);
-
   let response = await originalFetch(input, nextInit);
 
   if(customQuery && response.ok){
@@ -65,9 +62,6 @@ window.fetch = async function(input, init){
       const rows = await response.clone().json();
       const slug = extractSlug(rows);
       if(slug) window.__CHATSHOP_SUPERFRETE_SLUG = slug;
-
-      /* Se o cadastro esta sem www e a pagina abriu com www (ou vice-versa),
-         repete automaticamente a consulta usando a outra forma do dominio. */
       if(!hasDocument(rows)){
         const ff = parsedBody?.structuredQuery?.where?.fieldFilter;
         const current = cleanHost(ff?.value?.stringValue || location.hostname);
@@ -89,9 +83,43 @@ window.fetch = async function(input, init){
       }
     }catch(e){}
   }
-
   return response;
 };
+
+/* Republicação segura da própria loja.
+   Ao editar uma loja existente, o campo slug fica desabilitado. Antes do
+   publish normal, confirma que o documento desse slug pertence ao usuário
+   autenticado. Para lojas legadas do próprio painel, corrige ownerUid e então
+   deixa o fluxo original continuar. Não reivindica slug digitado em loja nova. */
+let republishGuard = false;
+document.addEventListener('click', async function(e){
+  const btn = e.target?.closest?.('#publishBtn');
+  if(!btn || republishGuard) return;
+  const slugInput = document.getElementById('slug');
+  const slug = String(slugInput?.value || '').trim().toLowerCase();
+  const editingExisting = !!slugInput?.disabled;
+  const user = window.firebase?.auth?.().currentUser;
+  const firestore = window.firebase?.firestore?.();
+  if(!editingExisting || !slug || !user || !firestore) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+  if(typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+  try{
+    const ref = firestore.collection('chatshops').doc(slug);
+    const snap = await ref.get();
+    if(snap.exists){
+      const data = snap.data() || {};
+      if(!data.ownerUid || data.ownerUid !== user.uid){
+        await ref.set({ownerUid:user.uid, ownerEmail:String(user.email||data.ownerEmail||'').toLowerCase()},{merge:true});
+      }
+    }
+  }catch(err){
+    console.warn('Não foi possível normalizar o dono da loja antes de republicar:', err);
+  }
+  republishGuard = true;
+  try{ btn.click(); } finally { setTimeout(()=>{republishGuard=false},0); }
+}, true);
 
 function fixVisibleShippingText(){
   const store = window.__CHATSHOP_STORE_DATA;
