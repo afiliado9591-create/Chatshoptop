@@ -1888,7 +1888,9 @@ async function publish(){
     toast('Chatbot publicado com sucesso');
   }catch(e){
     console.error(e);
-    statusEl.innerHTML = '❌ Erro ao publicar. Confira as regras do Firestore e a configuração do Firebase (veja o console do navegador).';
+    const errorCode = esc(e?.code || 'sem-codigo');
+    const errorMessage = esc(e?.message || String(e) || 'Erro desconhecido');
+    statusEl.innerHTML = `❌ Erro ao publicar.<br><b>Código:</b> ${errorCode}<br><b>Detalhe:</b> ${errorMessage}`;
   }
   btn.disabled = false; btn.textContent = '🚀 Publicar Chatbot (gera o subdomínio)';
 }
