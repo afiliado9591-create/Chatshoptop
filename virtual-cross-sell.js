@@ -47,12 +47,23 @@ function price(v){
   return /r\$/i.test(s)?s:'R$ '+s;
 }
 
+function findAddButton(root){
+  const scope=root||document;
+  const known=scope.querySelector?.('#csvAdd,.csv-add,#vsAdd,.vs-add,.sg-buy,.cgc-buy,.csv-buy,[data-add-cart]');
+  if(known)return known;
+  const candidates=Array.from(scope.querySelectorAll?.('button,a,[role="button"]')||[]);
+  return candidates.find(el=>{
+    const t=norm(el.textContent||'');
+    return t.includes('adicionar a sacola')||t.includes('adicionar na sacola')||t.includes('adicionar ao carrinho');
+  })||null;
+}
+
 function installStyle(main){
   if($('#virtualCrossSellStyle'))return;
   const style=document.createElement('style');
   style.id='virtualCrossSellStyle';
   style.textContent=`
-    .vxs-wrap{margin:16px 0 4px;padding:13px 12px 12px;border:1px solid #ececec;border-radius:14px;background:#fff;box-shadow:0 2px 9px rgba(0,0,0,.06)}
+    .vxs-wrap{margin:16px 0 14px;padding:13px 12px 12px;border:1px solid #ececec;border-radius:14px;background:#fff;box-shadow:0 2px 9px rgba(0,0,0,.06)}
     .vxs-title{font-size:13px;font-weight:900;color:#1f2937;margin:0 0 3px}.vxs-sub{font-size:10.5px;color:#6b7280;margin:0 0 9px}
     .vxs-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
     .vxs-item{position:relative;min-width:0;border:1px solid #e5e7eb;border-radius:10px;background:#fff;padding:5px;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent;display:block}
@@ -100,11 +111,9 @@ function currentIndex(products,slugs,scope){
 function detailScope(){
   const known=$('.sg-detail-wrap') || $('.cgc-detail,.cgc-detail-wrap') || $('#csvProductBody') || $('#vsProductBody') || $('.csv-product-detail,.csv-detail-wrap');
   if(known)return known;
-  const buy=$('#csvAdd,.csv-add,#vsAdd,.vs-add,.sg-buy,.cgc-buy,.csv-buy,[data-add-cart]');
-  return buy?.closest('section,article,main,.modal,.sheet,.product-detail,div')||null;
-}
-function anchorIn(scope){
-  return scope.querySelector('#csvAdd,.csv-add,#vsAdd,.vs-add,.sg-buy,.cgc-buy,.csv-buy,[data-add-cart]') || scope.querySelector('.sg-card,.cgc-card,.vs-detail-name,.csv-dname,.csv-detail-name,[data-product-name]') || scope.lastElementChild;
+  const buy=findAddButton(document);
+  if(!buy)return null;
+  return buy.closest('main,article,section,.modal,.sheet,.product-detail,.product-page') || buy.parentElement?.parentElement || document.body;
 }
 
 function selectedBumps(scope){
@@ -118,13 +127,13 @@ function addOneThroughExistingCart(index){
   const csvOpen=$(`#csvGrid [data-product="${index}"]`);
   if(csvOpen){
     csvOpen.click();
-    const add=$('#csvAdd');
+    const add=findAddButton(document);
     if(add){add.click();return true;}
   }
   const vsOpen=$(`#vsGrid [data-product="${index}"]`);
   if(vsOpen){
     vsOpen.click();
-    const add=$('#vsAdd');
+    const add=findAddButton(document);
     if(add){add.click();return true;}
   }
   return false;
@@ -150,7 +159,8 @@ function render(){
   const products=Array.isArray(data.products)?data.products:[];
   if(products.length<2)return;
   const scope=detailScope();
-  if(!scope){$$('.vxs-wrap').forEach(x=>x.remove());return;}
+  const addButton=findAddButton(scope||document);
+  if(!scope||!addButton){$$('.vxs-wrap').forEach(x=>x.remove());return;}
   if(scope.querySelector('.vxs-wrap'))return;
 
   const slugs=buildSlugs(products);
@@ -169,15 +179,17 @@ function render(){
     return `<label class="vxs-item" aria-label="Adicionar ${esc(name)} ao pedido"><input class="vxs-check" type="checkbox" value="${i}"><div class="vxs-img">${img?`<img src="${esc(img)}" alt="${esc(name)}">`:'<div class="vxs-noimg">🛍️</div>'}</div><div class="vxs-name">${esc(name)}</div>${p?.price?`<div class="vxs-price">${esc(price(p.price))}</div>`:''}<div class="vxs-picked">✓ Vai junto</div></label>`;
   }).join('')+'</div>';
   wrap.addEventListener('change',e=>{if(e.target.classList.contains('vxs-check'))markSelection(e.target);});
-  const anchor=anchorIn(scope);
-  if(anchor&&anchor.parentNode)anchor.insertAdjacentElement('afterend',wrap);else scope.appendChild(wrap);
+  addButton.insertAdjacentElement('beforebegin',wrap);
 }
 
 document.addEventListener('click',e=>{
   if(autoAdding)return;
-  const add=e.target.closest('#csvAdd,.csv-add,#vsAdd,.vs-add,[data-add-cart]');
-  if(!add)return;
-  const scope=add.closest('#csvProductBody,#vsProductBody,.csv-product-detail,.csv-detail-wrap,.product-detail')||document;
+  const clicked=e.target.closest('button,a,[role="button"]');
+  if(!clicked)return;
+  const known=clicked.matches('#csvAdd,.csv-add,#vsAdd,.vs-add,[data-add-cart]');
+  const byText=/adicionar\s+(a|na|ao)\s+(sacola|carrinho)/i.test(norm(clicked.textContent||''));
+  if(!known&&!byText)return;
+  const scope=clicked.closest('#csvProductBody,#vsProductBody,.csv-product-detail,.csv-detail-wrap,.product-detail,.product-page,main,section')||document;
   const bumps=selectedBumps(scope);
   if(!bumps.length)return;
   setTimeout(()=>addBumps(bumps),40);
@@ -189,5 +201,5 @@ new MutationObserver(schedule).observe(document.documentElement,{childList:true,
 document.addEventListener('click',schedule,true);
 window.addEventListener('popstate',schedule);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
-setTimeout(schedule,250);setTimeout(schedule,700);setTimeout(schedule,1500);
+setTimeout(schedule,200);setTimeout(schedule,500);setTimeout(schedule,1000);setTimeout(schedule,2000);
 })();
