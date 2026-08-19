@@ -2110,7 +2110,7 @@ async function abrirCatalogoDetalhe(catalogoId, catalogoNome, linkAfiliacao){
         const p = docSnap.data();
         const atual = document.querySelectorAll('#products .product').length;
         if(atual >= myProductLimit){ $('#catalogoModal').style.display='none'; abrirPlanos(); return; }
-        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', link:'https://', fromCatalog:true, qna:p.qna||[], buttonText:p.buttonText||'Comprar agora', buttonColor:p.buttonColor||'#7A2E3B', displayText:p.displayText||'', voiceText:p.voiceText||'' }, {prepend:true,focus:true});
+        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', link:'https://', fromCatalog:true, qna:p.qna||[], buttonText:p.buttonText||'Comprar agora', buttonColor:p.buttonColor||'#7A2E3B', displayText:p.displayText||'', voiceText:p.voiceText||'' }, {prepend:true,focus:false});
         renderLive(); atualizarAvisoLimite();
         $('#catalogoModal').style.display='none';
         toast('Produto adicionado! Agora cole o link completo dele no campo destacado.');
