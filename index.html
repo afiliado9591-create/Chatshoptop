@@ -1849,7 +1849,13 @@ async function publish(){
     }
     const ref = db.collection(COLECAO).doc(slug);
     const existing = await ref.get();
-    if(existing.exists && existing.data().ownerUid !== myUid){
+    const existingData = existing.exists ? existing.data() : null;
+    // Compatibilidade com lojas antigas criadas antes do ownerUid:
+    // somente o administrador pode reivindicar um documento legado sem dono.
+    // Lojas que já possuem ownerUid continuam protegidas contra sobrescrita.
+    const legacySemDono = existing.exists && !existingData?.ownerUid;
+    const podeReivindicarLegado = legacySemDono && isAdmin;
+    if(existing.exists && existingData?.ownerUid !== myUid && !podeReivindicarLegado){
       statusEl.innerHTML = `⚠️ O endereço <b>${slug}.${DOMINIO_BASE}</b> já está em uso por outra loja. Escolha outro subdomínio.`;
       btn.disabled = false; btn.textContent = '🚀 Publicar Chatbot (gera o subdomínio)';
       return;
