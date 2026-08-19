@@ -138,11 +138,22 @@ function fixVisibleShippingText(){
   }
 }
 
+function loadStoreEditorRestore(){
+  if(document.querySelector('script[data-store-editor-restore]')) return;
+  const s=document.createElement('script');
+  s.src='/store-editor-restore.js?v=20260819-restore-virtual-affiliate';
+  s.async=true;
+  s.dataset.storeEditorRestore='1';
+  document.head.appendChild(s);
+}
+
 fixPublishButtonLabel();
 fixVisibleShippingText();
+loadStoreEditorRestore();
 const observer = new MutationObserver(()=>{
   fixPublishButtonLabel();
   fixVisibleShippingText();
+  loadStoreEditorRestore();
 });
 observer.observe(document.documentElement, { childList:true, subtree:true, characterData:true });
 })();
