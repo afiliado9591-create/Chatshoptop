@@ -129,6 +129,10 @@ module.exports = async function handler(request, response) {
       "price:p.price||'', link:p.baseLink||'https://', fromCatalog:true"
     );
 
+    // O seletor Loja Virtual deve aparecer para todos. O bloqueio por plano
+    // acontece ao tentar selecionar a opção, e não escondendo o recurso.
+    html = html.replace(/<\/head>/i, '<style id="sellerFirstPlanUi">#editorView .field:has(#storeType){display:flex!important}</style></head>');
+
     html = removeScript(html, 'superfrete-domain-fix.js');
     html = removeScript(html, 'superfrete-upgrade.js');
     html = removeScript(html, 'plan-access-control.js');
