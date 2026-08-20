@@ -111,11 +111,19 @@ function productForDetail(){
     activeProductIndex=urlIndex;
     return ps[urlIndex];
   }
-  if(activeProductIndex>=0&&ps[activeProductIndex]) return ps[activeProductIndex];
   const body=detailBody();
   const name=clean(body?.querySelector('.csv-dname,.vs-detail-name')?.textContent);
   const price=clean(body?.querySelector('.csv-dprice,.vs-detail-price')?.textContent);
-  return ps.find(p=>clean(p?.name)===name) || (name?{name,price}:null);
+  if(name){
+    const norm=v=>clean(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const byName=ps.findIndex(p=>norm(p?.name)===norm(name));
+    if(byName>=0){
+      activeProductIndex=byName;
+      return ps[byName];
+    }
+  }
+  if(activeProductIndex>=0&&ps[activeProductIndex]) return ps[activeProductIndex];
+  return name?{name,price}:null;
 }
 function makeButton(resolveProduct,cls){
   const b=document.createElement('button');
