@@ -37,17 +37,61 @@ function applyLimits(){
     if(typeof myProductLimit!=='undefined')myProductLimit=limitFor(currentPlan());
   }catch(e){}
 }
+function installOwnProductStyle(){
+  if($('#basicOwnProductStyle'))return;
+  const style=document.createElement('style');
+  style.id='basicOwnProductStyle';
+  style.textContent=`
+    #products .product.basic-own-product-editor{display:block!important}
+    #products .product.basic-own-product-editor .product-head{display:flex!important}
+    #products .product.basic-own-product-editor .affiliate-product-summary{display:none!important}
+    #products .product.basic-own-product-editor .own-product-visible{display:flex!important}
+    #products .product.basic-own-product-editor .own-product-image-tabs{display:flex!important}
+    #products .product.basic-own-product-editor .own-product-image-box{display:block!important}
+    #products .product.basic-own-product-editor .own-product-image-box.upload-box:not(.active){display:none!important}
+    #products .product.basic-own-product-editor .image-preview{display:flex!important}
+  `;
+  document.head.appendChild(style);
+}
+function markOwnProductFields(card){
+  if(!card)return;
+  card.classList.add('basic-own-product-editor');
+  card.classList.remove('affiliate-compact-card');
+  ['name','price','link','imageUrl'].forEach(k=>{
+    const input=card.querySelector(`[data-k="${k}"]`);
+    const field=input?.closest('.field');
+    if(field)field.classList.add('own-product-visible');
+  });
+  const file=card.querySelector('[data-k="file"]');
+  const fileField=file?.closest('.field');
+  if(fileField)fileField.classList.add('own-product-visible');
+  const urlInput=card.querySelector('[data-k="imageUrl"]');
+  const imageArea=urlInput?.closest('.upload-box')?.parentElement;
+  if(imageArea){
+    imageArea.querySelectorAll('.tabs').forEach(el=>el.classList.add('own-product-image-tabs'));
+    imageArea.querySelectorAll('.upload-box').forEach(el=>el.classList.add('own-product-image-box'));
+    imageArea.querySelectorAll('.image-preview').forEach(el=>el.style.setProperty('display','flex','important'));
+  }else{
+    card.querySelectorAll('.tabs').forEach(el=>{
+      if(el.querySelector('[data-mode="url"]')||el.querySelector('[data-mode="upload"]'))el.classList.add('own-product-image-tabs');
+    });
+    card.querySelectorAll('.upload-box').forEach(box=>{
+      if(box.querySelector('[data-k="imageUrl"]')||box.querySelector('[data-k="file"]'))box.classList.add('own-product-image-box');
+    });
+  }
+}
 function revealOwnProductEditor(){
   if(!canOwnProducts())return;
+  installOwnProductStyle();
   const add=$('#addProduct');
   if(add){
-    add.style.removeProperty('display');
+    add.style.setProperty('display','inline-block','important');
     add.disabled=false;
     if(add.textContent!=='+ Produto próprio')add.textContent='+ Produto próprio';
   }
   $$('#products .product').forEach(card=>{
     if(card.dataset.catalogProductId||card.dataset.catalogId)return;
-    card.classList.remove('affiliate-compact-card');
+    markOwnProductFields(card);
   });
 }
 function protectFreeOwnProducts(){
@@ -70,10 +114,7 @@ function updatePlanText(){
     else if(/básico/i.test(title))wanted='✅ Até 50 produtos<br>✅ Catálogo pronto<br>✅ Produtos próprios<br>✅ Upload de imagem<br>✅ Link de imagem<br>✅ Chat Vendedor ativo';
     else if(/profissional/i.test(title))wanted='✅ Produtos ilimitados<br>✅ Catálogo pronto<br>✅ Produtos próprios<br>✅ Upload e link de imagem<br>✅ Loja Virtual completa<br>✅ Recursos avançados';
     if(wanted&&lim.innerHTML!==wanted)lim.innerHTML=wanted;
-    if(wanted){
-      lim.classList.remove('lim');
-      lim.classList.add('plan-benefits');
-    }
+    if(wanted){lim.classList.remove('lim');lim.classList.add('plan-benefits')}
   });
 }
 function refresh(){applyLimits();if(canOwnProducts())revealOwnProductEditor()}
@@ -81,14 +122,9 @@ function boot(){
   protectFreeOwnProducts();
   refresh();
   document.addEventListener('click',e=>{
-    if(e.target.closest?.('#verPlanosBtn,#verPlanosLink,[onclick*="abrirPlanos"],#addProduct'))setTimeout(()=>{updatePlanText();refresh()},0);
+    if(e.target.closest?.('#verPlanosBtn,#verPlanosLink,[onclick*="abrirPlanos"],#addProduct'))setTimeout(()=>{updatePlanText();refresh()},50);
   },true);
-  const modal=$('#plansModal');
-  if(modal){
-    const obs=new MutationObserver(()=>{});
-    obs.observe(modal,{childList:false,subtree:false});
-  }
-  setInterval(refresh,3000);
+  setInterval(refresh,2500);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
