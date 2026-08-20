@@ -1,0 +1,70 @@
+name: Fix product sales audio context
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-product-sales-audio.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fix current product resolution for sales-page audio
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('virtual-seller-audio.js')
+          s=p.read_text(encoding='utf-8')
+          old="""function productForDetail(){
+  const ps=storeProducts();
+  const urlIndex=indexFromCurrentUrl();
+  if(urlIndex>=0&&ps[urlIndex]){
+    activeProductIndex=urlIndex;
+    return ps[urlIndex];
+  }
+  if(activeProductIndex>=0&&ps[activeProductIndex]) return ps[activeProductIndex];
+  const body=detailBody();
+  const name=clean(body?.querySelector('.csv-dname,.vs-detail-name')?.textContent);
+  const price=clean(body?.querySelector('.csv-dprice,.vs-detail-price')?.textContent);
+  return ps.find(p=>clean(p?.name)===name) || (name?{name,price}:null);
+}"""
+          new="""function productForDetail(){
+  const ps=storeProducts();
+  const urlIndex=indexFromCurrentUrl();
+  if(urlIndex>=0&&ps[urlIndex]){
+    activeProductIndex=urlIndex;
+    return ps[urlIndex];
+  }
+  // Na pagina de venda, o produto visivel na tela e a fonte principal.
+  // Isso evita reutilizar o indice do primeiro produto aberto anteriormente.
+  const body=detailBody();
+  const name=clean(body?.querySelector('.csv-dname,.vs-detail-name')?.textContent);
+  const price=clean(body?.querySelector('.csv-dprice,.vs-detail-price')?.textContent);
+  if(name){
+    const norm=v=>clean(v).normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
+    const byName=ps.findIndex(p=>norm(p?.name)===norm(name));
+    if(byName>=0){
+      activeProductIndex=byName;
+      return ps[byName];
+    }
+  }
+  if(activeProductIndex>=0&&ps[activeProductIndex]) return ps[activeProductIndex];
+  return name?{name,price}:null;
+}"""
+          if old not in s:
+              raise SystemExit('Trecho esperado de productForDetail nao encontrado; nenhuma alteracao feita.')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name "chatshop-fix-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add virtual-seller-audio.js
+          git commit -m "fix: usar produto visivel no audio da pagina de venda" || exit 0
+          git push
