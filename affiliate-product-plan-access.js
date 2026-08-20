@@ -22,10 +22,16 @@ const $=(s,r)=>(r||document).querySelector(s), $$=(s,r)=>[...(r||document).query
 })();
 
 function isAdminUser(){try{return typeof isAdmin!=='undefined'&&isAdmin===true}catch(e){return false}}
-function currentPlan(){try{return isAdminUser()?'profissional':((typeof myPlan!=='undefined'&&myPlan)||'aprendiz')}catch(e){return'aprendiz'}}
+function normalizePlan(v){
+  const s=String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  if(/profissional|professional|premium|^pro$/.test(s))return'profissional';
+  if(/basico|basic/.test(s))return'basico';
+  return'aprendiz';
+}
+function currentPlan(){try{return isAdminUser()?'profissional':normalizePlan((typeof myPlan!=='undefined'&&myPlan)||'aprendiz')}catch(e){return'aprendiz'}}
 function affiliateMode(){try{return !isAdminUser()&&($('#storeType')?.value||'affiliate')==='affiliate'}catch(e){return false}}
-function canOwnProducts(){return isAdminUser()||currentPlan()==='basico'||currentPlan()==='profissional'}
-function canEditCatalogQna(){return affiliateMode()&&(currentPlan()==='basico'||currentPlan()==='profissional')}
+function canOwnProducts(){const p=currentPlan();return isAdminUser()||p==='basico'||p==='profissional'}
+function canEditCatalogQna(){const p=currentPlan();return affiliateMode()&&(p==='basico'||p==='profissional')}
 function limitFor(p){return p==='aprendiz'?10:(p==='basico'?50:1000000)}
 function upgrade(){try{if(typeof abrirPlanos==='function')return abrirPlanos()}catch(e){};try{window.abrirPlanos?.()}catch(e){}}
 function notify(msg){try{if(typeof toast==='function')return toast(msg)}catch(e){};alert(msg)}
@@ -44,6 +50,8 @@ function installOwnProductStyle(){
   const style=document.createElement('style');
   style.id='basicOwnProductStyle';
   style.textContent=`
+    /* No catálogo simplificado, Básico e Profissional mantêm Produto próprio disponível. */
+    #editorView.catalog-paid-own-products #addProduct{display:inline-block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
     #products .product.basic-own-product-editor{display:block!important}
     #products .product.basic-own-product-editor .product-head{display:flex!important}
     #products .product.basic-own-product-editor .affiliate-product-summary{display:none!important}
@@ -112,11 +120,14 @@ function revealCatalogQna(){
   });
 }
 function revealOwnProductEditor(){
+  const editor=$('#editorView');
+  const allowed=canOwnProducts()&&affiliateMode();
+  if(editor)editor.classList.toggle('catalog-paid-own-products',allowed);
   if(!canOwnProducts())return;
   installOwnProductStyle();
   const add=$('#addProduct');
   if(add){
-    add.style.setProperty('display','inline-block','important');
+    add.style.removeProperty('display');
     add.disabled=false;
     if(add.textContent!=='+ Produto próprio')add.textContent='+ Produto próprio';
   }
@@ -174,14 +185,15 @@ function installCatalogQnaCollect(){
   wrapped.__affiliateCatalogQnaWrapped=true;
   window.collect=wrapped;try{collect=wrapped}catch(e){}
 }
-function refresh(){applyLimits();if(canOwnProducts())revealOwnProductEditor();revealCatalogQna();installCatalogQnaCollect()}
+function refresh(){applyLimits();revealOwnProductEditor();revealCatalogQna();installCatalogQnaCollect()}
 function boot(){
   protectFreeOwnProducts();
   refresh();
+  document.addEventListener('change',e=>{if(e.target?.id==='storeType')setTimeout(refresh,50)},true);
   document.addEventListener('click',e=>{
     if(e.target.closest?.('#verPlanosBtn,#verPlanosLink,[onclick*="abrirPlanos"],#addProduct,.add-prod-qna,#catalogoLista button[data-id]'))setTimeout(()=>{updatePlanText();refresh()},80);
   },true);
-  setInterval(refresh,2500);
+  setInterval(refresh,1200);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
