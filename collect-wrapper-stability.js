@@ -17,6 +17,25 @@ function markCurrent(){
   markers.forEach(k=>{try{fn[k]=true}catch(e){}});
   return true;
 }
+function ensureAdminCsvAfterAuth(){
+  let tries=0;
+  const timer=setInterval(()=>{
+    tries++;
+    let admin=false;
+    try{admin=typeof isAdmin!=='undefined'&&isAdmin===true}catch(e){}
+    if(admin){
+      clearInterval(timer);
+      if(window.__chatshopAdminCsvReloaded)return;
+      window.__chatshopAdminCsvReloaded=true;
+      const s=document.createElement('script');
+      s.src='/admin-public-pages.js?v=20260820-1055-after-auth';
+      s.async=true;
+      document.body.appendChild(s);
+      return;
+    }
+    if(tries>120)clearInterval(timer);
+  },250);
+}
 function boot(){
   let tries=0;
   const timer=setInterval(()=>{
@@ -28,6 +47,7 @@ function boot(){
   document.addEventListener('click',e=>{
     if(e.target.closest?.('#publishBtn'))markCurrent();
   },true);
+  ensureAdminCsvAfterAuth();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
