@@ -1,25 +1,53 @@
-/* ChatShop: paleta de cores disponível para afiliado e lojista. */
+/* ChatShop: paleta de cores disponível e estável para afiliado e lojista. */
 (function(){
 'use strict';
-function restorePalette(){
+
+function installStablePaletteCss(){
+  if(document.getElementById('chatshopStablePaletteCss'))return;
+  const style=document.createElement('style');
+  style.id='chatshopStablePaletteCss';
+  style.textContent=`
+    #editorView .section:has(#paletaPresets),
+    #editorView .section:has(#mainColor){display:block!important;visibility:visible!important;opacity:1!important}
+
+    #editorView .section:has(#paletaPresets) .field,
+    #editorView .section:has(#paletaPresets) .grid2,
+    #editorView .section:has(#mainColor) .field,
+    #editorView .section:has(#mainColor) .grid2{display:block!important;visibility:visible!important;opacity:1!important}
+
+    #editorView #paletaPresets,
+    #editorView #mainColor,
+    #editorView #darkColor,
+    #editorView #accentColor,
+    #editorView #chatBg,
+    #editorView #buyColor,
+    #editorView #priceColor,
+    #editorView #cardColor,
+    #editorView #cardOpacity,
+    #editorView #cardTextColor,
+    #editorView #categoryColor,
+    #editorView #categoryTextColor,
+    #editorView #showCategoryMenu{visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+
+    #editorView .section:has(#paletaPresets) .grid2,
+    #editorView .section:has(#mainColor) .grid2{display:grid!important}
+  `;
+  document.head.appendChild(style);
+}
+
+function clearOldAffiliateHide(){
   const editor=document.getElementById('editorView');
   if(!editor)return;
-  const sections=[...editor.querySelectorAll('.section')];
-  const appearance=sections.find(s=>/aparência|cores da loja/i.test(s.querySelector('h2')?.textContent||''));
-  if(!appearance)return;
-  appearance.style.removeProperty('display');
-  appearance.removeAttribute('data-affiliate-hidden');
-  appearance.querySelectorAll('.field,.grid2').forEach(el=>{
-    el.style.removeProperty('display');
-    el.removeAttribute('data-affiliate-hidden');
-  });
-  const ids=['paletaPresets','mainColor','darkColor','accentColor','chatBg','buyColor','priceColor','cardColor','cardOpacity','cardTextColor','categoryColor','categoryTextColor','showCategoryMenu'];
-  ids.forEach(id=>{
-    const el=document.getElementById(id);if(!el)return;
-    const field=el.closest('.field');if(field){field.style.removeProperty('display');field.removeAttribute('data-affiliate-hidden');}
-    el.style.removeProperty('display');
-  });
+  const section=editor.querySelector('.section:has(#paletaPresets),.section:has(#mainColor)');
+  if(!section)return;
+  section.removeAttribute('data-affiliate-hidden');
+  section.querySelectorAll('[data-affiliate-hidden]').forEach(el=>el.removeAttribute('data-affiliate-hidden'));
 }
-function boot(){restorePalette();new MutationObserver(()=>setTimeout(restorePalette,20)).observe(document.getElementById('editorView')||document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});setInterval(restorePalette,700)}
+
+function boot(){
+  installStablePaletteCss();
+  clearOldAffiliateHide();
+}
+
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
