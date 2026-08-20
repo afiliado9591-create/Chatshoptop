@@ -1,0 +1,73 @@
+name: Fix seller audio legacy behavior
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-seller-audio-legacy.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fix seller audio state and product mapping
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('seller-audio-admin-controls.js')
+          s=p.read_text(encoding='utf-8')
+
+          s=s.replace("function controlsOf(){return featureData?.adminControl||{}}", "function controlsOf(){const live=window.__CHATSHOP_STORE_FEATURE_DATA||featureData;return live?.adminControl||{}}")
+          s=s.replace("function publicProducts(){return Array.isArray(featureData?.products)?featureData.products:[]}", "function publicProducts(){const live=window.__CHATSHOP_STORE_FEATURE_DATA||featureData;return Array.isArray(live?.products)?live.products:[]}")
+
+          old="""function playSellerAudio(p,btn){
+  const legacyText=String(p?.voiceText||'').trim();
+  const savedMode=String(p?.sellerAudioMode||'off');
+  const mode=savedMode==='off'&&legacyText?'tts':savedMode;
+"""
+          new="""function playSellerAudio(p,btn){
+  const legacyText=String(p?.voiceText||'').trim();
+  const hasSavedMode=p&&Object.prototype.hasOwnProperty.call(p,'sellerAudioMode');
+  const savedMode=hasSavedMode?String(p?.sellerAudioMode||'off'):'off';
+  const mode=!hasSavedMode&&legacyText?'tts':savedMode;
+"""
+          if old not in s: raise SystemExit('playSellerAudio esperado nao encontrado')
+          s=s.replace(old,new,1)
+
+          old="function hasSellerAudio(p){const legacyText=String(p?.voiceText||'').trim();const saved=String(p?.sellerAudioMode||'off');const m=saved==='off'&&legacyText?'tts':saved;return m==='tts'?!!String(p?.sellerAudioText||legacyText).trim():((m==='upload'||m==='record')&&!!String(p?.sellerAudioUrl||'').trim())}"
+          new="function hasSellerAudio(p){const legacyText=String(p?.voiceText||'').trim();const hasSaved=p&&Object.prototype.hasOwnProperty.call(p,'sellerAudioMode');const saved=hasSaved?String(p?.sellerAudioMode||'off'):'off';const m=!hasSaved&&legacyText?'tts':saved;return m==='tts'?!!String(p?.sellerAudioText||legacyText).trim():((m==='upload'||m==='record')&&!!String(p?.sellerAudioUrl||'').trim())}"
+          if old not in s: raise SystemExit('hasSellerAudio esperado nao encontrado')
+          s=s.replace(old,new,1)
+
+          old="""function productForCard(card){
+  const ps=publicProducts();const i=Number(card.dataset.i);if(Number.isInteger(i)&&i>=0&&ps[i])return ps[i];
+  const name=card.querySelector('.cgc-name')?.textContent.trim();return ps.find(p=>String(p?.name||'').trim()===name)||null;
+}"""
+          new="""function productForCard(card){
+  const ps=publicProducts();
+  const name=card.querySelector('.cgc-name')?.textContent.trim();
+  if(name){
+    const norm=v=>String(v||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').trim().toLowerCase();
+    const byName=ps.find(p=>norm(p?.name)===norm(name));
+    if(byName)return byName;
+  }
+  const i=Number(card.dataset.i);if(Number.isInteger(i)&&i>=0&&ps[i])return ps[i];
+  return null;
+}"""
+          if old not in s: raise SystemExit('productForCard esperado nao encontrado')
+          s=s.replace(old,new,1)
+
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name "chatshop-fix-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add seller-audio-admin-controls.js
+          git commit -m "fix: respeitar vendedor desativado e audio por produto" || exit 0
+          git push
