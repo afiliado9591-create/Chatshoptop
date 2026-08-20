@@ -1,0 +1,58 @@
+name: Fix subdomain validation safely
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-subdomain-validation-safe.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch only subdomain ownership validation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old=s
+          patterns=[
+            r"\s*// Compatibilidade com lojas antigas criadas antes do ownerUid:[\s\S]*?if\(existing\.exists && existingData\?\.ownerUid !== myUid && !podeReivindicarLegado\)\{",
+            r"\s*const legacySemDono = existing\.exists && !existingData\?\.ownerUid;[\s\S]*?if\(existing\.exists && existingData\?\.ownerUid !== myUid && !podeReivindicarLegado\)\{"
+          ]
+          replacement="""
+    // Validação de propriedade do subdomínio.
+    // O dono atual pode atualizar normalmente. O administrador pode recuperar
+    // qualquer subdomínio, inclusive documentos antigos com outro ownerUid.
+    const pertenceAoUsuario = existing.exists && existingData?.ownerUid === myUid;
+    const adminPodeRecuperar = existing.exists && isAdmin;
+    if(existing.exists && !pertenceAoUsuario && !adminPodeRecuperar){"""
+          changed=False
+          for pat in patterns:
+            ns,n=re.subn(pat,replacement,s,count=1)
+            if n:
+              s=ns; changed=True; break
+          if not changed:
+            # Fallback: patch only the exact ownership condition if present.
+            target="if(existing.exists && existingData?.ownerUid !== myUid && !podeReivindicarLegado){"
+            if target in s:
+              s=s.replace(target,"const pertenceAoUsuario = existing.exists && existingData?.ownerUid === myUid;\n    const adminPodeRecuperar = existing.exists && isAdmin;\n    if(existing.exists && !pertenceAoUsuario && !adminPodeRecuperar){",1)
+              changed=True
+          if not changed:
+            raise SystemExit('Bloco de validação do subdomínio não encontrado; nenhuma alteração feita.')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name "chatshop-fix-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html
+          git commit -m "fix: corrigir validação de subdomínio sem tocar no login" || exit 0
+          git push
