@@ -1,0 +1,1 @@
+Força uma nova implantação limpa após reversão das duas alterações que travaram o painel. Nenhuma funcionalidade foi alterada neste arquivo.
