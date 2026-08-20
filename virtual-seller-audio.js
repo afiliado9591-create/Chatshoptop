@@ -10,11 +10,32 @@ let activeProductIndex = -1;
 let scheduled = false;
 
 const clean=v=>String(v==null?'':v).trim();
-
+function slugBase(value){
+  return clean(value||'produto').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90)||'produto';
+}
+function buildProductSlugs(ps){
+  const used={};
+  return ps.map(p=>{
+    const base=slugBase(p?.name);
+    used[base]=(used[base]||0)+1;
+    return used[base]===1?base:`${base}-${used[base]}`;
+  });
+}
+function currentPathSlug(){
+  const m=location.pathname.match(/^\/produto\/([^/]+)\/?$/i);
+  if(!m)return'';
+  try{return decodeURIComponent(m[1]).toLowerCase()}catch(e){return clean(m[1]).toLowerCase()}
+}
 function storeProducts(){
   if(storeData && Array.isArray(storeData.products)) return storeData.products;
   if(featureData && Array.isArray(featureData.products)) return featureData.products;
   return [];
+}
+function indexFromCurrentUrl(){
+  const wanted=currentPathSlug();
+  if(!wanted)return-1;
+  const ps=storeProducts();
+  return buildProductSlugs(ps).indexOf(wanted);
 }
 function controls(){
   return (storeData && storeData.adminControl) || (featureData && featureData.adminControl) || {};
@@ -85,6 +106,11 @@ function detailBody(){
 }
 function productForDetail(){
   const ps=storeProducts();
+  const urlIndex=indexFromCurrentUrl();
+  if(urlIndex>=0&&ps[urlIndex]){
+    activeProductIndex=urlIndex;
+    return ps[urlIndex];
+  }
   if(activeProductIndex>=0&&ps[activeProductIndex]) return ps[activeProductIndex];
   const body=detailBody();
   const name=clean(body?.querySelector('.csv-dname,.vs-detail-name')?.textContent);
@@ -138,6 +164,8 @@ function addDetailButton(){
 }
 function apply(){
   scheduled=false;
+  const urlIndex=indexFromCurrentUrl();
+  if(urlIndex>=0)activeProductIndex=urlIndex;
   if(controls().sellerAudioPaused){
     stopPlayback();
     document.querySelectorAll('.virtual-seller-audio-btn').forEach(x=>x.remove());
@@ -162,7 +190,7 @@ async function loadStore(){
       const db=window.firebase?.firestore?.();
       if(db){
         const snap=await db.collection('chatshops').doc(slug).get();
-        if(snap.exists){storeData={slug,...snap.data()};schedule();return;}
+        if(snap.exists){storeData={slug,...snap.data()};const urlIndex=indexFromCurrentUrl();if(urlIndex>=0)activeProductIndex=urlIndex;schedule();return;}
       }
     }catch(e){}
     await new Promise(r=>setTimeout(r,300));
@@ -189,12 +217,21 @@ document.addEventListener('click',e=>{
     setTimeout(schedule,120);
     return;
   }
-  if(e.target.closest?.('[data-close="product"]')){
+  const gridCard=e.target.closest?.('.cgc[data-i]');
+  if(gridCard&&!e.target.closest?.('.cgc-buy')){
+    const i=Number(gridCard.dataset.i);
+    if(Number.isInteger(i)&&i>=0)activeProductIndex=i;
+    setTimeout(schedule,20);
+    setTimeout(schedule,120);
+    return;
+  }
+  if(e.target.closest?.('[data-close="product"],.cgc-back,.cgc-menu')){
     stopPlayback();
     activeProductIndex=-1;
   }
 },true);
 
+window.addEventListener('popstate',()=>{activeProductIndex=indexFromCurrentUrl();schedule()});
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',schedule,{once:true}); else schedule();
 loadStore();
