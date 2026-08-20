@@ -2,6 +2,25 @@
 (function(){
 'use strict';
 const $=(s,r)=>(r||document).querySelector(s), $$=(s,r)=>[...(r||document).querySelectorAll(s)];
+
+/* Evita que scripts antigos entrem em loop quando os cartões de Planos são alterados. */
+(function guardPlanMutations(){
+  if(window.__chatshopPlanMutationGuard)return;
+  window.__chatshopPlanMutationGuard=true;
+  const NativeMutationObserver=window.MutationObserver;
+  if(!NativeMutationObserver)return;
+  window.MutationObserver=function(callback){
+    return new NativeMutationObserver((mutations,observer)=>{
+      const relevantes=mutations.filter(m=>{
+        const target=m.target&&m.target.nodeType===1?m.target:m.target?.parentElement;
+        return !(target&&target.closest&&target.closest('#plansCols'));
+      });
+      if(relevantes.length)callback(relevantes,observer);
+    });
+  };
+  window.MutationObserver.prototype=NativeMutationObserver.prototype;
+})();
+
 function isAdminUser(){try{return typeof isAdmin!=='undefined'&&isAdmin===true}catch(e){return false}}
 function currentPlan(){try{return isAdminUser()?'profissional':((typeof myPlan!=='undefined'&&myPlan)||'aprendiz')}catch(e){return'aprendiz'}}
 function canOwnProducts(){return isAdminUser()||currentPlan()==='basico'||currentPlan()==='profissional'}
@@ -44,7 +63,7 @@ function updatePlanText(){
   const cols=$('#plansCols');if(!cols)return;
   $$('.plan-card',cols).forEach(card=>{
     const title=card.querySelector('h3')?.textContent||'';
-    const lim=card.querySelector('.lim');
+    const lim=card.querySelector('.lim,.plan-benefits');
     if(!lim)return;
     let wanted='';
     if(/aprendiz|grátis/i.test(title))wanted='✅ Até 10 produtos<br>✅ Catálogo pronto<br>✅ Chat Vendedor ativo<br>✅ Troca dos links de afiliado';
@@ -57,14 +76,19 @@ function updatePlanText(){
     }
   });
 }
-function refresh(){applyLimits();updatePlanText();if(canOwnProducts())revealOwnProductEditor()}
+function refresh(){applyLimits();if(canOwnProducts())revealOwnProductEditor()}
 function boot(){
   protectFreeOwnProducts();
   refresh();
   document.addEventListener('click',e=>{
-    if(e.target.closest?.('#verPlanosBtn,#verPlanosLink,[onclick*="abrirPlanos"],#addProduct'))setTimeout(updatePlanText,0);
+    if(e.target.closest?.('#verPlanosBtn,#verPlanosLink,[onclick*="abrirPlanos"],#addProduct'))setTimeout(()=>{updatePlanText();refresh()},0);
   },true);
-  setInterval(refresh,1500);
+  const modal=$('#plansModal');
+  if(modal){
+    const obs=new MutationObserver(()=>{});
+    obs.observe(modal,{childList:false,subtree:false});
+  }
+  setInterval(refresh,3000);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
