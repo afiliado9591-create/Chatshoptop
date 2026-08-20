@@ -20,12 +20,15 @@ function applyLimits(){
 }
 function revealOwnProductEditor(){
   if(!canOwnProducts())return;
-  const add=$('#addProduct');if(add){add.style.removeProperty('display');add.disabled=false;add.textContent='+ Produto próprio'}
+  const add=$('#addProduct');
+  if(add){
+    add.style.removeProperty('display');
+    add.disabled=false;
+    if(add.textContent!=='+ Produto próprio')add.textContent='+ Produto próprio';
+  }
   $$('#products .product').forEach(card=>{
     if(card.dataset.catalogProductId||card.dataset.catalogId)return;
-    [...card.children].forEach(ch=>ch.style.removeProperty('display'));
     card.classList.remove('affiliate-compact-card');
-    card.querySelectorAll('.tabs,.upload-box,.field').forEach(el=>el.style.removeProperty('display'));
   });
 }
 function protectFreeOwnProducts(){
@@ -40,13 +43,28 @@ function protectFreeOwnProducts(){
 function updatePlanText(){
   const cols=$('#plansCols');if(!cols)return;
   $$('.plan-card',cols).forEach(card=>{
-    const title=card.querySelector('h3')?.textContent||'',lim=card.querySelector('.lim');if(!lim)return;
-    if(/aprendiz|grátis/i.test(title))lim.innerHTML='✅ Até 10 produtos<br>✅ Catálogo pronto<br>✅ Chat Vendedor ativo<br>✅ Troca dos links de afiliado';
-    else if(/básico/i.test(title))lim.innerHTML='✅ Até 50 produtos<br>✅ Catálogo pronto<br>✅ Produtos próprios<br>✅ Upload de imagem<br>✅ Link de imagem<br>✅ Chat Vendedor ativo';
-    else if(/profissional/i.test(title))lim.innerHTML='✅ Produtos ilimitados<br>✅ Catálogo pronto<br>✅ Produtos próprios<br>✅ Upload e link de imagem<br>✅ Loja Virtual completa<br>✅ Recursos avançados';
+    const title=card.querySelector('h3')?.textContent||'';
+    const lim=card.querySelector('.lim');
+    if(!lim)return;
+    let wanted='';
+    if(/aprendiz|grátis/i.test(title))wanted='✅ Até 10 produtos<br>✅ Catálogo pronto<br>✅ Chat Vendedor ativo<br>✅ Troca dos links de afiliado';
+    else if(/básico/i.test(title))wanted='✅ Até 50 produtos<br>✅ Catálogo pronto<br>✅ Produtos próprios<br>✅ Upload de imagem<br>✅ Link de imagem<br>✅ Chat Vendedor ativo';
+    else if(/profissional/i.test(title))wanted='✅ Produtos ilimitados<br>✅ Catálogo pronto<br>✅ Produtos próprios<br>✅ Upload e link de imagem<br>✅ Loja Virtual completa<br>✅ Recursos avançados';
+    if(wanted&&lim.innerHTML!==wanted)lim.innerHTML=wanted;
+    if(wanted){
+      lim.classList.remove('lim');
+      lim.classList.add('plan-benefits');
+    }
   });
 }
 function refresh(){applyLimits();updatePlanText();if(canOwnProducts())revealOwnProductEditor()}
-function boot(){protectFreeOwnProducts();refresh();new MutationObserver(()=>setTimeout(refresh,30)).observe(document.body,{childList:true,subtree:true});setInterval(refresh,1500)}
+function boot(){
+  protectFreeOwnProducts();
+  refresh();
+  document.addEventListener('click',e=>{
+    if(e.target.closest?.('#verPlanosBtn,#verPlanosLink,[onclick*="abrirPlanos"],#addProduct'))setTimeout(updatePlanText,0);
+  },true);
+  setInterval(refresh,1500);
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
