@@ -3,6 +3,51 @@
 
 let lastCheck=null;
 
+/*
+ * Vários módulos do editor acrescentam dados envolvendo window.collect().
+ * Quando um módulo substitui collect(), ele pode perder a marca deixada pelo
+ * módulo anterior. Isso fazia dois ou mais módulos se embrulharem novamente
+ * em sequência até estourar a pilha (Maximum call stack size exceeded).
+ *
+ * Em vez de marcar módulos que ainda não rodaram, preservamos somente as
+ * marcas que já apareceram em alguma versão de collect(). Assim cada módulo
+ * continua podendo instalar sua extensão uma vez, mas não volta a se instalar
+ * depois que outro módulo troca a função.
+ */
+const collectWrapperMarkers=[
+  '__storePagesWrapped',
+  '__mpOauthWrapped',
+  '__sellerAudioWrapped',
+  '__catalogSellerModelWrapped',
+  '__singleProductVideoWrapped',
+  '__productVideoWrapped',
+  '__superfreteWrapped',
+  '__productSellerButtonWrapped',
+  '__planAccessWrapped',
+  '__affiliateProductPlanWrapped',
+  '__virtualShippingWrapped'
+];
+const seenCollectMarkers=new Set();
+let lastCollectFn=null;
+function stabilizeCollect(){
+  const fn=window.collect;
+  if(typeof fn!=='function')return false;
+  collectWrapperMarkers.forEach(marker=>{
+    try{if(fn[marker])seenCollectMarkers.add(marker)}catch(e){}
+  });
+  seenCollectMarkers.forEach(marker=>{try{fn[marker]=true}catch(e){}});
+  lastCollectFn=fn;
+  return true;
+}
+
+/* Roda rápido durante a montagem do editor, quando os módulos são carregados. */
+let stabilityTicks=0;
+const stabilityTimer=setInterval(()=>{
+  stabilizeCollect();
+  stabilityTicks++;
+  if(stabilityTicks>600)clearInterval(stabilityTimer);
+},25);
+
 function qs(id){return document.getElementById(id)}
 
 function invalidValues(value,path,found,seen){
@@ -36,6 +81,7 @@ function preflight(){
   }catch(e){}
   if(!result.uid)return result;
   try{
+    stabilizeCollect();
     if(typeof window.collect!=='function')throw new Error('A função que prepara os dados da loja não carregou.');
     const data=window.collect();
     invalidValues(data,'loja',result.invalid,new WeakSet());
@@ -75,6 +121,7 @@ function install(){
   if(btn.dataset.preflightDiagnostic!=='1'){
     btn.dataset.preflightDiagnostic='1';
     btn.addEventListener('click',event=>{
+      stabilizeCollect();
       status.querySelector('.publish-diagnostic-detail')?.remove();
       lastCheck=preflight();
       if(!lastCheck.uid||lastCheck.error||lastCheck.invalid.length||lastCheck.bytes>900000){
@@ -101,6 +148,7 @@ function install(){
 let attempts=0;
 const timer=setInterval(()=>{
   attempts++;
+  stabilizeCollect();
   if(install()||attempts>200)clearInterval(timer);
 },150);
 install();
