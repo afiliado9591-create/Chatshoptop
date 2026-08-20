@@ -1,0 +1,1 @@
+Redeploy da versão estável de login em 2026-08-20.
