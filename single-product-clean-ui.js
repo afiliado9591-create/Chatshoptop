@@ -114,8 +114,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (function(){
 'use strict';
 function loadGalleryGrid(){
-  if(document.querySelector('script[data-single-product-gallery-grid]'))return;
-  const s=document.createElement('script');s.src='/single-product-gallery-grid.js?v=20260821-1435';s.defer=true;s.dataset.singleProductGalleryGrid='1';document.head.appendChild(s);
+  const old=document.querySelector('script[data-single-product-gallery-grid]');if(old)old.remove();
+  const s=document.createElement('script');s.src='/single-product-gallery-grid.js?v=20260821-1519-reference';s.defer=true;s.dataset.singleProductGalleryGrid='1';document.head.appendChild(s);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadGalleryGrid,{once:true});else loadGalleryGrid();
 })();
