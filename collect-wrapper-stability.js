@@ -17,6 +17,14 @@ function markCurrent(){
   markers.forEach(k=>{try{fn[k]=true}catch(e){}});
   return true;
 }
+function ensureVirtualStoreAccess(){
+  if(document.querySelector('script[data-virtual-store-user-access]'))return;
+  const s=document.createElement('script');
+  s.src='/virtual-store-user-access.js?v=20260821-1001';
+  s.async=true;
+  s.dataset.virtualStoreUserAccess='1';
+  document.body.appendChild(s);
+}
 function ensureAdminCsvAfterAuth(){
   let tries=0;
   const timer=setInterval(()=>{
@@ -28,7 +36,7 @@ function ensureAdminCsvAfterAuth(){
       if(window.__chatshopAdminCsvReloaded)return;
       window.__chatshopAdminCsvReloaded=true;
       const s=document.createElement('script');
-      s.src='/admin-public-pages.js?v=20260820-1055-after-auth';
+      s.src='/admin-public-pages.js?v=20260821-1001-after-auth';
       s.async=true;
       document.body.appendChild(s);
       return;
@@ -37,6 +45,7 @@ function ensureAdminCsvAfterAuth(){
   },250);
 }
 function boot(){
+  ensureVirtualStoreAccess();
   let tries=0;
   const timer=setInterval(()=>{
     tries++;
