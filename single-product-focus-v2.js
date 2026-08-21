@@ -17,13 +17,13 @@ function css(){
     body.chatshop-virtual-tiktok #pubChatToggle,
     body.chatshop-virtual-tiktok .pub-chat-toggle,
     body.chatshop-virtual-tiktok .vts-share,
-    body.chatshop-virtual-tiktok .vts-bag,
-    body.chatshop-virtual-tiktok #csvBag,
-    body.chatshop-virtual-tiktok .vs-bag,
     body.chatshop-virtual-tiktok .vts-card-category{display:none!important}
     body.chatshop-virtual-tiktok .vts-actions{display:flex!important;flex-direction:column!important;gap:10px!important}
     body.chatshop-virtual-tiktok .vts-seller,
     body.chatshop-virtual-tiktok .vts-play{display:grid!important}
+    #singleProductFloatingBag{position:fixed;top:14px;right:14px;z-index:90;border:0;border-radius:999px;background:#111827;color:#fff;padding:10px 14px;font-weight:900;box-shadow:0 5px 18px rgba(0,0,0,.28);display:flex;align-items:center;gap:7px;cursor:pointer}
+    #singleProductFloatingBag .spfb-count{min-width:22px;height:22px;border-radius:999px;background:#dc2626;color:#fff;display:grid;place-items:center;font-size:12px;padding:0 6px}
+    #singleProductFloatingBag:active{transform:scale(.97)}
   `;document.head.appendChild(s);
 }
 function productText(p){
@@ -43,12 +43,29 @@ function openProductChat(p,index){
   if(trigger){trigger.dataset.productIndex=String(index);trigger.dataset.productName=String(p?.name||'');trigger.click();return;}
   const overlay=$('.pub-chat-overlay');if(overlay)overlay.classList.add('open');
 }
+function ensureFloatingBag(){
+  if(!isSingle())return;
+  const original=$('#csvBag,.vs-bag');if(!original)return;
+  let floating=$('#singleProductFloatingBag');
+  if(!floating){
+    floating=document.createElement('button');floating.type='button';floating.id='singleProductFloatingBag';
+    floating.innerHTML='🛍️ Sacola <span class="spfb-count">0</span>';
+    floating.onclick=e=>{e.preventDefault();e.stopPropagation();original.click()};
+    document.body.appendChild(floating);
+  }
+  const source=$('#csvCount',original)||$('#csvCount')||original.querySelector('span');
+  const target=$('.spfb-count',floating);if(source&&target)target.textContent=String(source.textContent||'0').trim()||'0';
+  if(source&&!source.__singleBagObserved){
+    source.__singleBagObserved=true;
+    new MutationObserver(()=>{const t=$('.spfb-count','#singleProductFloatingBag');if(t)t.textContent=String(source.textContent||'0').trim()||'0'}).observe(source,{childList:true,subtree:true,characterData:true});
+  }
+}
 function decorate(){
   if(!isSingle())return false;css();
   const d=data(),products=Array.isArray(d?.products)?d.products:[];
   $$('.csv-card,.vs-card').forEach((card,index)=>{
     const p=products[index]||{};
-    card.querySelectorAll('.vts-share,.vts-bag').forEach(x=>x.remove());
+    card.querySelectorAll('.vts-share').forEach(x=>x.remove());
     const buy=card.querySelector('.csv-open,.vs-open,[data-product]');if(buy)buy.textContent='Comprar';
     const actions=card.querySelector('.vts-actions');if(!actions)return;
     let play=actions.querySelector('.vts-play');if(!play){play=document.createElement('button');play.type='button';play.className='vts-action vts-play';actions.prepend(play)}
@@ -57,6 +74,7 @@ function decorate(){
     seller.innerHTML='💬<span>Falar sobre este produto</span>';seller.onclick=e=>{e.preventDefault();e.stopPropagation();openProductChat(p,index)};
   });
   $$('footer,.footer,.site-footer,.store-footer,#storeFooter,#pubFooter').forEach(x=>x.style.setProperty('display','none','important'));
+  ensureFloatingBag();
   return true;
 }
 function boot(){let n=0;const t=setInterval(()=>{n++;decorate();if(n>100)clearInterval(t)},120);if(document.body)new MutationObserver(()=>requestAnimationFrame(decorate)).observe(document.body,{childList:true,subtree:true});}
