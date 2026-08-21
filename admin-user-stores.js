@@ -1,4 +1,4 @@
-/* ChatShop Admin — painel separado para lojas de afiliados/lojistas. */
+/* ChatShop Admin — lojas de usuários + liberação manual de Loja Virtual. */
 (function(){
 'use strict';
 const $=(s,r)=>(r||document).querySelector(s);
@@ -12,6 +12,10 @@ function tsValue(v){if(!v)return 0;if(typeof v.toMillis==='function')return v.to
 function fmtDate(v){const ms=tsValue(v);if(!ms)return 'sem registro';try{return new Date(ms).toLocaleDateString('pt-BR')}catch(e){return 'sem registro'}}
 function planName(v){const s=String(v||'aprendiz').toLowerCase();if(s.includes('prof')||s.includes('premium')||s==='pro')return'Profissional';if(s.includes('bas'))return'Básico';return'Grátis/Aprendiz'}
 let cached=[];
+let virtualUsers=[];
+let virtualAccess=false;
+let virtualSelectionWanted=false;
+
 async function loadUserStores(){
   if(!adminOk())return;
   const box=$('#adminConteudo');if(!box)return;
@@ -80,12 +84,125 @@ async function deleteUserStore(docId,name,owner){
     cached=cached.filter(x=>x.id!==docId);notify('Loja do usuário excluída.');drawFiltered();
   }catch(e){console.error(e);notify('Não foi possível excluir esta loja.');}
 }
+
+async function loadVirtualAccessUsers(){
+  if(!adminOk())return;
+  const box=$('#adminConteudo');if(!box)return;
+  box.innerHTML='<p class="empty-hint">Carregando usuários...</p>';
+  try{
+    const d=dbRef();if(!d)throw new Error('Banco indisponível');
+    const snap=await d.collection('users').orderBy('createdAt','desc').limit(500).get();
+    virtualUsers=snap.docs.map(doc=>({uid:doc.id,...(doc.data()||{})}));
+    renderVirtualAccessUsers();
+  }catch(e){console.error(e);box.innerHTML='<p class="empty-hint">Não foi possível carregar os usuários.</p>';}
+}
+function renderVirtualAccessUsers(){
+  const box=$('#adminConteudo');if(!box)return;
+  box.innerHTML=`<div style="margin-bottom:12px"><h3 style="margin:0 0 4px">🏪 Acesso à Loja Virtual</h3><small style="color:var(--muted)">Libere ou bloqueie manualmente a função Loja Virtual para cada usuário, sem alterar o plano dele.</small></div><div class="field"><input id="virtualAccessSearch" placeholder="Buscar por e-mail" style="width:100%"></div><div id="virtualAccessList"></div>`;
+  $('#virtualAccessSearch')?.addEventListener('input',drawVirtualAccessUsers);
+  drawVirtualAccessUsers();
+}
+function drawVirtualAccessUsers(){
+  const list=$('#virtualAccessList');if(!list)return;
+  const q=String($('#virtualAccessSearch')?.value||'').trim().toLowerCase();
+  const items=virtualUsers.filter(u=>!q||String(u.email||u.uid).toLowerCase().includes(q));
+  if(!items.length){list.innerHTML='<p class="empty-hint">Nenhum usuário encontrado.</p>';return;}
+  list.innerHTML=items.map(u=>{
+    const allowed=u.virtualStoreAccess===true;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 0;border-bottom:1px solid #eee"><div style="min-width:0;flex:1"><b style="word-break:break-all">${esc(u.email||u.uid)}</b><br><span style="font-size:12px;color:${allowed?'#15803d':'var(--muted)'}">${allowed?'✅ Loja Virtual liberada':'🔒 Loja Virtual bloqueada'}</span></div><button class="btn ${allowed?'danger':'success'}" data-virtual-access-uid="${esc(u.uid)}" data-virtual-access-value="${allowed?'0':'1'}" type="button" style="font-size:12px;white-space:nowrap">${allowed?'🔒 Bloquear Loja Virtual':'🏪 Liberar Loja Virtual'}</button></div>`;
+  }).join('');
+  $$('[data-virtual-access-uid]',list).forEach(btn=>btn.onclick=()=>setVirtualAccess(btn.dataset.virtualAccessUid,btn.dataset.virtualAccessValue==='1'));
+}
+async function setVirtualAccess(uid,allowed){
+  if(!adminOk()||!uid)return;
+  const btn=$(`[data-virtual-access-uid="${CSS.escape(uid)}"]`);if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  try{
+    const d=dbRef();const admin=currentAdmin()||{};
+    await d.collection('users').doc(uid).set({
+      virtualStoreAccess:allowed,
+      virtualStoreAccessUpdatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      virtualStoreAccessUpdatedBy:String(admin.email||admin.uid||'admin')
+    },{merge:true});
+    const item=virtualUsers.find(x=>x.uid===uid);if(item)item.virtualStoreAccess=allowed;
+    notify(allowed?'Loja Virtual liberada para este usuário.':'Acesso à Loja Virtual bloqueado.');
+    drawVirtualAccessUsers();
+  }catch(e){console.error(e);notify('Não foi possível alterar o acesso. Confira as regras do Firestore.');if(btn)btn.disabled=false;}
+}
+
 function installTab(){
   if(!adminOk())return false;
-  if($('#adminTabUserStores'))return true;
-  const anchor=$('#adminTabLojas')||$('#adminTabCatalogo')||$('#adminTabUsuarios');if(!anchor)return false;
-  const b=document.createElement('button');b.className='btn';b.id='adminTabUserStores';b.type='button';b.textContent='👥 Lojas de usuários';anchor.insertAdjacentElement('afterend',b);b.onclick=loadUserStores;return true;
+  if(!$('#adminTabUserStores')){
+    const anchor=$('#adminTabLojas')||$('#adminTabCatalogo')||$('#adminTabUsuarios');if(!anchor)return false;
+    const b=document.createElement('button');b.className='btn';b.id='adminTabUserStores';b.type='button';b.textContent='👥 Lojas de usuários';anchor.insertAdjacentElement('afterend',b);b.onclick=loadUserStores;
+  }
+  if(!$('#adminTabVirtualAccess')){
+    const anchor=$('#adminTabUsuarios')||$('#adminTabUserStores');if(!anchor)return false;
+    const b=document.createElement('button');b.className='btn';b.id='adminTabVirtualAccess';b.type='button';b.textContent='🏪 Liberar Loja Virtual';anchor.insertAdjacentElement('afterend',b);b.onclick=loadVirtualAccessUsers;
+  }
+  return true;
 }
-function boot(){let tries=0;const t=setInterval(()=>{tries++;if(installTab()||tries>100)clearInterval(t)},100)}
+
+function setVirtualFlag(value){
+  virtualAccess=value===true;
+  window.__CHATSHOP_VIRTUAL_STORE_ACCESS=virtualAccess;
+  if(!virtualAccess)virtualSelectionWanted=false;
+  setTimeout(enforceVirtualEditorAccess,0);
+}
+async function syncCurrentVirtualAccess(user){
+  if(!user||adminOk()){setVirtualFlag(adminOk());return;}
+  try{
+    const d=dbRef();if(!d)return;
+    const snap=await d.collection('users').doc(user.uid).get();
+    setVirtualFlag(!!(snap.exists&&snap.data()?.virtualStoreAccess===true));
+  }catch(e){console.warn('Não foi possível ler acesso à Loja Virtual',e);setVirtualFlag(false);}
+}
+function patchCollectForVirtualAccess(){
+  if(typeof window.collect!=='function')return;
+  if(window.collect.__manualVirtualAccessWrapped)return;
+  const old=window.collect;
+  const fn=function(){
+    const value=old.apply(this,arguments)||{};
+    const type=document.getElementById('storeType');
+    const wants=virtualSelectionWanted||type?.value==='virtual';
+    if((adminOk()||virtualAccess)&&wants){
+      value.storeType='virtual';
+      value.planFeatures={...(value.planFeatures||{}),virtual:true};
+    }
+    return value;
+  };
+  fn.__manualVirtualAccessWrapped=true;
+  window.collect=fn;try{collect=fn}catch(e){}
+}
+function enforceVirtualEditorAccess(){
+  if(!(adminOk()||virtualAccess))return;
+  const type=document.getElementById('storeType');
+  if(type){
+    const option=[...type.options].find(o=>o.value==='virtual');
+    if(option){option.disabled=false;option.hidden=false;}
+    const field=type.closest('.field');if(field)field.style.display='';
+    if(virtualSelectionWanted&&type.value!=='virtual'){type.value='virtual';try{type.dispatchEvent(new Event('change',{bubbles:true}))}catch(e){}}
+  }
+  patchCollectForVirtualAccess();
+}
+function installUserAccessBridge(){
+  document.addEventListener('change',e=>{
+    const el=e.target;if(!el||el.id!=='storeType')return;
+    if(adminOk()||virtualAccess)virtualSelectionWanted=el.value==='virtual';
+  },true);
+  let debounce=0;
+  if(document.body&&!document.body.dataset.virtualAccessObserved){
+    document.body.dataset.virtualAccessObserved='1';
+    new MutationObserver(()=>{clearTimeout(debounce);debounce=setTimeout(enforceVirtualEditorAccess,140)}).observe(document.body,{childList:true,subtree:true});
+  }
+  try{
+    if(window.auth&&typeof auth.onAuthStateChanged==='function')auth.onAuthStateChanged(user=>syncCurrentVirtualAccess(user));
+    else syncCurrentVirtualAccess(currentAdmin());
+  }catch(e){syncCurrentVirtualAccess(currentAdmin());}
+  let tries=0;const t=setInterval(()=>{tries++;enforceVirtualEditorAccess();if(tries>80)clearInterval(t)},150);
+}
+function boot(){
+  let tries=0;const t=setInterval(()=>{tries++;if(installTab()||tries>100)clearInterval(t)},100);
+  installUserAccessBridge();
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
