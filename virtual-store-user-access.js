@@ -3,20 +3,25 @@
 'use strict';
 const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
-const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 const dbRef=()=>{try{return typeof db!=='undefined'&&db?db:null}catch(e){return null}};
 const adminOk=()=>{try{return typeof isAdmin!=='undefined'&&isAdmin===true}catch(e){return false}};
 const notify=msg=>{try{if(typeof toast==='function')return toast(msg)}catch(e){} alert(msg)};
 let currentAccess=false;
 let currentUid='';
+let currentProfessional=false;
 
 function setAccess(value){
   currentAccess=value===true;
-  window.__CHATSHOP_VIRTUAL_STORE_UNLOCKED=currentAccess;
-  document.documentElement.dataset.virtualStoreUnlocked=currentAccess?'1':'0';
+  window.__CHATSHOP_VIRTUAL_STORE_UNLOCKED=currentAccess||currentProfessional;
+  document.documentElement.dataset.virtualStoreUnlocked=(currentAccess||currentProfessional)?'1':'0';
   applyEditorAccess();
 }
-function canUseVirtual(){return adminOk()||currentAccess===true||window.__CHATSHOP_VIRTUAL_STORE_UNLOCKED===true}
+function canUseVirtual(){
+  let pro=currentProfessional;
+  try{pro=pro||myPlan==='profissional'}catch(e){}
+  return adminOk()||pro||currentAccess===true||window.__CHATSHOP_VIRTUAL_STORE_UNLOCKED===true;
+}
 
 async function loadCurrentUserAccess(user){
   const d=dbRef();if(!d||!user?.uid)return;
@@ -24,7 +29,8 @@ async function loadCurrentUserAccess(user){
   try{
     const snap=await d.collection('users').doc(user.uid).get();
     const data=snap.exists?snap.data()||{}:{};
-    setAccess(data.virtualStoreEnabled===true||data.permissions?.virtualStore===true);
+    currentProfessional=data.plan==='profissional'||data.professionalGrantedFree===true;
+    setAccess(data.virtualStoreEnabled===true||data.permissions?.virtualStore===true||currentProfessional);
   }catch(e){console.warn('Não foi possível ler a permissão de Loja Virtual',e)}
 }
 
@@ -124,7 +130,7 @@ function installAdminHook(){
 function boot(){
   watchEditor();installAdminHook();
   try{
-    if(window.auth&&typeof auth.onAuthStateChanged==='function')auth.onAuthStateChanged(user=>{if(user)loadCurrentUserAccess(user);else setAccess(false)});
+    if(window.auth&&typeof auth.onAuthStateChanged==='function')auth.onAuthStateChanged(user=>{if(user)loadCurrentUserAccess(user);else{currentProfessional=false;setAccess(false)}});
     else if(typeof currentUser!=='undefined'&&currentUser?.uid)loadCurrentUserAccess(currentUser);
   }catch(e){}
 }
