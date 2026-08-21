@@ -83,3 +83,12 @@ function boot(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+
+(function(){
+'use strict';
+function loadCarousel(){
+  if(document.querySelector('script[data-single-product-carousel]'))return;
+  const s=document.createElement('script');s.src='/single-product-carousel-clean.js?v=20260821-0918';s.defer=true;s.dataset.singleProductCarousel='1';document.head.appendChild(s);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadCarousel,{once:true});else loadCarousel();
+})();
