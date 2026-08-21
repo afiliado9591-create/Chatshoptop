@@ -7,7 +7,7 @@ let catalogId='',catalogName='';
 function isAdminUser(){try{return typeof isAdmin!=='undefined'&&isAdmin===true}catch(e){return false}}
 function database(){try{return typeof db!=='undefined'&&db?db:null}catch(e){return null}}
 function notify(msg){try{if(typeof toast==='function')return toast(msg)}catch(e){};alert(msg)}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]))}
 function norm(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()}
 function detectSep(line){return (line.match(/;/g)||[]).length>(line.match(/,/g)||[]).length?';':','}
 function parseCsv(text){text=String(text||'').replace(/^\uFEFF/,'');const first=text.split(/\r?\n/).find(x=>x.trim())||'',sep=detectSep(first),rows=[];let row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){const ch=text[i];if(ch==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(ch===sep&&!quoted){row.push(cell);cell=''}else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cell);cell='';if(row.some(v=>String(v).trim()))rows.push(row);row=[]}else cell+=ch}row.push(cell);if(row.some(v=>String(v).trim()))rows.push(row);if(rows.length<2)return[];const headers=rows.shift().map(norm),aliases={name:['nome','produto','titulo','title','name'],price:['preco','valor','price'],image:['imagem','image','foto','url imagem','imagem url','image url'],link:['link','url','link shopee','url shopee','produto link','link produto'],category:['categoria','category'],description:['descricao','description','texto','descricao produto']},idx={};Object.entries(aliases).forEach(([k,names])=>idx[k]=headers.findIndex(h=>names.includes(h)));return rows.map(cols=>{const get=k=>idx[k]>=0?String(cols[idx[k]]||'').trim():'';return{name:get('name'),price:get('price'),image:get('image'),link:get('link'),category:get('category'),description:get('description')}}).filter(p=>p.name||p.link)}
@@ -21,4 +21,11 @@ function trackCatalog(e){const ver=e.target.closest?.('#ctgLista [data-ver]');if
 function refresh(){decorateCatalogList();ensureInsideButton()}
 function boot(){if(!isAdminUser())return;document.addEventListener('click',trackCatalog,true);refresh();const root=$('#adminConteudo');if(root)new MutationObserver(()=>setTimeout(refresh,60)).observe(root,{childList:true,subtree:true})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+
+(function(){
+'use strict';
+function load(src){return new Promise((resolve,reject)=>{if(document.querySelector(`script[data-admin-extra="${src}"]`))return resolve();const s=document.createElement('script');s.src=src;s.defer=true;s.dataset.adminExtra=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s);});}
+async function start(){try{if(typeof isAdmin!=='undefined'&&isAdmin===true){await load('/admin-public-page-defaults-bridge.js?v=20260821-0746');await load('/admin-pages-delete-controls.js?v=20260821-0746');}}catch(e){console.error('Falha ao carregar controles extras do admin:',e)}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(start,0),{once:true});else setTimeout(start,0);
 })();
