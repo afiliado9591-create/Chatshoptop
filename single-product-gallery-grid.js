@@ -56,6 +56,7 @@ function decorate(){
     imgs.forEach((src,i)=>{const b=document.createElement('button');b.type='button';b.className='spg-thumb';b.setAttribute('aria-label','Abrir imagem '+(i+1));b.innerHTML='<img src="'+esc(src)+'" alt="'+esc(p?.name||'Produto')+'">';b.onclick=e=>{e.preventDefault();e.stopPropagation();openImage(p,index,src,slide)};grid.appendChild(b)});slide.appendChild(grid);
   });return true;
 }
-function boot(){let n=0;const t=setInterval(()=>{n++;decorate();if(n>240)clearInterval(t)},100);if(document.body)new MutationObserver(()=>requestAnimationFrame(decorate)).observe(document.body,{childList:true,subtree:true});window.addEventListener('load',decorate,{once:true})}
+function loadBelowCard(){if(document.querySelector('script[data-single-product-card-below]'))return;const s=document.createElement('script');s.src='/single-product-card-below.js?v=20260821-1804';s.defer=true;s.dataset.singleProductCardBelow='1';document.head.appendChild(s)}
+function boot(){loadBelowCard();let n=0;const t=setInterval(()=>{n++;decorate();if(n>240)clearInterval(t)},100);if(document.body)new MutationObserver(()=>requestAnimationFrame(decorate)).observe(document.body,{childList:true,subtree:true});window.addEventListener('load',decorate,{once:true})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
