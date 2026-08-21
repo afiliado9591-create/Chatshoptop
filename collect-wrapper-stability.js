@@ -12,6 +12,8 @@ const markers=[
   '__productSellerButtonWrapped',
   '__sellerButtonProductWrapped',
   '__planAccessWrapped',
+  '__planPolicyWrapped',
+  '__manualVirtualAccessWrapped',
   '__affiliateCatalogQnaWrapped'
 ];
 let lastCollect=null;
