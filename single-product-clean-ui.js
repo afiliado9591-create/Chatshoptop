@@ -119,3 +119,12 @@ function loadGalleryGrid(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadGalleryGrid,{once:true});else loadGalleryGrid();
 })();
+
+(function(){
+'use strict';
+function loadKeyboardFix(){
+  if(document.querySelector('script[data-product-chat-keyboard-fix]'))return;
+  const s=document.createElement('script');s.src='/product-chat-keyboard-fix.js?v=20260821-1710';s.defer=true;s.dataset.productChatKeyboardFix='1';document.head.appendChild(s);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadKeyboardFix,{once:true});else loadKeyboardFix();
+})();
