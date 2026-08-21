@@ -92,3 +92,12 @@ function loadCarousel(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadCarousel,{once:true});else loadCarousel();
 })();
+
+(function(){
+'use strict';
+function loadFocus(){
+  if(document.querySelector('script[data-single-product-focus-v2]'))return;
+  const s=document.createElement('script');s.src='/single-product-focus-v2.js?v=20260821-1040';s.defer=true;s.dataset.singleProductFocusV2='1';document.head.appendChild(s);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadFocus,{once:true});else loadFocus();
+})();
