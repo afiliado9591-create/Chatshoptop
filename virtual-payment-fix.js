@@ -1,11 +1,11 @@
-/* ChatShop Loja Virtual — corrige forma de pagamento publicada e descrição do produto. */
+/* ChatShop Loja Virtual — corrige forma de pagamento publicada, descrição e trava de frete no Mercado Pago. */
 (function(){
 'use strict';
 const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 let cfg=null,loading=false;
 
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]))}
 function host(){return location.hostname.toLowerCase()}
 async function loadConfig(){
   if(cfg||loading)return cfg;loading=true;
@@ -22,7 +22,10 @@ function productDesc(name){
 function installStyle(){
   if($('#csvPaymentFixStyle'))return;
   const s=document.createElement('style');s.id='csvPaymentFixStyle';s.textContent=`
-  .csv-mp-btn{width:100%;border:0;background:#009ee3;color:#fff;padding:13px;border-radius:12px;font-weight:900;font-size:15px;margin-top:10px;cursor:pointer}.csv-mp-btn:disabled{opacity:.55;cursor:not-allowed}.csv-pay-note{font-size:11px;color:#64748b;text-align:center;margin-top:6px}.csv-pay-actions{display:grid;gap:8px;margin-top:10px}.csv-pay-actions .csv-checkout,.csv-pay-actions .csv-mp-btn{margin-top:0}.vcd-description{margin:8px 0 12px!important;padding:11px 12px!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;border-radius:11px!important;color:#334155!important;line-height:1.45!important;font-size:14px!important;white-space:pre-wrap!important;max-height:none!important;overflow:visible!important}.vcd-description-title{font-weight:900;color:#111827;margin-bottom:5px}@media(max-width:520px){.csv-mainimg{max-height:48vh!important;object-fit:contain!important}.csv-sheet{max-height:96dvh!important}.vcd-description{font-size:13px!important}}
+  .csv-mp-btn{width:100%;border:0;background:#009ee3;color:#fff;padding:13px;border-radius:12px;font-weight:900;font-size:15px;margin-top:10px;cursor:pointer}.csv-mp-btn:disabled{opacity:.55;cursor:not-allowed}.csv-pay-note{font-size:11px;color:#64748b;text-align:center;margin-top:6px}.csv-pay-actions{display:grid;gap:8px;margin-top:10px}.csv-pay-actions .csv-checkout,.csv-pay-actions .csv-mp-btn{margin-top:0}.vcd-description{margin:8px 0 12px!important;padding:11px 12px!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;border-radius:11px!important;color:#334155!important;line-height:1.45!important;font-size:14px!important;white-space:pre-wrap!important;max-height:none!important;overflow:visible!important}.vcd-description-title{font-weight:900;color:#111827;margin-bottom:5px}
+  #sfQuoteOptions label{position:relative!important;z-index:2!important;pointer-events:auto!important;min-height:54px!important}
+  #sfQuoteOptions input[name="sfQuote"]{width:20px!important;height:20px!important;min-width:20px!important;cursor:pointer!important;pointer-events:auto!important;position:relative!important;z-index:4!important}
+  @media(max-width:520px){.csv-mainimg{max-height:48vh!important;object-fit:contain!important}.csv-sheet{max-height:96dvh!important}.vcd-description{font-size:13px!important}}
   `;document.head.appendChild(s);
 }
 function fixDescription(){
@@ -43,15 +46,52 @@ function cartItems(){
     return {name,qty:q?Number(q[1]):1,color:c?c[1].trim():''};
   }).filter(x=>x.name);
 }
+function selectedShipping(){
+  const wrap=$('#sfQuoteOptions');
+  const input=wrap?.querySelector('input[name="sfQuote"]:checked');
+  if(!wrap||!wrap.children.length)return null;
+  if(!input)return {required:true,selected:false};
+  const label=input.closest('label');
+  const name=label?.querySelector('b')?.textContent?.trim()||'';
+  const text=label?.textContent||'';
+  const priceMatch=text.match(/R\$\s*[\d.]+(?:,\d{2})?/i);
+  return {required:true,selected:true,name,priceText:priceMatch?priceMatch[0]:'',index:Number(input.value)};
+}
+function installShippingClickGuard(){
+  if(document.documentElement.dataset.sfClickGuard==='1')return;
+  document.documentElement.dataset.sfClickGuard='1';
+  document.addEventListener('click',e=>{
+    const label=e.target.closest?.('#sfQuoteOptions label');
+    if(!label)return;
+    const input=label.querySelector('input[name="sfQuote"]');
+    if(!input)return;
+    if(!input.checked)input.checked=true;
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+  },true);
+}
 async function payMercadoPago(btn){
-  const address=$('#sfAddress')?.value?.trim()||$('#csvAddress')?.value?.trim()||'';const km=$('#csvKm')?.value||'';const err=$('#sfCalcStatus')||$('#csvShipError');
+  const address=$('#sfAddress')?.value?.trim()||$('#csvAddress')?.value?.trim()||'';
+  const km=$('#csvKm')?.value||'';
+  const err=$('#sfCalcStatus')||$('#csvShipError');
   if(!address){if(err){err.style.display='block';err.textContent='Digite o endereço de entrega antes de pagar.'}else alert('Digite o endereço de entrega.');return}
+
+  const shipping=selectedShipping();
+  const postalCode=String($('#sfDestCep')?.value||'').replace(/\D/g,'');
+  if(shipping?.required&&!shipping.selected){
+    if(err){err.style.display='block';err.style.color='#b91c1c';err.textContent='Escolha PAC, SEDEX ou outra opção de frete antes de pagar.'}else alert('Escolha uma opção de frete antes de pagar.');
+    return;
+  }
+  if(shipping?.required&&postalCode.length!==8){
+    if(err){err.style.display='block';err.style.color='#b91c1c';err.textContent='Calcule o frete com um CEP válido antes de pagar.'}else alert('Calcule o frete antes de pagar.');
+    return;
+  }
+
   const items=cartItems();if(!items.length){alert('Sua sacola está vazia.');return}
   const affiliateRef=String(window.__CHATSHOP_AFFILIATE_REF||'').trim();
   const attributedValue=items.reduce((sum,item)=>{const p=(cfg?.products||[]).find(x=>String(x?.name||'').trim()===item.name);return sum+numericPrice(p?.price)*item.qty},0);
-  const old=btn.textContent;btn.disabled=true;btn.textContent='Abrindo Mercado Pago...';
+  const old=btn.textContent;btn.disabled=true;btn.textContent='Validando frete...';
   try{
-    const r=await fetch('/api/mercadopago/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({slug:cfg?.slug||'',host:host(),items,address,km,affiliateRef})});
+    const r=await fetch('/api/mercadopago/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({slug:cfg?.slug||'',host:host(),items,address,km,affiliateRef,destinationPostalCode:postalCode,shippingServiceName:shipping?.name||'',shippingOptionIndex:Number.isInteger(shipping?.index)?shipping.index:null})});
     const j=await r.json();if(!r.ok||!j.checkoutUrl)throw new Error(j.message||'Não foi possível abrir o Mercado Pago.');
     window.dispatchEvent(new CustomEvent('chatshop:mercadopago-checkout',{detail:{affiliateRef,value:attributedValue}}));
     location.href=j.checkoutUrl;
@@ -82,7 +122,7 @@ function setupCheckout(){
     }else if(existingMp){existingMp.textContent=connected?'🔵 Pagar com Mercado Pago':'Mercado Pago indisponível';existingMp.disabled=!connected}
   }
 }
-async function apply(){installStyle();await loadConfig();fixDescription();setupCheckout()}
+async function apply(){installStyle();installShippingClickGuard();await loadConfig();fixDescription();setupCheckout()}
 function observe(){
   let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(apply,25)}).observe(document.body,{childList:true,subtree:true});
   document.addEventListener('click',e=>{if(e.target.closest('[data-product],#csvBag,#csvAdd'))setTimeout(apply,35)},true);
