@@ -1,0 +1,77 @@
+name: Fix shipping selection before Mercado Pago
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-shipping-selection-mercadopago.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch SuperFrete selection and Mercado Pago guard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          # 1) SuperFrete: expose current selection globally and make radio selection robust on desktop/mobile.
+          p=Path('superfrete-upgrade.js')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace(
+            "selectedQuote=null;quotes=[];renderQuoteOptions();updateTotals();",
+            "selectedQuote=null;window.__CHATSHOP_SELECTED_SHIPPING_QUOTE=null;quotes=[];renderQuoteOptions();updateTotals();",
+            1
+          )
+          old="$('#sfQuoteOptions').addEventListener('change',e=>{const i=Number(e.target.value);if(Number.isInteger(i)&&quotes[i]){selectedQuote=quotes[i];updateTotals()}});"
+          new="""const chooseQuote=e=>{
+        const input=e.target.closest?.('input[name=\"sfQuote\"]');
+        if(!input)return;
+        const i=Number(input.value);
+        if(Number.isInteger(i)&&quotes[i]){
+          selectedQuote=quotes[i];
+          window.__CHATSHOP_SELECTED_SHIPPING_QUOTE=selectedQuote;
+          document.querySelectorAll('#sfQuoteOptions input[name=\"sfQuote\"]').forEach(x=>x.checked=(x===input));
+          updateTotals();
+        }
+      };
+      $('#sfQuoteOptions').addEventListener('change',chooseQuote);
+      $('#sfQuoteOptions').addEventListener('click',chooseQuote);"""
+          if old not in s:
+            raise SystemExit('Trecho de seleção do SuperFrete não encontrado')
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+
+          # 2) Mercado Pago: never allow checkout when SuperFrete is present and no service was selected.
+          p=Path('virtual-payment-fix.js')
+          s=p.read_text(encoding='utf-8')
+          old="""async function payMercadoPago(btn){
+  const address=$('#sfAddress')?.value?.trim()||$('#csvAddress')?.value?.trim()||'';const km=$('#csvKm')?.value||'';const err=$('#sfCalcStatus')||$('#csvShipError');
+  if(!address){if(err){err.style.display='block';err.textContent='Digite o endereço de entrega antes de pagar.'}else alert('Digite o endereço de entrega.');return}
+"""
+          new="""async function payMercadoPago(btn){
+  const address=$('#sfAddress')?.value?.trim()||$('#csvAddress')?.value?.trim()||'';const km=$('#csvKm')?.value||'';const err=$('#sfCalcStatus')||$('#csvShipError');
+  if(!address){if(err){err.style.display='block';err.textContent='Digite o endereço de entrega antes de pagar.'}else alert('Digite o endereço de entrega.');return}
+  const sfOptions=$('#sfQuoteOptions');
+  if(sfOptions && sfOptions.children.length && !window.__CHATSHOP_SELECTED_SHIPPING_QUOTE){
+    if(err){err.style.display='block';err.textContent='Escolha PAC, SEDEX ou outra opção de frete antes de pagar.';err.style.color='#b91c1c'}else alert('Escolha uma opção de frete antes de pagar.');
+    return;
+  }
+"""
+          if old not in s:
+            raise SystemExit('Trecho do Mercado Pago não encontrado')
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name "chatshop-fix-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add superfrete-upgrade.js virtual-payment-fix.js
+          git commit -m "fix: exigir seleção de frete antes do Mercado Pago" || exit 0
+          git push
