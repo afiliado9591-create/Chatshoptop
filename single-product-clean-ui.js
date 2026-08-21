@@ -101,3 +101,12 @@ function loadFocus(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadFocus,{once:true});else loadFocus();
 })();
+
+(function(){
+'use strict';
+function loadFinalCleanup(){
+  if(document.querySelector('script[data-single-product-final-cleanup]'))return;
+  const s=document.createElement('script');s.src='/single-product-final-cleanup.js?v=20260821-1115';s.defer=true;s.dataset.singleProductFinalCleanup='1';document.head.appendChild(s);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadFinalCleanup,{once:true});else loadFinalCleanup();
+})();
