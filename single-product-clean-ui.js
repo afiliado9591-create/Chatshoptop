@@ -128,3 +128,12 @@ function loadKeyboardFix(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadKeyboardFix,{once:true});else loadKeyboardFix();
 })();
+
+(function(){
+'use strict';
+function loadProductChatCard(){
+  if(document.querySelector('script[data-product-chat-card]'))return;
+  const s=document.createElement('script');s.src='/product-chat-card.js?v=20260821-1806';s.defer=true;s.dataset.productChatCard='1';document.head.appendChild(s);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadProductChatCard,{once:true});else loadProductChatCard();
+})();
