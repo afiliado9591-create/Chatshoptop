@@ -11,7 +11,7 @@ function imagesOf(p){const list=[];if(Array.isArray(p?.images))list.push(...p.im
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function hexToRgba(hex,opacity){const m=String(hex||'').match(/^#([0-9a-f]{6})$/i);if(!m)return `rgba(255,255,255,${opacity})`;const n=parseInt(m[1],16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${opacity})`}
 function productText(p){const base=String(p?.voiceText||p?.displayText||p?.cardDescription||p?.description||p?.name||'').trim();return (base||String(p?.name||'Conheça este produto'))+' Se gostou, toque no botão Comprar.'}
-function speak(p,btn){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(productText(p));u.lang='pt-BR';u.rate=1;btn.disabled=true;u.onend=u.onerror=()=>{btn.disabled=false};speechSynthesis.speak(u)}catch(e){btn.disabled=false}}
+function speak(p,btn){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(productText(p));u.lang='pt-BR';u.rate=1;btn.disabled=true;btn.classList.add('speaking');u.onend=u.onerror=()=>{btn.disabled=false;btn.classList.remove('speaking')};speechSynthesis.speak(u)}catch(e){btn.disabled=false;btn.classList.remove('speaking')}}
 function preload(src){return new Promise(resolve=>{if(!src)return resolve(false);const img=new Image();img.onload=()=>resolve(true);img.onerror=()=>resolve(false);img.src=src;if(img.complete)resolve(true)})}
 function preloadProduct(p){imagesOf(p).forEach(src=>{const i=new Image();i.decoding='async';i.src=src})}
 function ensureStyle(){if($('#singleProductReferenceStyle'))return;const s=document.createElement('style');s.id='singleProductReferenceStyle';s.textContent=`
@@ -41,11 +41,15 @@ body.chatshop-single-reference #pubFeed .pub-slide{height:100dvh!important;min-h
 .spr-card{flex:0 0 auto;border-radius:16px;padding:11px 13px;box-shadow:0 3px 14px rgba(0,0,0,.12);border:1px solid rgba(0,0,0,.06)}
 .spr-name{font-size:18px;font-weight:900;line-height:1.2;margin:0 0 5px;overflow-wrap:anywhere}
 .spr-price{font-size:21px;font-weight:950;color:var(--store-price,var(--store-main,#c2185b));margin-bottom:9px}
-.spr-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-.spr-actions button,.spr-actions a{border:0;border-radius:12px;min-height:44px;padding:9px 6px;font-size:11px;font-weight:900;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:4px;text-align:center;line-height:1.15}
-.spr-buy{background:var(--store-buy,var(--store-main,#7A2E3B));color:#fff}.spr-listen,.spr-chat{background:#fff;color:#111827;border:1px solid #e5e7eb!important}
+.spr-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.spr-actions button,.spr-actions a{border:0;border-radius:14px;min-height:48px;padding:10px 7px;font-size:11px;font-weight:950;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:5px;text-align:center;line-height:1.15;box-shadow:0 3px 10px rgba(0,0,0,.12)}
+.spr-buy{background:var(--store-buy,var(--store-main,#7A2E3B));color:#fff}
+.spr-listen{background:#2563eb;color:#fff;border:1px solid #1d4ed8!important}
+.spr-listen.speaking{background:#1d4ed8;transform:scale(.98)}
+.spr-chat{background:#e11d48;color:#fff;border:1px solid #be123c!important;box-shadow:0 4px 14px rgba(225,29,72,.30)!important}
+.spr-chat:active{transform:scale(.98)}
 body.chatshop-single-reference .spf-aff-actions{display:none!important}
-@media(max-width:420px){.spr-page{padding:7px 8px 10px;gap:6px}.spr-thumbs{height:78px;flex-basis:78px;gap:6px}.spr-name{font-size:16px}.spr-price{font-size:19px}.spr-actions button,.spr-actions a{font-size:10px;min-height:42px;padding:7px 4px}}
+@media(max-width:420px){.spr-page{padding:7px 8px 10px;gap:6px}.spr-thumbs{height:78px;flex-basis:78px;gap:6px}.spr-name{font-size:16px}.spr-price{font-size:19px}.spr-actions button,.spr-actions a{font-size:10px;min-height:46px;padding:8px 4px}}
 `;document.head.appendChild(s)}
 function forceHideGlobalChat(){const btn=$('#pubChatToggle');if(btn){btn.style.setProperty('display','none','important');btn.style.setProperty('visibility','hidden','important');btn.style.setProperty('pointer-events','none','important');btn.setAttribute('aria-hidden','true')}$$('.pub-chat-toggle,.global-chat-toggle,.general-chat-button').forEach(x=>{x.style.setProperty('display','none','important');x.style.setProperty('visibility','hidden','important')})}
 function openChat(p,index,slide){window.__CHATSHOP_ACTIVE_PRODUCT=p;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=index;const chat=slide?.querySelector('.spf-aff-chat');if(chat){chat.click();return}const overlay=$('#spfProductChat');if(overlay){const title=$('#spfProductChatTitle');if(title)title.textContent='💬 '+String(p?.name||'Produto');overlay.classList.add('open');return}const hiddenGlobal=$('#pubChatToggle');if(hiddenGlobal){hiddenGlobal.dataset.productIndex=String(index);hiddenGlobal.dataset.productName=String(p?.name||'');hiddenGlobal.click();forceHideGlobalChat()}}
