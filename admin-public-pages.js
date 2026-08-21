@@ -26,6 +26,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (function(){
 'use strict';
 function load(src){return new Promise((resolve,reject)=>{if(document.querySelector(`script[data-admin-extra="${src}"]`))return resolve();const s=document.createElement('script');s.src=src;s.defer=true;s.dataset.adminExtra=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s);});}
-async function start(){try{await load('/single-product-clean-ui.js?v=20260821-0905');await load('/catalog-affiliate-access.js?v=20260821-0855');if(typeof isAdmin!=='undefined'&&isAdmin===true){await load('/admin-public-page-defaults-bridge.js?v=20260821-0746');await load('/admin-pages-delete-controls.js?v=20260821-0746');}}catch(e){console.error('Falha ao carregar controles extras do ChatShop:',e)}}
+async function start(){try{await load('/single-product-clean-ui.js?v=20260821-0905');await load('/catalog-affiliate-access.js?v=20260821-0855');if(typeof isAdmin!=='undefined'&&isAdmin===true){await load('/admin-public-page-defaults-bridge.js?v=20260821-0746');await load('/admin-pages-delete-controls.js?v=20260821-0746');await load('/admin-user-stores.js?v=20260821-0948');}}catch(e){console.error('Falha ao carregar controles extras do ChatShop:',e)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(start,0),{once:true});else setTimeout(start,0);
 })();
