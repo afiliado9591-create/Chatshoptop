@@ -1,0 +1,1 @@
+Hotfix 2026-08-21: produção restaurada para a versão estável anterior ao PR #87 devido a Maximum call stack size exceeded ao publicar.
