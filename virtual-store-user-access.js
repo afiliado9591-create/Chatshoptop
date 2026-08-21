@@ -52,6 +52,7 @@ function wrapCollect(){
     return value;
   };
   wrapped.__virtualUserAccessWrapped=true;
+  wrapped.__planPolicyWrapped=true;
   window.collect=wrapped;try{collect=wrapped}catch(e){}
 }
 
