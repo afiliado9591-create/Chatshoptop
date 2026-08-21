@@ -1,0 +1,1 @@
+Hotfix 2026-08-21: restaura a versão estável anterior às permissões por usuário para corrigir Maximum call stack size exceeded ao publicar.
