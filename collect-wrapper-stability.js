@@ -25,6 +25,14 @@ function ensureVirtualStoreAccess(){
   s.dataset.virtualStoreUserAccess='1';
   document.body.appendChild(s);
 }
+function ensureProfessionalAccess(){
+  if(document.querySelector('script[data-professional-user-access]'))return;
+  const s=document.createElement('script');
+  s.src='/professional-user-access.js?v=20260821-1010';
+  s.async=true;
+  s.dataset.professionalUserAccess='1';
+  document.body.appendChild(s);
+}
 function ensureAdminCsvAfterAuth(){
   let tries=0;
   const timer=setInterval(()=>{
@@ -46,6 +54,7 @@ function ensureAdminCsvAfterAuth(){
 }
 function boot(){
   ensureVirtualStoreAccess();
+  ensureProfessionalAccess();
   let tries=0;
   const timer=setInterval(()=>{
     tries++;
