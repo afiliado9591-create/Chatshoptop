@@ -19,7 +19,7 @@ function cap(plan){return POLICY[normalizePlan(plan)]||POLICY.aprendiz}
 function isFree(){return currentPlan()==='aprendiz'}
 function manualVirtualAccess(){try{return window.__CHATSHOP_VIRTUAL_STORE_ACCESS===true}catch(e){return false}}
 function canUseVirtual(){const c=cap(currentPlan());return adminMode()||c.features.virtual||manualVirtualAccess()}
-function canUseShipping(){const c=cap(currentPlan());return (adminMode()||c.features.shipping)&&canUseVirtual()}
+function canUseShipping(){const c=cap(currentPlan());return canUseVirtual()&&(adminMode()||c.features.shipping||manualVirtualAccess())}
 function canUseCustomDomain(){const c=cap(currentPlan());return adminMode()||c.features.customDomain}
 function canUseMercadoPago(){const c=cap(currentPlan());return adminMode()||c.features.mercadoPago}
 function safe(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -41,11 +41,11 @@ async function syncLoggedUser(){
     const c=cap(plan);
     try{myPlan=plan;myProductLimit=c.products;myChatLimit=c.chats}catch(e){}
     window.__CHATSHOP_VIRTUAL_STORE_ACCESS=adminMode()||u.virtualStoreAccess===true||c.features.virtual;
-    await ref.set({productLimit:c.products,chatLimit:c.chats,planPolicyVersion:'2026-08-21-professional-virtual-fix'},{merge:true});
+    await ref.set({productLimit:c.products,chatLimit:c.chats,planPolicyVersion:'2026-08-21-virtual-shipping-fix'},{merge:true});
     try{
       const stores=await db.collection(typeof COLECAO!=='undefined'?COLECAO:'chatshops').where('ownerUid','==',myUid).get();
       const features={...c.features};
-      if(window.__CHATSHOP_VIRTUAL_STORE_ACCESS)features.virtual=true;
+      if(window.__CHATSHOP_VIRTUAL_STORE_ACCESS){features.virtual=true;features.shipping=true}
       await Promise.all(stores.docs.map(d=>d.ref.set({planTier:plan,planFeatures:features},{merge:true})));
     }catch(e){console.warn('Não consegui atualizar o plano nas lojas',e)}
     setTimeout(applyEditorAccess,50);
@@ -86,14 +86,14 @@ function patchCollect(){
   const original=window.collect;
   function wrapped(){
     const d=original.apply(this,arguments)||{};
-    const plan=currentPlan(),c=cap(plan),allowVirtual=canUseVirtual();
+    const plan=currentPlan(),c=cap(plan),allowVirtual=canUseVirtual(),allowShipping=canUseShipping();
     const type=document.getElementById('storeType');
     d.planTier=plan;
-    d.planFeatures={...c.features,virtual:allowVirtual};
+    d.planFeatures={...c.features,virtual:allowVirtual,shipping:allowShipping};
     if(allowVirtual&&type?.value==='virtual')d.storeType='virtual';
     else if(!allowVirtual)d.storeType='affiliate';
     if(!c.features.chat){d.qna=[];(d.products||[]).forEach(p=>{p.qna=[];p.sellerAudioMode='off';p.sellerAudioText='';p.sellerAudioUrl=''})}
-    if(!canUseShipping())d.shipping={mode:'none'};
+    if(!allowShipping)d.shipping={mode:'none'};
     if(!canUseCustomDomain())d.customDomain='';
     d.checkoutMode=canUseMercadoPago()?'mercadopago_or_whatsapp':'whatsapp';
     return d;
