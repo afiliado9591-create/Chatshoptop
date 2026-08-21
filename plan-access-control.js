@@ -1,7 +1,8 @@
 /* ChatShop — regras de acesso dos planos
-   Grátis: 1 loja, 10 produtos, catálogo + WhatsApp.
-   Básico: 1 loja, 30 produtos, recursos normais da loja + frete + WhatsApp.
-   Profissional: 2 lojas, produtos ilimitados, domínio próprio e checkout Mercado Pago.
+   Foco público atual: afiliados.
+   Grátis: 1 ChatShop, até 10 produtos, catálogo + chat vendedor.
+   Básico: 1 ChatShop, até 30 produtos, recursos extras do afiliado.
+   Profissional e Loja Virtual: mantidos no sistema, mas ocultos para clientes; admin pode liberar/usar.
 */
 (function(){
 'use strict';
@@ -10,11 +11,11 @@ const INTERNAL_UNLIMITED = 1000000;
 const POLICY = {
   aprendiz: {
     name:'Grátis', price:'Grátis', products:10, chats:1,
-    features:{catalog:true,whatsapp:true,virtual:false,chat:false,shipping:false,coupons:false,customDomain:false,mercadoPago:false}
+    features:{catalog:true,whatsapp:true,virtual:false,chat:true,shipping:false,coupons:false,customDomain:false,mercadoPago:false}
   },
   basico: {
     name:'Básico', price:'R$ 18,00/mês', products:30, chats:1,
-    features:{catalog:true,whatsapp:true,virtual:true,chat:true,shipping:true,coupons:true,customDomain:false,mercadoPago:false}
+    features:{catalog:true,whatsapp:true,virtual:false,chat:true,shipping:false,coupons:false,customDomain:false,mercadoPago:false}
   },
   profissional: {
     name:'Profissional', price:'R$ 49,90/mês', products:INTERNAL_UNLIMITED, chats:2,
@@ -22,9 +23,12 @@ const POLICY = {
   }
 };
 
+function adminMode(){
+  try{return typeof isAdmin!=='undefined' && isAdmin===true}catch(e){return false}
+}
 function currentPlan(){
   try{
-    if(typeof isAdmin!=='undefined'&&isAdmin===true)return 'profissional';
+    if(adminMode())return 'profissional';
     return (typeof myPlan!=='undefined' && myPlan) || 'aprendiz';
   }catch(e){return 'aprendiz'}
 }
@@ -52,9 +56,9 @@ async function syncLoggedUser(){
     if(typeof db==='undefined'||!db||typeof myUid==='undefined'||!myUid)return;
     const ref=db.collection('users').doc(myUid);
     const snap=await ref.get();
-    const plan=(typeof isAdmin!=='undefined'&&isAdmin===true)?'profissional':((snap.exists&&snap.data().plan)||currentPlan()||'aprendiz');
+    const plan=adminMode()?'profissional':((snap.exists&&snap.data().plan)||currentPlan()||'aprendiz');
     const c=cap(plan);
-    await ref.set({productLimit:c.products,chatLimit:c.chats,planPolicyVersion:'2026-08-18-upload-lock'}, {merge:true});
+    await ref.set({productLimit:c.products,chatLimit:c.chats,planPolicyVersion:'2026-08-21-affiliate-focus'}, {merge:true});
     try{myPlan=plan;myProductLimit=c.products;myChatLimit=c.chats}catch(e){}
 
     try{
@@ -136,33 +140,41 @@ function installAprendizImageUploadLock(){
 }
 
 function applyEditorAccess(){
-  const plan=currentPlan(), c=cap(plan);
+  const plan=currentPlan(), c=cap(plan), admin=adminMode();
   try{myProductLimit=c.products;myChatLimit=c.chats}catch(e){}
 
   const type=document.getElementById('storeType');
   if(type){
     const virtualOpt=[...type.options].find(o=>o.value==='virtual');
-    if(virtualOpt) virtualOpt.disabled=!c.features.virtual;
-    if(!c.features.virtual && type.value==='virtual'){
+    const allowVirtual=admin && c.features.virtual;
+    if(virtualOpt){
+      virtualOpt.disabled=!allowVirtual;
+      virtualOpt.hidden=!allowVirtual;
+    }
+    if(!allowVirtual && type.value==='virtual'){
       type.value='affiliate';
       try{type.dispatchEvent(new Event('change',{bubbles:true}))}catch(e){}
     }
     const typeField=type.closest('.field');
-    if(typeField) typeField.style.display=c.features.virtual?'':'none';
+    if(typeField) typeField.style.display=allowVirtual?'':'none';
   }
 
   const shipping=document.getElementById('shippingSettings');
-  if(shipping) shipping.style.display=c.features.shipping && type?.value==='virtual'?'block':'none';
+  if(shipping) shipping.style.display=admin && c.features.shipping && type?.value==='virtual'?'block':'none';
 
   const custom=document.getElementById('customDomainField');
   const locked=document.getElementById('customDomainLocked');
-  if(custom) custom.style.display=c.features.customDomain?'block':'none';
+  if(custom) custom.style.display=admin && c.features.customDomain?'block':'none';
   if(locked){
-    locked.style.display=c.features.customDomain?'none':'block';
-    const small=locked.querySelector('small');
-    if(small) small.innerHTML='Disponível somente no plano <b>Profissional</b>. <a href="#" id="verPlanosDominioPolicy">Ver planos</a>';
-    const link=document.getElementById('verPlanosDominioPolicy');
-    if(link) link.onclick=e=>{e.preventDefault();try{abrirPlanos()}catch(err){}};
+    if(!admin){
+      locked.style.display='none';
+    }else{
+      locked.style.display=c.features.customDomain?'none':'block';
+      const small=locked.querySelector('small');
+      if(small) small.innerHTML='Disponível somente no plano <b>Profissional</b>. <a href="#" id="verPlanosDominioPolicy">Ver planos</a>';
+      const link=document.getElementById('verPlanosDominioPolicy');
+      if(link) link.onclick=e=>{e.preventDefault();try{abrirPlanos()}catch(err){}};
+    }
   }
 
   const qna=sectionByHeading('perguntas e respostas');
@@ -188,10 +200,10 @@ function patchCollect(){
   const original=window.collect;
   function wrapped(){
     const d=original();
-    const plan=currentPlan(), c=cap(plan);
+    const plan=currentPlan(), c=cap(plan), admin=adminMode();
     d.planTier=plan;
     d.planFeatures={...c.features};
-    if(!c.features.virtual) d.storeType='affiliate';
+    if(!admin || !c.features.virtual) d.storeType='affiliate';
     if(!c.features.chat){
       d.qna=[];
       (d.products||[]).forEach(p=>{
@@ -199,9 +211,9 @@ function patchCollect(){
         p.sellerAudioMode='off'; p.sellerAudioText=''; p.sellerAudioUrl='';
       });
     }
-    if(!c.features.shipping) d.shipping={mode:'none'};
-    if(!c.features.customDomain) d.customDomain='';
-    d.checkoutMode=c.features.mercadoPago?'mercadopago_or_whatsapp':'whatsapp';
+    if(!admin || !c.features.shipping) d.shipping={mode:'none'};
+    if(!admin || !c.features.customDomain) d.customDomain='';
+    d.checkoutMode=(admin && c.features.mercadoPago)?'mercadopago_or_whatsapp':'whatsapp';
     return d;
   }
   wrapped.__planPolicyWrapped=true;
@@ -215,10 +227,12 @@ function installPlanModal(){
     if(!cols)return;
     const plan=currentPlan();
     const cards=[
-      {key:'aprendiz',title:'Grátis',price:'R$ 0',items:['1 ChatShop','Até 10 produtos','Catálogo público','Botão de WhatsApp'],note:'Para começar e testar sua vitrine.'},
-      {key:'basico',title:'Básico',price:'R$ 18/mês',items:['1 ChatShop','Até 30 produtos','Loja virtual e sacola','Chat vendedor','Frete / SuperFrete','Cupons','Finalização pelo WhatsApp'],note:'Para vender normalmente sem checkout online.'},
-      {key:'profissional',title:'Profissional',price:'R$ 49,90/mês',items:['Até 2 ChatShops','Produtos ilimitados','Tudo do Básico','Domínio próprio','Checkout Mercado Pago','Pagamento confirmado na loja'],note:'Plano completo para vender e receber online.'}
+      {key:'aprendiz',title:'Grátis',price:'R$ 0',items:['1 ChatShop para afiliado','Até 10 produtos','Catálogo público','Chat vendedor','Link de afiliado por produto'],note:'Para começar e testar o ChatShop.'},
+      {key:'basico',title:'Básico',price:'R$ 18/mês',items:['1 ChatShop para afiliado','Até 30 produtos','Chat vendedor','Upload de imagens','Catálogo e produto em destaque','Link de afiliado por produto'],note:'Plano principal para afiliados.'}
     ];
+    if(adminMode()){
+      cards.push({key:'profissional',title:'Profissional',price:'R$ 49,90/mês',items:['Até 2 ChatShops','Produtos ilimitados','Loja virtual','Domínio próprio','Checkout Mercado Pago','Recursos avançados'],note:'Plano interno/avançado, oculto para clientes.'});
+    }
     cols.innerHTML=cards.map(p=>{
       const current=p.key===plan,free=p.key==='aprendiz';
       return `<div class="plan-card ${current?'current':''}"><h3>${p.title}</h3><div class="preco">${p.price}</div><div class="lim" style="text-align:left;line-height:1.65">${p.items.map(x=>'✅ '+safe(x)).join('<br>')}</div><div style="font-size:11px;color:var(--muted);min-height:34px;margin:7px 0">${safe(p.note)}</div><button data-plano="${p.key}" ${current||free?'disabled':''}>${current?'Plano atual':(free?'Grátis':'Assinar')}</button></div>`;
@@ -277,20 +291,10 @@ function patchDashboard(){
 }
 
 function publicStorePolicy(){
-  const data=window.__CHATSHOP_STORE_DATA || window.__CHATSHOP_STORE_FEATURE_DATA;
-  const plan=String(data?.planTier||'');
-  if(plan!=='aprendiz')return;
-  document.querySelectorAll('#pubChatToggle,#pubChatOverlay,.pub-chat-toggle,.pub-chat-overlay,.seller-audio-btn').forEach(el=>el.style.display='none');
-  if(document.getElementById('freeWhatsappButton'))return;
-  const phone=String(data?.whatsapp||'').replace(/\D/g,'');
-  if(!phone)return;
-  const a=document.createElement('a');
-  a.id='freeWhatsappButton';
-  a.href='https://wa.me/'+phone;
-  a.target='_blank';a.rel='noopener';
-  a.textContent='💬 Falar no WhatsApp';
-  a.style.cssText='position:fixed;right:14px;bottom:18px;z-index:120;background:#25D366;color:#fff;text-decoration:none;border-radius:999px;padding:12px 16px;font:800 13px Arial,sans-serif;box-shadow:0 4px 16px #0004';
-  document.body.appendChild(a);
+  // No foco atual, o ChatShop vendedor é o produto principal também no plano Grátis.
+  // Não esconder chat/voz no plano gratuito. Apenas remover o fallback antigo de WhatsApp, se existir.
+  const old=document.getElementById('freeWhatsappButton');
+  if(old) old.remove();
 }
 
 function install(){
