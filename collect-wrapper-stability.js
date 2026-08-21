@@ -7,14 +7,19 @@ const markers=[
   '__sellerAudioWrapped',
   '__catalogSellerModelWrapped',
   '__singleProductVideoWrapped',
+  '__singleProductMenuWrapped',
   '__superfreteWrapped',
   '__productSellerButtonWrapped',
-  '__planAccessWrapped'
+  '__sellerButtonProductWrapped',
+  '__planAccessWrapped',
+  '__affiliateCatalogQnaWrapped'
 ];
+let lastCollect=null;
 function markCurrent(){
   const fn=window.collect;
   if(typeof fn!=='function')return false;
   markers.forEach(k=>{try{fn[k]=true}catch(e){}});
+  lastCollect=fn;
   return true;
 }
 function ensureAdminCsvAfterAuth(){
@@ -37,16 +42,35 @@ function ensureAdminCsvAfterAuth(){
   },250);
 }
 function boot(){
-  let tries=0;
-  const timer=setInterval(()=>{
-    tries++;
-    if(markCurrent()||tries>40)clearInterval(timer);
+  /*
+   * Não paramos de vigiar depois do primeiro collect(). Vários módulos do ChatShop
+   * são reinjetados ou executam refresh periódico. Quando um deles cria um novo
+   * wrapper, as flags que estavam no wrapper anterior deixam de estar na função
+   * externa. Reaplicar todas as flags na função corrente impede a formação de uma
+   * cadeia infinita de wrappers e preserva os wrappers já instalados.
+   */
+  markCurrent();
+  setInterval(()=>{
+    const fn=window.collect;
+    if(typeof fn!=='function')return;
+    if(fn!==lastCollect)markCurrent();
+    else markers.forEach(k=>{try{fn[k]=true}catch(e){}});
   },100);
-  setTimeout(markCurrent,700);
-  setTimeout(markCurrent,1500);
+
   document.addEventListener('click',e=>{
-    if(e.target.closest?.('#publishBtn'))markCurrent();
+    if(e.target.closest?.('#publishBtn')){
+      markCurrent();
+      setTimeout(markCurrent,0);
+    }
   },true);
+
+  /* Se scripts forem adicionados dinamicamente, marque novamente o collect atual. */
+  if(document.documentElement&&!document.documentElement.dataset.collectGuardObserved){
+    document.documentElement.dataset.collectGuardObserved='1';
+    new MutationObserver(mutations=>{
+      if(mutations.some(m=>[...m.addedNodes].some(n=>n?.tagName==='SCRIPT')))setTimeout(markCurrent,0);
+    }).observe(document.documentElement,{childList:true,subtree:true});
+  }
   ensureAdminCsvAfterAuth();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
