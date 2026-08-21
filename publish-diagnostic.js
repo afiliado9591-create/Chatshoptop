@@ -9,10 +9,9 @@ let lastCheck=null;
  * módulo anterior. Isso fazia dois ou mais módulos se embrulharem novamente
  * em sequência até estourar a pilha (Maximum call stack size exceeded).
  *
- * Em vez de marcar módulos que ainda não rodaram, preservamos somente as
- * marcas que já apareceram em alguma versão de collect(). Assim cada módulo
- * continua podendo instalar sua extensão uma vez, mas não volta a se instalar
- * depois que outro módulo troca a função.
+ * Preservamos somente marcas que já apareceram em alguma versão de collect().
+ * Assim cada módulo pode instalar sua extensão uma vez, mas não volta a se
+ * instalar depois que outro módulo troca a função externa.
  */
 const collectWrapperMarkers=[
   '__storePagesWrapped',
@@ -20,11 +19,14 @@ const collectWrapperMarkers=[
   '__sellerAudioWrapped',
   '__catalogSellerModelWrapped',
   '__singleProductVideoWrapped',
+  '__singleProductMenuWrapped',
   '__productVideoWrapped',
   '__superfreteWrapped',
   '__productSellerButtonWrapped',
+  '__sellerButtonProductWrapped',
   '__planAccessWrapped',
   '__affiliateProductPlanWrapped',
+  '__affiliateCatalogQnaWrapped',
   '__virtualShippingWrapped'
 ];
 const seenCollectMarkers=new Set();
@@ -40,13 +42,14 @@ function stabilizeCollect(){
   return true;
 }
 
-/* Roda rápido durante a montagem do editor, quando os módulos são carregados. */
-let stabilityTicks=0;
-const stabilityTimer=setInterval(()=>{
-  stabilizeCollect();
-  stabilityTicks++;
-  if(stabilityTicks>600)clearInterval(stabilityTimer);
-},25);
+/*
+ * A proteção precisa durar enquanto o editor estiver aberto. Alguns módulos
+ * fazem refresh periódico (inclusive a cada 1,2 s), então parar a proteção
+ * depois de poucos segundos permitia que a cadeia de wrappers crescesse de
+ * novo. 250 ms é rápido o bastante para preservar as flags e leve no navegador.
+ */
+stabilizeCollect();
+setInterval(stabilizeCollect,250);
 
 function qs(id){return document.getElementById(id)}
 
