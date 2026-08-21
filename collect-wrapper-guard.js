@@ -1,1 +1,0 @@
-/* ChatShop collect wrapper guard placeholder */
