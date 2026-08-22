@@ -53,47 +53,17 @@ function captureContext(btn){
   if(Number.isInteger(idx)&&idx>=0){window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=idx;const p=products()[idx];if(usefulProduct(p))window.__CHATSHOP_ACTIVE_PRODUCT=p}
 }
 function activeProduct(){const idx=indexFromVisibleProduct(),p=window.__CHATSHOP_ACTIVE_PRODUCT;if(usefulProduct(p))return p;return products()[idx]||null}
-function closeChat(){
-  $('#spfProductChat')?.classList.remove('open');
-  $('#pubChatOverlay')?.classList.remove('open');
-  $('#virtualChatOverlay')?.classList.remove('open');
-}
-function productSlugBase(value){return String(value||'produto').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90)||'produto'}
-function productSlugForIndex(idx){const used={};const list=products();for(let i=0;i<list.length;i++){const base=productSlugBase(list[i]?.name);used[base]=(used[base]||0)+1;const slug=used[base]===1?base:`${base}-${used[base]}`;if(i===idx)return slug}return''}
-function openProductRoute(idx){const slug=productSlugForIndex(idx);if(!slug)return false;const url=`${location.origin}/produto/${encodeURIComponent(slug)}`;location.assign(url);return true}
-function safeClick(el){
-  if(!el||el.tagName==='A')return false;
-  el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
-  return true;
-}
-function openVirtualProduct(idx){
-  if(openProductRoute(idx))return true;
-  if(typeof window.__CHATSHOP_OPEN_SALES_PRODUCT==='function'){
-    try{if(window.__CHATSHOP_OPEN_SALES_PRODUCT(idx)!==false)return true}catch(e){}
-  }
-  const csv=$$('.csv-card')[idx];
-  if(csv){const open=csv.querySelector('button.csv-open');if(open&&safeClick(open))return true;if(safeClick(csv))return true}
-  const vs=$$('.vs-card')[idx];
-  if(vs){const open=vs.querySelector('button.vs-open');if(open&&safeClick(open))return true;if(safeClick(vs))return true}
-  const sg=$(`.sg-card[data-product-index="${idx}"]`)||$$('.sg-card[data-product-index]')[idx]||$$('.sg-card')[idx];
-  if(sg&&safeClick(sg))return true;
-  const cgc=$(`.cgc[data-i="${idx}"]`)||$$('.cgc[data-i]')[idx]||$$('.cgc')[idx];
-  if(cgc&&safeClick(cgc))return true;
-  const slide=$$('#pubFeed .pub-slide')[idx];
-  if(slide&&safeClick(slide))return true;
-  return false;
-}
-function doBuy(p,idx,e){
-  e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.();
-  const d=data()||{};
-  const isVirtual=String(d.storeType||'').toLowerCase()==='virtual';
-  if(isVirtual){
-    closeChat();
-    if(!openProductRoute(idx))console.warn('ChatShop: rota interna do produto não encontrada para índice',idx);
-    return;
-  }
-  const link=String(p?.link||p?.baseLink||p?.url||'').trim();
-  if(/^https?:\/\//i.test(link)){location.href=link}
+function hideNativeDuplicate(box,card,name){
+  const wanted=norm(name);
+  Array.from(box.children).forEach(el=>{
+    if(el===card||el.id==='spfChatProductCard')return;
+    const txt=norm(el.textContent||'');
+    if(!txt||!wanted)return;
+    const hasImage=!!el.querySelector('img');
+    const hasBuy=/comprar/.test(txt);
+    const sameName=txt.includes(wanted)||wanted.includes(txt.replace(/comprar.*/, '').trim());
+    if(hasImage&&hasBuy&&sameName){el.style.setProperty('display','none','important');el.dataset.chatshopDuplicateProduct='1'}
+  });
 }
 async function renderCard(){
   preferProductChatUi();
@@ -102,13 +72,13 @@ async function renderCard(){
   if(!usefulProduct(p)){await fetchStore();idx=indexFromVisibleProduct();p=products()[idx]||null}
   if(!usefulProduct(p))return false;
   window.__CHATSHOP_ACTIVE_PRODUCT=p;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=idx;
-  ensureStyle();const key=[idx,p?.name,p?.price,imageOf(p),p?.link,p?.baseLink].join('|');let card=$('#spfChatProductCard');if(card?.dataset.key===key)return true;card?.remove();card=document.createElement('div');card.id='spfChatProductCard';card.className='spf-chat-product-card';card.dataset.key=key;
+  ensureStyle();const key=[idx,p?.name,p?.price,imageOf(p),p?.link,p?.baseLink].join('|');let card=$('#spfChatProductCard');
   const img=imageOf(p),desc=descriptionOf(p),name=String(p?.name||'Produto'),price=String(p?.price||'Consulte');
-  card.innerHTML=`${img?`<img class="spf-chat-product-image" src="${esc(img)}" alt="${esc(name)}" loading="eager" decoding="async">`:''}<div class="spf-chat-product-name">${esc(name)}</div><div class="spf-chat-product-price">${esc(price)}</div>${desc?`<div class="spf-chat-product-desc">${esc(desc)}</div>`:''}<button class="spf-chat-product-buy" type="button">🛒 Comprar agora</button>`;
-  const buyBtn=$('.spf-chat-product-buy',card);
-  buyBtn.onpointerdown=e=>{const d=data()||{};if(String(d.storeType||'').toLowerCase()==='virtual'){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();closeChat();openProductRoute(idx)}};
-  buyBtn.onclick=e=>doBuy(p,idx,e);
-  box.prepend(card);box.scrollTop=0;return true
+  if(card?.dataset.key===key){hideNativeDuplicate(box,card,name);return true}
+  card?.remove();card=document.createElement('div');card.id='spfChatProductCard';card.className='spf-chat-product-card';card.dataset.key=key;card.dataset.productIndex=String(idx);
+  card.innerHTML=`${img?`<img class="spf-chat-product-image" src="${esc(img)}" alt="${esc(name)}" loading="eager" decoding="async">`:''}<div class="spf-chat-product-name">${esc(name)}</div><div class="spf-chat-product-price">${esc(price)}</div>${desc?`<div class="spf-chat-product-desc">${esc(desc)}</div>`:''}<button class="spf-chat-product-buy" data-product-index="${idx}" type="button">🛒 Comprar agora</button>`;
+  /* IMPORTANTE: este arquivo só renderiza o cartão. A navegação do botão é controlada exclusivamente por product-chat-buy-fix.js. */
+  box.prepend(card);hideNativeDuplicate(box,card,name);box.scrollTop=0;return true
 }
 function bindOverlay(){const overlay=$('#spfProductChat');if(!overlay||overlay.dataset.productCardBound)return false;overlay.dataset.productCardBound='1';preferProductChatUi();new MutationObserver(()=>{preferProductChatUi();if(overlay.classList.contains('open'))setTimeout(renderCard,20)}).observe(overlay,{attributes:true,attributeFilter:['class']});return true}
 function tick(){preferProductChatUi();bindOverlay();if($('#spfProductChat')?.classList.contains('open'))renderCard()}
