@@ -40,29 +40,40 @@ function captureContext(btn){
   if(Number.isInteger(idx)&&idx>=0){window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=idx;const p=products()[idx];if(usefulProduct(p))window.__CHATSHOP_ACTIVE_PRODUCT=p}
 }
 function activeProduct(){const idx=indexFromVisibleProduct(),p=window.__CHATSHOP_ACTIVE_PRODUCT;if(usefulProduct(p))return p;return products()[idx]||null}
-function productSlugBase(value){return String(value||'produto').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90)||'produto'}
-function productSlugAt(idx){const used={};const list=products();let result='produto-'+(idx+1);for(let i=0;i<list.length;i++){const base=productSlugBase(list[i]?.name);used[base]=(used[base]||0)+1;const slug=used[base]===1?base:`${base}-${used[base]}`;if(i===idx){result=slug;break}}return result}
-function isVirtualStore(){return String(data()?.storeType||'').toLowerCase()==='virtual'}
 function buyTarget(idx){
   const indexed=$(`.sg-card[data-product-index="${idx}"] .sg-buy`);if(indexed)return indexed;
-  const cards=$$('.csv-card,.vs-card');const c=cards[idx];if(c){const b=c.querySelector('.csv-open,.vs-open,.spr-buy,.pub-slide-buy,[data-product],.sg-buy');if(b)return b}
-  const slide=$$('#pubFeed .pub-slide')[idx];return slide?.querySelector('.pub-slide-buy,.spr-buy,.csv-open,.vs-open,[data-product],.sg-buy')||null;
+  const cgc=$(`.cgc[data-i="${idx}"] .cgc-buy`);if(cgc)return cgc;
+  const cards=$$('.csv-card,.vs-card');const c=cards[idx];if(c){const b=c.querySelector('.csv-open,.vs-open,.spr-buy,.pub-slide-buy,[data-product]:not([data-product-chat]),.sg-buy,.cgc-buy');if(b)return b}
+  const slide=$$('#pubFeed .pub-slide')[idx];return slide?.querySelector('.pub-slide-buy,.spr-buy,.csv-open,.vs-open,[data-product]:not([data-product-chat]),.sg-buy,.cgc-buy')||null;
+}
+function closeChat(){
+  $('#spfProductChat')?.classList.remove('open');
+  $('#pubChatOverlay')?.classList.remove('open');
+  $('#virtualChatOverlay')?.classList.remove('open');
 }
 function doBuy(p,idx,e){
   e?.preventDefault?.();e?.stopPropagation?.();
-  if(isVirtualStore()){
-    const slug=productSlugAt(idx);
-    const url=new URL(location.href);
-    url.pathname='/';
-    url.search='';
-    url.hash='';
-    url.searchParams.set('product',slug);
-    location.assign(url.pathname+url.search);
+  const d=data()||{};
+  const isVirtual=String(d.storeType||'').toLowerCase()==='virtual';
+  if(isVirtual){
+    closeChat();
+    requestAnimationFrame(()=>{
+      const original=buyTarget(idx);
+      if(original){original.click();return;}
+      const card=$(`.sg-card[data-product-index="${idx}"],.cgc[data-i="${idx}"]`)||$$('.csv-card,.vs-card,#pubFeed .pub-slide')[idx];
+      if(card){
+        card.click();
+        setTimeout(()=>{
+          const detail=$('.sg-detail-wrap,.csv-detail,.vs-detail,#csvProductBody,#vsProductBody');
+          const b=detail?.querySelector?.('.csv-open,.vs-open,.spr-buy,.pub-slide-buy,.sg-buy,.cgc-buy,[data-product]:not([data-product-chat])');
+          if(b)b.click();
+        },120);
+      }else console.warn('ChatShop: não encontrei o botão do produto',idx);
+    });
     return;
   }
-  const original=buyTarget(idx);if(original){original.click();return}
-  const link=String(p?.link||p?.baseLink||p?.url||'').trim();if(link&&link!=='#'&&!/^https?:\/\/$/.test(link)){location.href=link;return}
-  const detail=$(`.sg-card[data-product-index="${idx}"]`);if(detail){detail.click();setTimeout(()=>{const b=$('.sg-detail-wrap .sg-buy,.csv-open,.vs-open,.spr-buy');if(b)b.click()},60)}
+  const link=String(p?.link||p?.baseLink||p?.url||'').trim();
+  if(link&&link!=='#'&&!/^https?:\/\/$/.test(link)){location.href=link;return}
 }
 async function renderCard(){
   const box=$('#spfProductChatMessages');if(!box)return false;
