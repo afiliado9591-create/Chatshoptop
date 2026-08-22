@@ -26,6 +26,20 @@ function ensureStyle(){if($('#productChatCardStyle'))return;const s=document.cre
 .spf-chat-product-buy{width:100%;min-height:48px;border:0;border-radius:12px;background:var(--store-main,#c2185b);color:#fff;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 3px 10px rgba(0,0,0,.12);cursor:pointer}
 `;
 document.head.appendChild(s)}
+function preferProductChatUi(){
+  const modern=$('#spfProductChat');
+  if(!modern)return false;
+  const oldToggle=$('#pubChatToggle');
+  const oldOverlay=$('#pubChatOverlay');
+  const oldVirtualToggle=$('#virtualChatToggle');
+  const oldVirtualOverlay=$('#virtualChatOverlay');
+  if(oldToggle)oldToggle.style.setProperty('display','none','important');
+  if(oldOverlay){oldOverlay.classList.remove('open');oldOverlay.style.setProperty('display','none','important');oldOverlay.setAttribute('aria-hidden','true')}
+  if(oldVirtualToggle)oldVirtualToggle.style.setProperty('display','none','important');
+  if(oldVirtualOverlay){oldVirtualOverlay.classList.remove('open');oldVirtualOverlay.style.setProperty('display','none','important');oldVirtualOverlay.setAttribute('aria-hidden','true')}
+  document.body?.classList.add('chatshop-use-product-chat');
+  return true;
+}
 function indexFromVisibleProduct(){
   const direct=Number(window.__CHATSHOP_ACTIVE_PRODUCT_INDEX);if(Number.isInteger(direct)&&direct>=0)return direct;
   const visibleName=String($('.sg-detail-wrap .sg-name,.vs-detail-name,.csv-dname,.vs-product-name,.csv-product-name')?.textContent||'').trim();
@@ -72,6 +86,7 @@ function doBuy(p,idx,e){
   if(/^https?:\/\//i.test(link)){location.href=link}
 }
 async function renderCard(){
+  preferProductChatUi();
   const box=$('#spfProductChatMessages');if(!box)return false;
   let p=activeProduct();let idx=indexFromVisibleProduct();
   if(!usefulProduct(p)){await fetchStore();idx=indexFromVisibleProduct();p=products()[idx]||null}
@@ -83,8 +98,8 @@ async function renderCard(){
   $('.spf-chat-product-buy',card).onclick=e=>doBuy(p,idx,e);
   box.prepend(card);box.scrollTop=0;return true
 }
-function bindOverlay(){const overlay=$('#spfProductChat');if(!overlay||overlay.dataset.productCardBound)return false;overlay.dataset.productCardBound='1';new MutationObserver(()=>{if(overlay.classList.contains('open'))setTimeout(renderCard,20)}).observe(overlay,{attributes:true,attributeFilter:['class']});return true}
-function tick(){bindOverlay();if($('#spfProductChat')?.classList.contains('open'))renderCard()}
-function boot(){fetchStore();let n=0;const timer=setInterval(()=>{n++;tick();if(n>80||bindOverlay())clearInterval(timer)},100);document.addEventListener('pointerdown',e=>{const btn=e.target?.closest?.('.spr-chat,.vts-seller,.vcd-product-seller,[data-product-chat]');if(btn)captureContext(btn)},true);document.addEventListener('click',e=>{const btn=e.target?.closest?.('.spr-chat,.vts-seller,.vcd-product-seller,[data-product-chat]');if(btn)captureContext(btn);setTimeout(tick,30)},true)}
+function bindOverlay(){const overlay=$('#spfProductChat');if(!overlay||overlay.dataset.productCardBound)return false;overlay.dataset.productCardBound='1';preferProductChatUi();new MutationObserver(()=>{preferProductChatUi();if(overlay.classList.contains('open'))setTimeout(renderCard,20)}).observe(overlay,{attributes:true,attributeFilter:['class']});return true}
+function tick(){preferProductChatUi();bindOverlay();if($('#spfProductChat')?.classList.contains('open'))renderCard()}
+function boot(){fetchStore();let n=0;const timer=setInterval(()=>{n++;tick();if(n>100)clearInterval(timer)},100);new MutationObserver(()=>preferProductChatUi()).observe(document.documentElement,{childList:true,subtree:true});document.addEventListener('pointerdown',e=>{const btn=e.target?.closest?.('.spr-chat,.vts-seller,.vcd-product-seller,[data-product-chat]');if(btn)captureContext(btn)},true);document.addEventListener('click',e=>{const btn=e.target?.closest?.('.spr-chat,.vts-seller,.vcd-product-seller,[data-product-chat]');if(btn)captureContext(btn);setTimeout(tick,30)},true)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
