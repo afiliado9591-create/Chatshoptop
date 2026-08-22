@@ -28,52 +28,48 @@ function ensureStyle(){if($('#productChatCardStyle'))return;const s=document.cre
 document.head.appendChild(s)}
 function indexFromVisibleProduct(){
   const direct=Number(window.__CHATSHOP_ACTIVE_PRODUCT_INDEX);if(Number.isInteger(direct)&&direct>=0)return direct;
-  const indexed=$('.sg-card[data-product-index]:focus-within,.sg-card[data-product-index]');if(indexed){const n=Number(indexed.dataset.productIndex);if(Number.isInteger(n))return n}
   const visibleName=String($('.sg-detail-wrap .sg-name,.vs-detail-name,.csv-dname,.vs-product-name,.csv-product-name')?.textContent||'').trim();
   if(visibleName){const n=products().findIndex(p=>norm(p?.name)===norm(visibleName));if(n>=0)return n}
   return 0;
 }
 function captureContext(btn){
-  let idx=Number(btn?.dataset?.productIndex);
-  if(!Number.isInteger(idx)||idx<0){const card=btn?.closest?.('[data-product-index],.csv-card,.vs-card,.pub-slide,.sg-card');if(card?.dataset?.productIndex!=null)idx=Number(card.dataset.productIndex);else if(card){const sel=card.matches('.pub-slide')?'.pub-slide':card.matches('.csv-card')?'.csv-card':card.matches('.vs-card')?'.vs-card':'.sg-card';idx=$$(sel).indexOf(card)}}
-  if(!Number.isInteger(idx)||idx<0){const nm=String(btn?.closest?.('.sg-detail-wrap,#vsProductBody,#csvProductBody')?.querySelector?.('.sg-name,.vs-detail-name,.csv-dname,.vs-product-name,.csv-product-name')?.textContent||'').trim();if(nm)idx=products().findIndex(p=>norm(p?.name)===norm(nm))}
+  let idx=-1;
+  for(const v of [btn?.dataset?.productIndex,btn?.dataset?.chatProduct,btn?.dataset?.product]){const n=Number(v);if(Number.isInteger(n)&&n>=0){idx=n;break}}
+  if(idx<0){const card=btn?.closest?.('[data-product-index],.csv-card,.vs-card,.pub-slide,.sg-card,.cgc');if(card?.dataset?.productIndex!=null)idx=Number(card.dataset.productIndex);else if(card?.dataset?.i!=null)idx=Number(card.dataset.i);else if(card){const sel=card.matches('.pub-slide')?'.pub-slide':card.matches('.csv-card')?'.csv-card':card.matches('.vs-card')?'.vs-card':card.matches('.cgc')?'.cgc':'.sg-card';idx=$$(sel).indexOf(card)}}
   if(Number.isInteger(idx)&&idx>=0){window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=idx;const p=products()[idx];if(usefulProduct(p))window.__CHATSHOP_ACTIVE_PRODUCT=p}
 }
 function activeProduct(){const idx=indexFromVisibleProduct(),p=window.__CHATSHOP_ACTIVE_PRODUCT;if(usefulProduct(p))return p;return products()[idx]||null}
-function buyTarget(idx){
-  const indexed=$(`.sg-card[data-product-index="${idx}"] .sg-buy`);if(indexed)return indexed;
-  const cgc=$(`.cgc[data-i="${idx}"] .cgc-buy`);if(cgc)return cgc;
-  const cards=$$('.csv-card,.vs-card');const c=cards[idx];if(c){const b=c.querySelector('.csv-open,.vs-open,.spr-buy,.pub-slide-buy,[data-product]:not([data-product-chat]),.sg-buy,.cgc-buy');if(b)return b}
-  const slide=$$('#pubFeed .pub-slide')[idx];return slide?.querySelector('.pub-slide-buy,.spr-buy,.csv-open,.vs-open,[data-product]:not([data-product-chat]),.sg-buy,.cgc-buy')||null;
-}
 function closeChat(){
   $('#spfProductChat')?.classList.remove('open');
   $('#pubChatOverlay')?.classList.remove('open');
   $('#virtualChatOverlay')?.classList.remove('open');
 }
+function openVirtualProduct(idx){
+  const csv=$$('.csv-card')[idx];
+  if(csv){const open=csv.querySelector('.csv-open');if(open){open.click();return true}csv.click();return true}
+  const vs=$$('.vs-card')[idx];
+  if(vs){const open=vs.querySelector('.vs-open');if(open){open.click();return true}vs.click();return true}
+  const sg=$(`.sg-card[data-product-index="${idx}"]`)||$$('.sg-card')[idx];
+  if(sg){const open=sg.querySelector('.sg-buy');if(open){open.click();return true}sg.click();return true}
+  const cgc=$(`.cgc[data-i="${idx}"]`)||$$('.cgc')[idx];
+  if(cgc){const open=cgc.querySelector('.cgc-buy');if(open){open.click();return true}cgc.click();return true}
+  const slide=$$('#pubFeed .pub-slide')[idx];
+  if(slide){slide.click();return true}
+  return false;
+}
 function doBuy(p,idx,e){
-  e?.preventDefault?.();e?.stopPropagation?.();
+  e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.();
   const d=data()||{};
   const isVirtual=String(d.storeType||'').toLowerCase()==='virtual';
   if(isVirtual){
     closeChat();
     requestAnimationFrame(()=>{
-      const original=buyTarget(idx);
-      if(original){original.click();return;}
-      const card=$(`.sg-card[data-product-index="${idx}"],.cgc[data-i="${idx}"]`)||$$('.csv-card,.vs-card,#pubFeed .pub-slide')[idx];
-      if(card){
-        card.click();
-        setTimeout(()=>{
-          const detail=$('.sg-detail-wrap,.csv-detail,.vs-detail,#csvProductBody,#vsProductBody');
-          const b=detail?.querySelector?.('.csv-open,.vs-open,.spr-buy,.pub-slide-buy,.sg-buy,.cgc-buy,[data-product]:not([data-product-chat])');
-          if(b)b.click();
-        },120);
-      }else console.warn('ChatShop: não encontrei o botão do produto',idx);
+      if(!openVirtualProduct(idx))console.warn('ChatShop: produto virtual não encontrado para índice',idx);
     });
     return;
   }
   const link=String(p?.link||p?.baseLink||p?.url||'').trim();
-  if(link&&link!=='#'&&!/^https?:\/\/$/.test(link)){location.href=link;return}
+  if(/^https?:\/\//i.test(link)){location.href=link}
 }
 async function renderCard(){
   const box=$('#spfProductChatMessages');if(!box)return false;
