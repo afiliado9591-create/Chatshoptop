@@ -58,39 +58,27 @@ function closeChat(){
   $('#pubChatOverlay')?.classList.remove('open');
   $('#virtualChatOverlay')?.classList.remove('open');
 }
+function productSlugBase(value){return String(value||'produto').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90)||'produto'}
+function productSlugForIndex(idx){const used={};const list=products();for(let i=0;i<list.length;i++){const base=productSlugBase(list[i]?.name);used[base]=(used[base]||0)+1;const slug=used[base]===1?base:`${base}-${used[base]}`;if(i===idx)return slug}return''}
+function openProductRoute(idx){const slug=productSlugForIndex(idx);if(!slug)return false;const url=`${location.origin}/produto/${encodeURIComponent(slug)}`;location.assign(url);return true}
 function safeClick(el){
   if(!el||el.tagName==='A')return false;
   el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
   return true;
 }
 function openVirtualProduct(idx){
-  /* Loja Virtual: sempre abrir a página interna do produto. Nunca usar o link externo salvo no item. */
+  if(openProductRoute(idx))return true;
   if(typeof window.__CHATSHOP_OPEN_SALES_PRODUCT==='function'){
     try{if(window.__CHATSHOP_OPEN_SALES_PRODUCT(idx)!==false)return true}catch(e){}
   }
-
   const csv=$$('.csv-card')[idx];
-  if(csv){
-    const open=csv.querySelector('button.csv-open');
-    if(open&&safeClick(open))return true;
-    if(safeClick(csv))return true;
-  }
-
+  if(csv){const open=csv.querySelector('button.csv-open');if(open&&safeClick(open))return true;if(safeClick(csv))return true}
   const vs=$$('.vs-card')[idx];
-  if(vs){
-    const open=vs.querySelector('button.vs-open');
-    if(open&&safeClick(open))return true;
-    if(safeClick(vs))return true;
-  }
-
-  /* Grade antiga: o cartão abre o detalhe; .sg-buy é link externo e NÃO deve ser clicado. */
+  if(vs){const open=vs.querySelector('button.vs-open');if(open&&safeClick(open))return true;if(safeClick(vs))return true}
   const sg=$(`.sg-card[data-product-index="${idx}"]`)||$$('.sg-card[data-product-index]')[idx]||$$('.sg-card')[idx];
   if(sg&&safeClick(sg))return true;
-
-  /* Grade atual de 2 produtos: o cartão abre o detalhe; .cgc-buy é link externo e NÃO deve ser clicado. */
   const cgc=$(`.cgc[data-i="${idx}"]`)||$$('.cgc[data-i]')[idx]||$$('.cgc')[idx];
   if(cgc&&safeClick(cgc))return true;
-
   const slide=$$('#pubFeed .pub-slide')[idx];
   if(slide&&safeClick(slide))return true;
   return false;
@@ -101,9 +89,7 @@ function doBuy(p,idx,e){
   const isVirtual=String(d.storeType||'').toLowerCase()==='virtual';
   if(isVirtual){
     closeChat();
-    setTimeout(()=>{
-      if(!openVirtualProduct(idx))console.warn('ChatShop: página interna do produto não encontrada para índice',idx);
-    },80);
+    if(!openProductRoute(idx))console.warn('ChatShop: rota interna do produto não encontrada para índice',idx);
     return;
   }
   const link=String(p?.link||p?.baseLink||p?.url||'').trim();
@@ -119,7 +105,9 @@ async function renderCard(){
   ensureStyle();const key=[idx,p?.name,p?.price,imageOf(p),p?.link,p?.baseLink].join('|');let card=$('#spfChatProductCard');if(card?.dataset.key===key)return true;card?.remove();card=document.createElement('div');card.id='spfChatProductCard';card.className='spf-chat-product-card';card.dataset.key=key;
   const img=imageOf(p),desc=descriptionOf(p),name=String(p?.name||'Produto'),price=String(p?.price||'Consulte');
   card.innerHTML=`${img?`<img class="spf-chat-product-image" src="${esc(img)}" alt="${esc(name)}" loading="eager" decoding="async">`:''}<div class="spf-chat-product-name">${esc(name)}</div><div class="spf-chat-product-price">${esc(price)}</div>${desc?`<div class="spf-chat-product-desc">${esc(desc)}</div>`:''}<button class="spf-chat-product-buy" type="button">🛒 Comprar agora</button>`;
-  $('.spf-chat-product-buy',card).onclick=e=>doBuy(p,idx,e);
+  const buyBtn=$('.spf-chat-product-buy',card);
+  buyBtn.onpointerdown=e=>{const d=data()||{};if(String(d.storeType||'').toLowerCase()==='virtual'){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();closeChat();openProductRoute(idx)}};
+  buyBtn.onclick=e=>doBuy(p,idx,e);
   box.prepend(card);box.scrollTop=0;return true
 }
 function bindOverlay(){const overlay=$('#spfProductChat');if(!overlay||overlay.dataset.productCardBound)return false;overlay.dataset.productCardBound='1';preferProductChatUi();new MutationObserver(()=>{preferProductChatUi();if(overlay.classList.contains('open'))setTimeout(renderCard,20)}).observe(overlay,{attributes:true,attributeFilter:['class']});return true}
