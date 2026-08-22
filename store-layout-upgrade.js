@@ -18,14 +18,14 @@
       .home-layout-option b{display:block;font-size:12.5px;color:#312e81;margin-bottom:2px}
       .home-layout-option small{display:block;color:#6b7280;font-size:11px}
 
-      body.store-grid-layout{background:#f5f5f5!important}
+      body.store-grid-layout{background:#f5f5f5!important;overflow-y:auto!important;height:auto!important;min-height:100%!important}
       body.store-grid-layout #storefrontScreen,
-      body.store-grid-layout #storefrontScreen #liveApp{background:#f5f5f5!important}
+      body.store-grid-layout #storefrontScreen #liveApp{background:#f5f5f5!important;height:auto!important;min-height:100vh!important;overflow:visible!important}
 
       #pubFeed.catalog-grid{
-        height:100dvh!important;overflow-y:auto!important;overflow-x:hidden!important;
+        height:auto!important;min-height:0!important;overflow:visible!important;
         display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
-        gap:8px!important;align-content:start!important;padding:68px 8px 155px!important;
+        gap:8px!important;align-content:start!important;padding:68px 8px 24px!important;
         background:#f5f5f5!important;scroll-snap-type:none!important;
       }
       #pubFeed.catalog-grid .pub-swipe-hint{display:none!important}
@@ -46,7 +46,6 @@
         border-bottom:1px solid #f1f1f1!important;
       }
 
-      /* Só escondemos o layout antigo DEPOIS que o novo card ficou pronto. */
       #pubFeed.catalog-grid .pub-slide.grid-ready .pub-slide-overlay{display:none!important}
       .catalog-grid-info{display:none}
       #pubFeed.catalog-grid .pub-slide.grid-ready .catalog-grid-info{
@@ -92,7 +91,7 @@
       body.store-grid-layout .promo-badge{display:none!important}
 
       body.store-grid-layout .pub-cat-menu{
-        position:fixed!important;top:0!important;left:0!important;right:0!important;transform:none!important;
+        position:sticky!important;top:0!important;left:auto!important;right:auto!important;transform:none!important;
         z-index:22!important;display:flex!important;flex-direction:row!important;gap:7px!important;
         max-height:none!important;overflow-x:auto!important;overflow-y:hidden!important;align-items:center!important;
         padding:10px 8px 9px!important;white-space:nowrap!important;background:rgba(245,245,245,.97)!important;
@@ -111,7 +110,7 @@
 
       @media(max-width:560px){
         .home-layout-options{grid-template-columns:1fr}
-        #pubFeed.catalog-grid{gap:7px!important;padding-left:7px!important;padding-right:7px!important;padding-bottom:150px!important}
+        #pubFeed.catalog-grid{gap:7px!important;padding-left:7px!important;padding-right:7px!important;padding-bottom:24px!important}
         #pubFeed.catalog-grid .pub-slide.grid-ready .catalog-grid-info{padding:9px 9px 10px!important;min-height:158px!important}
         #pubFeed.catalog-grid .catalog-grid-name{font-size:12.7px!important;min-height:33px!important}
         #pubFeed.catalog-grid .catalog-grid-description{font-size:10.8px!important;min-height:29px!important}
@@ -123,7 +122,7 @@
 
     function escText(value){
       return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'
       }[c]));
     }
     function norm(value){
