@@ -41,7 +41,7 @@ async function syncLoggedUser(){
     const c=cap(plan);
     try{myPlan=plan;myProductLimit=c.products;myChatLimit=c.chats}catch(e){}
     window.__CHATSHOP_VIRTUAL_STORE_ACCESS=adminMode()||u.virtualStoreAccess===true||c.features.virtual;
-    await ref.set({productLimit:c.products,chatLimit:c.chats,planPolicyVersion:'2026-08-21-virtual-shipping-fix'},{merge:true});
+    await ref.set({productLimit:c.products,chatLimit:c.chats,planPolicyVersion:'2026-08-21-restore-full-virtual-shipping'},{merge:true});
     try{
       const stores=await db.collection(typeof COLECAO!=='undefined'?COLECAO:'chatshops').where('ownerUid','==',myUid).get();
       const features={...c.features};
@@ -57,6 +57,44 @@ function hideClosestFieldByText(text){const wanted=String(text).toLowerCase();do
 function showClosestFieldByText(text){const wanted=String(text).toLowerCase();document.querySelectorAll('#editorView .field').forEach(f=>{if(String(f.textContent||'').toLowerCase().includes(wanted))f.style.display=''})}
 function sectionByHeading(text){const wanted=String(text).toLowerCase();return[...document.querySelectorAll('#editorView .section')].find(s=>String(s.querySelector('h2')?.textContent||'').toLowerCase().includes(wanted))}
 
+/* Restaura a estrutura original do frete se a regra de ocultação deixou apenas o título. */
+function ensureFullVirtualShipping(){
+  const type=document.getElementById('storeType');
+  if(!type||type.value!=='virtual'||!canUseShipping())return;
+  let box=document.getElementById('shippingSettings');
+  const typeField=type.closest('.field');
+  if(!box&&typeField){
+    box=document.createElement('div');box.id='shippingSettings';box.className='field';
+    box.style.cssText='border:1px solid #bae6fd;background:#f0f9ff;border-radius:12px;padding:12px;margin:10px 0 14px';
+    typeField.insertAdjacentElement('afterend',box);
+  }
+  if(!box)return;
+  box.style.display='block';
+  if(!document.getElementById('shippingMode')){
+    box.innerHTML=`<label style="font-size:14px">🚚 Configuração de entrega</label>
+      <div class="field" style="margin-top:8px"><label>Tipo de frete</label>
+        <select id="shippingMode">
+          <option value="free">🎁 Frete grátis</option>
+          <option value="per_km">📍 Frete por km</option>
+          <option value="superfrete">📦 SuperFrete — cálculo por CEP</option>
+        </select>
+        <small>Escolha como o frete será calculado na Loja Virtual.</small>
+      </div>
+      <div id="shippingKmFields" style="display:none">
+        <div class="field"><label>Endereço de saída / origem da loja</label><input id="shippingOrigin" placeholder="Ex: Rua Exemplo, 100 - São Paulo - SP"></div>
+        <div class="grid2"><div class="field"><label>Valor por km (R$)</label><input id="shippingRate" inputmode="decimal" value="2,50"></div><div class="field"><label>Frete mínimo (R$)</label><input id="shippingMinimum" inputmode="decimal" value="0"></div></div>
+        <div class="field"><label>Distância máxima (km)</label><input id="shippingMaxKm" inputmode="decimal" value="0"></div>
+      </div>`;
+    const mode=document.getElementById('shippingMode');
+    const km=document.getElementById('shippingKmFields');
+    const update=()=>{if(km)km.style.display=mode?.value==='per_km'?'block':'none';try{window.debounce?.()}catch(e){}};
+    mode?.addEventListener('change',update);update();
+    if(!document.getElementById('chatshop-superfrete-reload')){
+      const s=document.createElement('script');s.id='chatshop-superfrete-reload';s.src='/superfrete-upgrade.js?v=20260821-restore';document.head.appendChild(s);
+    }
+  }
+}
+
 function applyEditorAccess(){
   const plan=currentPlan(),c=cap(plan),allowVirtual=canUseVirtual();
   try{myProductLimit=c.products;myChatLimit=c.chats}catch(e){}
@@ -68,6 +106,7 @@ function applyEditorAccess(){
     const typeField=type.closest('.field');if(typeField)typeField.style.display=allowVirtual?'':'none';
   }
   const isVirtual=type?.value==='virtual';
+  if(isVirtual&&canUseShipping())ensureFullVirtualShipping();
   const shipping=document.getElementById('shippingSettings');
   if(shipping)shipping.style.display=canUseShipping()&&isVirtual?'block':'none';
   const custom=document.getElementById('customDomainField');
@@ -150,6 +189,7 @@ function publicStorePolicy(){document.getElementById('freeWhatsappButton')?.remo
 
 function install(){
   patchPlanConstants();patchCollect();patchDashboard();patchOpenEditor();installPlanModal();installAprendizImageUploadLock();applyEditorAccess();decorateDashboard();publicStorePolicy();
+  document.addEventListener('change',e=>{if(e.target?.id==='storeType')setTimeout(applyEditorAccess,0)},true);
   const root=document.body;
   if(root&&!root.dataset.planPolicyObserved){root.dataset.planPolicyObserved='1';let timer;new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{patchCollect();applyEditorAccess();decorateDashboard();publicStorePolicy()},100)}).observe(root,{childList:true,subtree:true})}
   try{if(window.auth&&typeof auth.onAuthStateChanged==='function')auth.onAuthStateChanged(user=>{if(user)setTimeout(syncLoggedUser,180)})}catch(e){}
