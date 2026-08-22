@@ -3,6 +3,7 @@
 'use strict';
 const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
 function store(){return window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||{};}
 function products(){const d=store();return Array.isArray(d.products)?d.products:[];}
 function remember(btn){
@@ -26,25 +27,49 @@ function closeChat(){
   $('#pubChatOverlay')?.classList.remove('open');
   $('#virtualChatOverlay')?.classList.remove('open');
 }
+function productPageIsOpen(){
+  const selectors=['#vsProductModal.open','#vsProductModal.on','#csvProductModal.open','#csvProductModal.on','.sg-detail-wrap','.cgc-detail'];
+  return selectors.some(s=>$(s));
+}
 function safeInternalClick(el){
   if(!el||el.tagName==='A')return false;
   el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
   return true;
 }
-function openSalesPage(idx){
+async function triggerVirtualModal(idx){
+  /* Primeiro tenta a função pública, se algum layout a expuser. */
   if(typeof window.__CHATSHOP_OPEN_SALES_PRODUCT==='function'){
-    try{if(window.__CHATSHOP_OPEN_SALES_PRODUCT(idx)!==false)return true;}catch(err){}
+    try{
+      window.__CHATSHOP_OPEN_SALES_PRODUCT(idx);
+      await wait(120);
+      if(productPageIsOpen())return true;
+    }catch(err){}
   }
-  const csvButton=$(`button.csv-open[data-product="${idx}"]`)||$$('.csv-card')[idx]?.querySelector('button.csv-open');
-  if(csvButton&&safeInternalClick(csvButton))return true;
-  const vsButton=$(`button.vs-open[data-product="${idx}"]`)||$$('.vs-card')[idx]?.querySelector('button.vs-open');
-  if(vsButton&&safeInternalClick(vsButton))return true;
+
+  /* Tenta o botão real do catálogo normal. */
+  const realCsv=$(`button.csv-open[data-product="${idx}"]`)||$$('.csv-card')[idx]?.querySelector('button.csv-open');
+  if(realCsv){safeInternalClick(realCsv);await wait(120);if(productPageIsOpen())return true;}
+  const realVs=$(`button.vs-open[data-product="${idx}"]`)||$$('.vs-card')[idx]?.querySelector('button.vs-open');
+  if(realVs){safeInternalClick(realVs);await wait(120);if(productPageIsOpen())return true;}
+
+  /* Na grade, os cards originais podem ter sido substituídos. Cria um gatilho interno temporário
+     para aproveitar o mesmo listener da Loja Virtual, sem usar href/window.open. */
+  for(const cls of ['vs-open','csv-open']){
+    const ghost=document.createElement('button');
+    ghost.type='button';ghost.className=cls;ghost.dataset.product=String(idx);
+    ghost.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none';
+    (document.body||document.documentElement).appendChild(ghost);
+    ghost.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
+    await wait(150);
+    ghost.remove();
+    if(productPageIsOpen())return true;
+  }
+
+  /* Último fallback: abre o detalhe da grade, mas nunca clica no link externo Comprar. */
   const sg=$(`.sg-card[data-product-index="${idx}"]`)||$$('.sg-card[data-product-index]')[idx];
-  if(sg&&safeInternalClick(sg))return true;
+  if(sg){safeInternalClick(sg);await wait(80);if(productPageIsOpen())return true;}
   const cgc=$(`.cgc[data-i="${idx}"]`)||$$('.cgc[data-i]')[idx];
-  if(cgc&&safeInternalClick(cgc))return true;
-  const slide=$$('#pubFeed .pub-slide')[idx];
-  if(slide&&safeInternalClick(slide))return true;
+  if(cgc){safeInternalClick(cgc);await wait(80);if(productPageIsOpen())return true;}
   return false;
 }
 function withNavigationGuard(fn){
@@ -54,19 +79,14 @@ function withNavigationGuard(fn){
     if(!active)return;
     const a=e.target?.closest?.('a');
     if(!a)return;
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
   };
   document.addEventListener('click',stopAnchors,true);
   try{window.open=function(){return null;};}catch(err){}
-  try{fn();}finally{
-    setTimeout(()=>{
-      active=false;
-      document.removeEventListener('click',stopAnchors,true);
-      try{window.open=oldOpen;}catch(err){}
-    },900);
-  }
+  Promise.resolve().then(fn).finally(()=>setTimeout(()=>{
+    active=false;document.removeEventListener('click',stopAnchors,true);
+    try{window.open=oldOpen;}catch(err){}
+  },900));
 }
 document.addEventListener('pointerdown',e=>{
   const seller=e.target?.closest?.('.spr-chat,.vts-seller,.vcd-product-seller,[data-product-chat]');
@@ -75,24 +95,18 @@ document.addEventListener('pointerdown',e=>{
 document.addEventListener('click',function(e){
   const seller=e.target?.closest?.('.spr-chat,.vts-seller,.vcd-product-seller,[data-product-chat]');
   if(seller)remember(seller);
-
   const buy=e.target?.closest?.('.spf-chat-product-buy');
   if(!buy)return;
   const d=store();
   if(String(d.storeType||'').toLowerCase()!=='virtual')return;
-
-  e.preventDefault();
-  e.stopPropagation();
-  e.stopImmediatePropagation();
-
+  e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
   const idx=activeIndex();
   if(idx<0){console.warn('ChatShop: produto do chat não identificado');return;}
-
-  withNavigationGuard(()=>{
+  withNavigationGuard(async()=>{
     closeChat();
-    setTimeout(()=>{
-      if(!openSalesPage(idx))console.warn('ChatShop: página de venda interna não encontrada para produto',idx);
-    },80);
+    await wait(80);
+    const opened=await triggerVirtualModal(idx);
+    if(!opened)console.warn('ChatShop: página de venda interna não abriu para produto',idx);
   });
 },true);
 })();
