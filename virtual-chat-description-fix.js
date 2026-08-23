@@ -1,6 +1,8 @@
 /* Loja Virtual: usa o mesmo ChatShop do catálogo + descrição completa do produto. */
 (function(){
 'use strict';
+/* Recursos da vitrine publicada não devem executar dentro do painel/editor. */
+if(location.hostname==='alibr.com.br'||location.hostname==='www.alibr.com.br')return;
 const $=(s,r)=> (r||document).querySelector(s);
 const $$=(s,r)=> Array.from((r||document).querySelectorAll(s));
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
