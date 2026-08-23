@@ -18,8 +18,8 @@ function canUseVirtual(){return adminMode()||(POLICY[currentPlan()]||POLICY.apre
 function isVirtual(){return $('#storeType')?.value==='virtual'}
 
 function loadScriptFresh(src,id){
-  const old=document.getElementById(id);if(old)old.remove();
-  const s=document.createElement('script');s.id=id;s.src=src;s.async=false;document.head.appendChild(s);
+  if(document.getElementById(id))return;
+  const s=document.createElement('script');s.id=id;s.src=src;s.async=true;document.head.appendChild(s);
 }
 
 /* ---------- FORMATO DA LOJA ---------- */
@@ -83,48 +83,48 @@ function shippingMarkup(){return `<label style="font-size:14px;font-weight:900">
     <div class="field"><label>Distância máxima (km)</label><input id="shippingMaxKm" inputmode="decimal" value="0"></div>
   </div>`}
 
-function visibleShippingMode(){
-  const m=$('#shippingMode');
-  if(!m)return false;
-  const st=getComputedStyle(m);return st.display!=='none'&&st.visibility!=='hidden';
+function showShippingBlock(box,mode){
+  box?.style.setProperty('display','block','important');
+  const field=mode?.closest('.field');if(field)field.style.setProperty('display','flex','important');
+  mode?.style.setProperty('display','block','important');
 }
 
 function rebuildShippingBlock(){
   const type=$('#storeType');if(!type||!isVirtual()||!canUseVirtual())return false;
-  const format=$('#virtualStoreFormatRecovery');
+  let boxes=$$('#shippingSettings');
+  let box=boxes.shift()||null;
+  boxes.forEach(el=>el.remove());
 
-  /* Remove a estrutura quebrada deixada pelas regras antigas. */
-  $$('#shippingSettings').forEach(el=>el.remove());
-  $('#superfreteSettings')?.remove();
+  if(!box){
+    box=document.createElement('div');
+    box.id='shippingSettings';box.className='field';
+    box.style.cssText='display:block!important;border:1px solid #bae6fd;background:#f0f9ff;border-radius:12px;padding:12px;margin:10px 0 14px';
+    box.innerHTML=shippingMarkup();
+    const format=$('#virtualStoreFormatRecovery');
+    if(format)format.insertAdjacentElement('afterend',box);else type.closest('.field')?.insertAdjacentElement('afterend',box);
+  }
 
-  const box=document.createElement('div');
-  box.id='shippingSettings';box.className='field';
-  box.style.cssText='display:block!important;border:1px solid #bae6fd;background:#f0f9ff;border-radius:12px;padding:12px;margin:10px 0 14px';
-  box.innerHTML=shippingMarkup();
-  if(format)format.insertAdjacentElement('afterend',box);else type.closest('.field')?.insertAdjacentElement('afterend',box);
-
-  const mode=$('#shippingMode'),km=$('#shippingKmFields');
-  const update=()=>{if(km)km.style.display=mode?.value==='per_km'?'block':'none';try{window.debounce?.()}catch(e){}};
-  mode?.addEventListener('change',update);update();
-
-  /* O primeiro carregamento do SuperFrete acontece cedo demais. Executa novamente agora que shippingMode existe. */
+  const mode=$('#shippingMode',box),km=$('#shippingKmFields',box);
+  if(!mode)return false;
+  showShippingBlock(box,mode);
+  if(!mode.__chatshopRecoveryBound){
+    mode.__chatshopRecoveryBound=true;
+    mode.addEventListener('change',()=>{if(km)km.style.display=mode.value==='per_km'?'block':'none';try{window.debounce?.()}catch(e){}});
+  }
+  if(km)km.style.display=mode.value==='per_km'?'block':'none';
+  if(![...mode.options].some(o=>o.value==='superfrete')){const o=document.createElement('option');o.value='superfrete';o.textContent='📦 SuperFrete — cálculo por CEP';mode.appendChild(o)}
   window.__chatshopSfRecoveryLoaded=true;
-  loadScriptFresh('/superfrete-upgrade.js?v=20260821-2146-visible-recovery','chatshop-superfrete-visible-recovery');
+  loadScriptFresh('/superfrete-upgrade.js?v=20260823-single-init','chatshop-superfrete-visible-recovery');
   return true;
 }
 
 function ensureShippingVisible(){
   if(!isVirtual()||!canUseVirtual())return;
-  const box=$('#shippingSettings');
-  const mode=$('#shippingMode');
-  if(!box||!mode||!visibleShippingMode()){
-    rebuildShippingBlock();return;
-  }
-  box.style.setProperty('display','block','important');
-  const field=mode.closest('.field');if(field)field.style.setProperty('display','flex','important');
-  mode.style.setProperty('display','block','important');
+  const box=$('#shippingSettings'),mode=box&&$('#shippingMode',box);
+  if(!box||!mode){rebuildShippingBlock();return}
+  showShippingBlock(box,mode);
   if(![...mode.options].some(o=>o.value==='superfrete')){const o=document.createElement('option');o.value='superfrete';o.textContent='📦 SuperFrete — cálculo por CEP';mode.appendChild(o)}
-  if(!$('#superfreteSettings')&&!document.getElementById('chatshop-superfrete-visible-recovery'))loadScriptFresh('/superfrete-upgrade.js?v=20260821-2146-visible-recovery','chatshop-superfrete-visible-recovery');
+  loadScriptFresh('/superfrete-upgrade.js?v=20260823-single-init','chatshop-superfrete-visible-recovery');
 }
 
 /* ---------- SALVAR / EDITAR ---------- */
@@ -162,7 +162,7 @@ function install(){
   applyAccess();
   document.addEventListener('change',e=>{if(e.target?.id==='storeType')setTimeout(()=>{applyAccess();if(isVirtual())ensureShippingVisible()},40)},true);
   try{if(window.auth&&typeof auth.onAuthStateChanged==='function')auth.onAuthStateChanged(user=>{if(user)setTimeout(syncLoggedUser,120)})}catch(e){}
-  let tries=0;const timer=setInterval(()=>{tries++;applyAccess();if(isVirtual())ensureShippingVisible();if(tries>60)clearInterval(timer)},200);
+  let tries=0;const timer=setInterval(()=>{tries++;applyAccess();const ready=$('#virtualStoreFormatRecovery')&&(!isVirtual()||($('#shippingSettings')&&$('#shippingMode')));if(ready||tries>=16)clearInterval(timer)},250);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
