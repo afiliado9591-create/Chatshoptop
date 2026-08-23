@@ -77,9 +77,20 @@ function decorateCard(card,index){
   }
   card.dataset.spcReady='1';
 }
+function hideDuplicateTopBag(){
+  /* O cabeçalho pode ser recriado depois do carregamento. Remove apenas o botão
+     textual preto "Sacola"; o botão vermelho lateral usa somente o ícone. */
+  $('button').forEach(button=>{
+    const text=String(button.textContent||'').replace(/\s+/g,' ').trim();
+    if(/^🛍️?\s*Sacola\b/i.test(text)||/^Sacola\b/i.test(text)){
+      if(!button.closest('.vs-modal,.spc-actions'))button.style.setProperty('display','none','important');
+    }
+  });
+}
 function decoratePublished(){
   if(!document.body.classList.contains('chatshop-virtual-tiktok'))return;
   installStyle();
+  hideDuplicateTopBag();
   const menuSetting=window.__CHATSHOP_STORE_DATA?.singleProductMenuEnabled??window.__CHATSHOP_STORE_FEATURE_DATA?.singleProductMenuEnabled;
   document.body.classList.toggle('single-menu-enabled',menuSetting===true);
   $$('.csv-card,.vs-card').forEach(decorateCard);
