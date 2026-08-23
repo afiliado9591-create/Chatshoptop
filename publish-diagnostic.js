@@ -27,7 +27,8 @@ const collectWrapperMarkers=[
   '__planAccessWrapped',
   '__affiliateProductPlanWrapped',
   '__affiliateCatalogQnaWrapped',
-  '__virtualShippingWrapped'
+  '__virtualShippingWrapped',
+  '__spcWrapped'
 ];
 const seenCollectMarkers=new Set();
 let lastCollectFn=null;
