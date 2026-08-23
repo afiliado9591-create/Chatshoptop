@@ -43,6 +43,50 @@ function ensureAdminCsvAfterAuth(){
     if(tries>120)clearInterval(timer);
   },250);
 }
+
+function installEditorPerformance(){
+  const root=document.getElementById('products');
+  if(!root||document.getElementById('chatshopEditorPerformanceStyle'))return;
+
+  const style=document.createElement('style');
+  style.id='chatshopEditorPerformanceStyle';
+  style.textContent=`
+    #products .product{
+      content-visibility:auto;
+      contain-intrinsic-size:900px;
+    }
+    #products .image-preview img{
+      content-visibility:auto;
+    }
+    @media(max-width:700px){
+      #products .product{contain-intrinsic-size:1100px;}
+    }
+  `;
+  document.head.appendChild(style);
+
+  let queued=false;
+  const tune=()=>{
+    queued=false;
+    root.querySelectorAll('.image-preview img').forEach(img=>{
+      if(!img.hasAttribute('loading'))img.loading='lazy';
+      if(!img.hasAttribute('decoding'))img.decoding='async';
+      try{img.fetchPriority='low'}catch(e){}
+    });
+  };
+  const schedule=()=>{
+    if(queued)return;
+    queued=true;
+    if('requestIdleCallback' in window)requestIdleCallback(tune,{timeout:500});
+    else setTimeout(tune,80);
+  };
+  schedule();
+
+  if(!root.dataset.performanceObserved){
+    root.dataset.performanceObserved='1';
+    new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
+  }
+}
+
 function boot(){
   /*
    * Não paramos de vigiar depois do primeiro collect(). Vários módulos do ChatShop
@@ -57,7 +101,7 @@ function boot(){
     if(typeof fn!=='function')return;
     if(fn!==lastCollect)markCurrent();
     else markers.forEach(k=>{try{fn[k]=true}catch(e){}});
-  },100);
+  },500);
 
   document.addEventListener('click',e=>{
     if(e.target.closest?.('#publishBtn')){
@@ -74,6 +118,13 @@ function boot(){
     }).observe(document.documentElement,{childList:true,subtree:true});
   }
   ensureAdminCsvAfterAuth();
+
+  let perfTries=0;
+  const perfTimer=setInterval(()=>{
+    perfTries++;
+    installEditorPerformance();
+    if(document.getElementById('products')||perfTries>40)clearInterval(perfTimer);
+  },250);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
