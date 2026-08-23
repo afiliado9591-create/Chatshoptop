@@ -104,9 +104,14 @@ function restoreAnalyticsFields(){
 function start(){
   restoreAnalyticsFields();
   const editor=$('#editorView')||document.body;
-  new MutationObserver(()=>requestAnimationFrame(restoreAnalyticsFields)).observe(editor,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class','hidden','disabled','readonly']});
+  let queued=false;
+  new MutationObserver(mutations=>{
+    if(!mutations.some(m=>m.addedNodes.length||m.removedNodes.length)||queued)return;
+    queued=true;
+    requestAnimationFrame(()=>{queued=false;restoreAnalyticsFields()});
+  }).observe(editor,{childList:true,subtree:true});
   document.addEventListener('change',e=>{if(e.target?.id==='storeType')setTimeout(restoreAnalyticsFields,30)},true);
-  setInterval(restoreAnalyticsFields,1200);
+  setTimeout(restoreAnalyticsFields,600);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
