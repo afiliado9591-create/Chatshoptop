@@ -46,23 +46,8 @@ function ensureAdminCsvAfterAuth(){
 
 function installEditorPerformance(){
   const root=document.getElementById('products');
-  if(!root||document.getElementById('chatshopEditorPerformanceStyle'))return;
-
-  const style=document.createElement('style');
-  style.id='chatshopEditorPerformanceStyle';
-  style.textContent=`
-    #products .product{
-      content-visibility:auto;
-      contain-intrinsic-size:900px;
-    }
-    #products .image-preview img{
-      content-visibility:auto;
-    }
-    @media(max-width:700px){
-      #products .product{contain-intrinsic-size:1100px;}
-    }
-  `;
-  document.head.appendChild(style);
+  if(!root||root.dataset.performanceObserved==='1')return;
+  root.dataset.performanceObserved='1';
 
   let queued=false;
   const tune=()=>{
@@ -80,11 +65,7 @@ function installEditorPerformance(){
     else setTimeout(tune,80);
   };
   schedule();
-
-  if(!root.dataset.performanceObserved){
-    root.dataset.performanceObserved='1';
-    new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
-  }
+  new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
 }
 
 function boot(){
