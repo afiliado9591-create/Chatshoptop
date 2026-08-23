@@ -1,6 +1,8 @@
 /* ChatShop - cabeçalho e rodapé da Loja Virtual com a identidade da loja. */
 (function(){
 'use strict';
+/* Recursos da vitrine publicada não devem executar dentro do painel/editor. */
+if(location.hostname==='alibr.com.br'||location.hostname==='www.alibr.com.br')return;
 
 const data=window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||null;
 if(!data)return;
