@@ -40,6 +40,19 @@ function restoreVirtualStoreFields(){
   });
 
   const add=$('#addProduct',editor);if(add)show(add);
+
+  /* Link de compra/afiliado pertence somente ao editor de catálogo afiliado. */
+  $('#products .product',editor).forEach(card=>{
+    const input=$('[data-k="link"]',card);
+    const field=input?.closest('.field')||input?.parentElement;
+    if(field&&field.dataset.virtualHidden!=='1'){
+      field.dataset.virtualHidden='1';
+      field.classList.add('affiliate-link-field');
+      field.style.setProperty('display','none','important');
+    }
+    const actions=$('.affiliate-base-link-actions',card);
+    if(actions)actions.style.setProperty('display','none','important');
+  });
 }
 
 function ensureBaseLinkAction(card){
@@ -113,10 +126,10 @@ function apply(){
 function start(){
   apply();
   const root=$('#editorView')||document.body;
-  new MutationObserver(()=>setTimeout(apply,20)).observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});
+  let queued=false;
+  new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;apply()})}).observe(root,{childList:true,subtree:true});
   document.addEventListener('change',e=>{if(e.target?.id==='storeType')setTimeout(apply,30)},true);
   document.addEventListener('click',e=>{if(e.target.closest?.('#usarCatalogoBtn,#catalogoLista button[data-id],#products'))setTimeout(apply,60)},true);
-  setInterval(apply,1200);
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
