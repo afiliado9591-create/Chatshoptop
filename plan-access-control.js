@@ -39,21 +39,30 @@ function setRecoveryModeFromData(data){
   syncUnderlyingFormat(value);
 }
 function ensureFormatControls(){
-  const type=$('#storeType');if(!type||!canUseVirtual())return;
+  const type=$('#storeType');if(!type)return;
   let box=$('#virtualStoreFormatRecovery');
   if(!box){
     box=document.createElement('div');box.id='virtualStoreFormatRecovery';box.className='field';
     box.style.cssText='margin:10px 0 14px;padding:12px;border:1px solid #ddd6fe;background:#faf5ff;border-radius:12px';
-    box.innerHTML=`<label style="font-size:14px;font-weight:900;color:#4c1d95">📱 Formato da Loja Virtual</label>
+    box.innerHTML=`<label id="chatshopFormatTitle" style="font-size:14px;font-weight:900;color:#4c1d95">📱 Formato da Loja Virtual</label>
       <div style="display:grid;gap:8px;margin-top:8px">
-        <label style="display:flex;gap:9px;align-items:flex-start;background:#fff;border:1px solid #ddd6fe;border-radius:10px;padding:10px"><input type="radio" name="virtualStoreFormatRecovery" value="catalog" checked><span><b>Catálogo completo</b><small style="display:block;color:#6b7280">Formato normal da loja com todos os produtos.</small></span></label>
+        <label data-format-option="catalog" style="display:flex;gap:9px;align-items:flex-start;background:#fff;border:1px solid #ddd6fe;border-radius:10px;padding:10px"><input type="radio" name="virtualStoreFormatRecovery" value="catalog" checked><span><b>Catálogo completo</b><small style="display:block;color:#6b7280">Formato normal da loja com todos os produtos.</small></span></label>
         <label style="display:flex;gap:9px;align-items:flex-start;background:#fff;border:1px solid #ddd6fe;border-radius:10px;padding:10px"><input type="radio" name="virtualStoreFormatRecovery" value="single"><span><b>1 produto por página</b><small style="display:block;color:#6b7280">Um produto em destaque por vez.</small></span></label>
         <label style="display:flex;gap:9px;align-items:flex-start;background:#fff;border:1px solid #ddd6fe;border-radius:10px;padding:10px"><input type="radio" name="virtualStoreFormatRecovery" value="grid"><span><b>Grade de 2 produtos</b><small style="display:block;color:#6b7280">Dois produtos lado a lado.</small></span></label>
       </div>`;
     type.closest('.field')?.insertAdjacentElement('afterend',box);
     box.addEventListener('change',e=>{if(e.target?.name==='virtualStoreFormatRecovery'){syncUnderlyingFormat(e.target.value);try{window.debounce?.()}catch(err){}}});
   }
-  box.style.display=isVirtual()?'block':'none';
+  const affiliate=type.value!=='virtual';
+  const title=$('#chatshopFormatTitle',box);
+  if(title)title.textContent=affiliate?'📱 Formato do Catálogo de Afiliados':'📱 Formato da Loja Virtual';
+  const catalogOption=$('[data-format-option="catalog"]',box);
+  if(catalogOption)catalogOption.style.display=affiliate?'none':'flex';
+  if(affiliate&&modeValue()==='catalog'){
+    const single=$('input[name="virtualStoreFormatRecovery"][value="single"]',box);
+    if(single){single.checked=true;syncUnderlyingFormat('single')}
+  }
+  box.style.display='block';
 }
 
 function consolidateFormatControls(){
@@ -149,9 +158,14 @@ function patchPopulateOnce(){
 function applyAccess(){
   const cap=POLICY[currentPlan()]||POLICY.aprendiz;try{myProductLimit=cap.products;myChatLimit=cap.chats}catch(e){}
   const type=$('#storeType'),allow=canUseVirtual();
-  if(type){const opt=[...type.options].find(o=>o.value==='virtual');if(opt){opt.hidden=!allow;opt.disabled=!allow}if(!allow&&type.value==='virtual'){type.value='affiliate';try{type.dispatchEvent(new Event('change',{bubbles:true}))}catch(e){}}}
-  if(allow){ensureFormatControls();consolidateFormatControls();if(isVirtual())ensureShippingVisible();patchCollectOnce();patchPopulateOnce()}
-  const format=$('#virtualStoreFormatRecovery');if(format&&type)format.style.display=isVirtual()?'block':'none';
+  if(type){
+    const opt=[...type.options].find(o=>o.value==='virtual');
+    if(opt){const blocked=!allow;if(opt.hidden!==blocked)opt.hidden=blocked;if(opt.disabled!==blocked)opt.disabled=blocked}
+    if(!allow&&type.value==='virtual'){type.value='affiliate';try{type.dispatchEvent(new Event('change',{bubbles:true}))}catch(e){}}
+  }
+  ensureFormatControls();consolidateFormatControls();
+  if(allow&&isVirtual())ensureShippingVisible();
+  patchCollectOnce();patchPopulateOnce();
 }
 
 async function syncLoggedUser(){
