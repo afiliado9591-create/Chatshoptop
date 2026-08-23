@@ -92,7 +92,24 @@ function ensureSfEditor(){
       if(!r.ok)throw new Error(j.error||'Não foi possível conectar o token.');
       sfTokenCipher=j.tokenCipher||'';
       $('#sfToken').value='';
-      status.textContent='✅ Token conectado e protegido. Agora publique a loja.';status.style.color='#166534';
+      let savedNow=false;
+      /* Em uma loja já publicada, salva o token protegido imediatamente.
+         Assim a vitrine não depende de um segundo clique em Publicar. */
+      try{
+        const publishedSlug=typeof mySlug!=='undefined'?String(mySlug||'').trim():'';
+        if(publishedSlug&&typeof db!=='undefined'&&db){
+          const shipping=collectShippingForCore();
+          const collection=typeof COLECAO!=='undefined'?COLECAO:'chatshops';
+          const update={shipping};
+          if(typeof firebase!=='undefined'&&firebase.firestore?.FieldValue)update.updatedAt=firebase.firestore.FieldValue.serverTimestamp();
+          await db.collection(collection).doc(publishedSlug).update(update);
+          savedNow=true;
+        }
+      }catch(saveError){
+        console.warn('Token protegido; salvamento imediato será concluído ao publicar.',saveError);
+      }
+      status.textContent=savedNow?'✅ Token conectado, protegido e salvo nesta loja.':'✅ Token conectado e protegido. Agora publique a loja.';
+      status.style.color='#166534';
       try{window.debounce?.()}catch(e){}
     }catch(e){status.textContent='⚠️ '+e.message;status.style.color='#b91c1c'}
     finally{btn.disabled=false;btn.textContent='🔐 Proteger e conectar token'}
