@@ -144,8 +144,12 @@ async function installPublished(){
   return true;
 }
 function boot(){
-  let attempts=0;const timer=setInterval(()=>{attempts++;installEditor();wrapEditor();if(attempts>80)clearInterval(timer)},125);
-  installPublished();
+  const host=location.hostname.toLowerCase(),editor=host==='alibr.com.br'||host==='www.alibr.com.br';
+  if(editor){
+    let attempts=0;const timer=setInterval(()=>{attempts++;if(installEditor()||attempts>=30)clearInterval(timer)},200);
+  }else{
+    installPublished();
+  }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
