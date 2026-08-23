@@ -68,6 +68,47 @@ function installEditorPerformance(){
   new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
 }
 
+/* Corrige espaços vazios gigantes no editor mobile sem esconder campos. */
+function installEditorMobileLayoutFix(){
+  if(document.getElementById('chatshopEditorMobileLayoutFix'))return;
+  const style=document.createElement('style');
+  style.id='chatshopEditorMobileLayoutFix';
+  style.textContent=`
+    @media(max-width:700px){
+      #editorView .section,
+      #editorView .field,
+      #editorView .grid2{
+        min-height:0!important;
+        height:auto!important;
+      }
+      #editorView .grid2{align-items:start!important;align-content:start!important}
+      #editorView label:has(#showCategoryMenu){
+        min-height:0!important;
+        height:auto!important;
+        margin-bottom:12px!important;
+        align-items:flex-start!important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  const normalizeCategoryBlock=()=>{
+    const cb=document.getElementById('showCategoryMenu');
+    if(!cb)return;
+    let el=cb.parentElement;
+    let steps=0;
+    while(el&&steps<5){
+      el.style.setProperty('min-height','0','important');
+      el.style.setProperty('height','auto','important');
+      if(el.classList?.contains('section'))break;
+      el=el.parentElement;steps++;
+    }
+  };
+  normalizeCategoryBlock();
+  setTimeout(normalizeCategoryBlock,300);
+  setTimeout(normalizeCategoryBlock,1200);
+}
+
 function boot(){
   /*
    * Não paramos de vigiar depois do primeiro collect(). Vários módulos do ChatShop
@@ -99,11 +140,13 @@ function boot(){
     }).observe(document.documentElement,{childList:true,subtree:true});
   }
   ensureAdminCsvAfterAuth();
+  installEditorMobileLayoutFix();
 
   let perfTries=0;
   const perfTimer=setInterval(()=>{
     perfTries++;
     installEditorPerformance();
+    installEditorMobileLayoutFix();
     if(document.getElementById('products')||perfTries>40)clearInterval(perfTimer);
   },250);
 }
