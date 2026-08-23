@@ -1,22 +1,24 @@
-// Regras adicionais para a coleção blogPosts.
-// Devem ser incorporadas ao bloco match /databases/{database}/documents
-// das regras atuais, sem substituir as regras do ChatShop.
+// Regras do Blog Alibr.
+// Cole estes blocos DENTRO de:
+// match /databases/{database}/documents {
+// e ANTES do bloqueio final: match /{document=**} { allow read, write: if false; }
+
 match /blogPosts/{postId} {
-  function blogAdmin() {
+  function blogPostsAdmin() {
     return request.auth != null
       && request.auth.token.email == "jeanaguiar636@gmail.com";
   }
 
-  function signedMember() {
+  function signedBlogMember() {
     return request.auth != null
       && request.auth.token.firebase.sign_in_provider != "anonymous";
   }
 
   allow read: if resource.data.status == "approved"
-    || (signedMember() && resource.data.authorUid == request.auth.uid)
-    || blogAdmin();
+    || (signedBlogMember() && resource.data.authorUid == request.auth.uid)
+    || blogPostsAdmin();
 
-  allow create: if signedMember()
+  allow create: if signedBlogMember()
     && request.resource.data.authorUid == request.auth.uid
     && request.resource.data.status == "pending"
     && request.resource.data.title is string
@@ -26,10 +28,77 @@ match /blogPosts/{postId} {
     && request.resource.data.body.size() >= 20
     && request.resource.data.body.size() <= 5000;
 
-  allow update: if blogAdmin();
+  allow update: if blogPostsAdmin();
 
-  allow delete: if blogAdmin()
-    || (signedMember()
+  allow delete: if blogPostsAdmin()
+    || (signedBlogMember()
       && resource.data.authorUid == request.auth.uid
       && resource.data.status == "pending");
+}
+
+// Configuração pública do Analytics e Search Console.
+// Somente o administrador pode modificar.
+match /blogConfig/{configId} {
+  function blogConfigAdmin() {
+    return request.auth != null
+      && request.auth.token.email == "jeanaguiar636@gmail.com";
+  }
+
+  allow read: if true;
+  allow create, update, delete: if blogConfigAdmin();
+}
+
+// Contadores gerais do blog.
+// Visitantes entram por autenticação anônima e só podem somar 1.
+match /blogMetrics/summary {
+  function blogMetricsAdmin() {
+    return request.auth != null
+      && request.auth.token.email == "jeanaguiar636@gmail.com";
+  }
+
+  allow read: if blogMetricsAdmin();
+
+  allow create: if request.auth != null
+    && request.resource.data.keys().hasOnly(["views", "clicks", "users", "updatedAt"]);
+
+  allow update: if request.auth != null
+    && request.resource.data.diff(resource.data).affectedKeys()
+      .hasOnly(["views", "clicks", "users", "updatedAt"])
+    && request.resource.data.get("views", 0) <= resource.data.get("views", 0) + 1
+    && request.resource.data.get("clicks", 0) <= resource.data.get("clicks", 0) + 1
+    && request.resource.data.get("users", 0) <= resource.data.get("users", 0) + 1;
+
+  allow delete: if blogMetricsAdmin();
+}
+
+// Um registro por navegador para estimar usuários únicos.
+match /blogVisitors/{visitorId} {
+  function blogVisitorsAdmin() {
+    return request.auth != null
+      && request.auth.token.email == "jeanaguiar636@gmail.com";
+  }
+
+  allow read: if blogVisitorsAdmin();
+  allow create: if request.auth != null
+    && !exists(/databases/$(database)/documents/blogVisitors/$(visitorId))
+    && request.resource.data.keys().hasOnly(["createdAt"]);
+  allow update: if false;
+  allow delete: if blogVisitorsAdmin();
+}
+
+// Eventos usados no ranking de cliques por publicação.
+match /blogEvents/{eventId} {
+  function blogEventsAdmin() {
+    return request.auth != null
+      && request.auth.token.email == "jeanaguiar636@gmail.com";
+  }
+
+  allow read: if blogEventsAdmin();
+  allow create: if request.auth != null
+    && request.resource.data.keys().hasOnly(["type", "postId", "createdAt"])
+    && request.resource.data.type == "click"
+    && request.resource.data.postId is string
+    && request.resource.data.postId.size() <= 120;
+  allow update: if false;
+  allow delete: if blogEventsAdmin();
 }
