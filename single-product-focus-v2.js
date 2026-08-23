@@ -77,6 +77,17 @@ function decorate(){
   ensureFloatingBag();
   return true;
 }
-function boot(){let n=0;const t=setInterval(()=>{n++;decorate();if(n>100)clearInterval(t)},120);if(document.body)new MutationObserver(()=>requestAnimationFrame(decorate)).observe(document.body,{childList:true,subtree:true});}
+function boot(){
+  let n=0,queued=false;
+  const run=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;decorate()})};
+  const t=setInterval(()=>{n++;if(decorate()||n>=30)clearInterval(t)},200);
+  const attach=()=>{
+    const grid=$('.csv-grid,.vs-grid');if(!grid||grid.dataset.singleFocusObserved==='1')return false;
+    grid.dataset.singleFocusObserved='1';
+    new MutationObserver(run).observe(grid,{childList:true,subtree:true});
+    return true;
+  };
+  if(!attach()){let tries=0;const wait=setInterval(()=>{tries++;if(attach()||tries>=20)clearInterval(wait)},200)}
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
