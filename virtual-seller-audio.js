@@ -1,6 +1,8 @@
 /* Loja Virtual: botão verde de áudio igual ao catálogo, inclusive na versão com frete/SuperFrete. */
 (function(){
 'use strict';
+/* Recursos da vitrine publicada não devem executar dentro do painel/editor. */
+if(location.hostname==='alibr.com.br'||location.hostname==='www.alibr.com.br')return;
 
 let storeData = window.__CHATSHOP_STORE_DATA || null;
 let featureData = window.__CHATSHOP_STORE_FEATURE_DATA || null;

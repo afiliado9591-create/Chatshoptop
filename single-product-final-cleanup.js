@@ -1,6 +1,8 @@
 /* ChatShop — chat de produto leve, único e orientado à compra. Sem timers contínuos, sem observer global. */
 (function(){
 'use strict';
+/* Recursos da vitrine publicada não devem executar dentro do painel/editor. */
+if(location.hostname==='alibr.com.br'||location.hostname==='www.alibr.com.br')return;
 const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const data=()=>window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||null;

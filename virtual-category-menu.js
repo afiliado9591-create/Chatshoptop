@@ -2,6 +2,8 @@
    Mostra os mesmos botoes de categoria do modulo Catalogo e filtra os produtos. */
 (function(){
 'use strict';
+/* Recursos da vitrine publicada não devem executar dentro do painel/editor. */
+if(location.hostname==='alibr.com.br'||location.hostname==='www.alibr.com.br')return;
 
 const data=window.__CHATSHOP_STORE_DATA||null;
 if(!data||data.storeType!=='virtual')return;

@@ -1,6 +1,8 @@
 /* Corrige rolagem da Loja Virtual no mobile sem afetar o catálogo. */
 (function(){
   'use strict';
+/* Recursos da vitrine publicada não devem executar dentro do painel/editor. */
+if(location.hostname==='alibr.com.br'||location.hostname==='www.alibr.com.br')return;
   function applyScrollFix(){
     const root=document.getElementById('storefrontScreen');
     const page=document.querySelector('.vs-page,.csv-page');
