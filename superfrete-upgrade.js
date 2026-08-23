@@ -91,12 +91,16 @@ function ensureSfEditor(){
       const j=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(j.error||'Não foi possível conectar o token.');
       sfTokenCipher=j.tokenCipher||'';
+      const tokenBox=$('#superfreteSettings');
+      if(tokenBox)tokenBox.dataset.tokenCipher=sfTokenCipher;
       $('#sfToken').value='';
       let savedNow=false;
       /* Em uma loja já publicada, salva o token protegido imediatamente.
          Assim a vitrine não depende de um segundo clique em Publicar. */
       try{
-        const publishedSlug=typeof mySlug!=='undefined'?String(mySlug||'').trim():'';
+        const knownSlug=typeof mySlug!=='undefined'?String(mySlug||'').trim():'';
+        const formSlug=String($('#slug')?.value||'').trim().toLowerCase();
+        const publishedSlug=knownSlug||formSlug;
         if(publishedSlug&&typeof db!=='undefined'&&db){
           const shipping=collectShippingForCore();
           const collection=typeof COLECAO!=='undefined'?COLECAO:'chatshops';
@@ -185,7 +189,7 @@ function collectShippingForCore(){
       origins,
       environment:$('#sfEnvironment')?.value==='sandbox'?'sandbox':'production',
       services:selectedServices(),
-      tokenCipher:sfTokenCipher||''
+      tokenCipher:sfTokenCipher||$('#superfreteSettings')?.dataset.tokenCipher||''
     }
   };
 }
@@ -195,6 +199,7 @@ window.ChatShopPopulateShipping=function(data){
   const shipping=data?.shipping&&typeof data.shipping==='object'?data.shipping:{};
   const saved=shipping.superfrete&&typeof shipping.superfrete==='object'?shipping.superfrete:{};
   sfTokenCipher=String(saved.tokenCipher||'');
+  if($('#superfreteSettings'))$('#superfreteSettings').dataset.tokenCipher=sfTokenCipher;
   if($('#shippingMode'))$('#shippingMode').value=shipping.mode||'free';
   if($('#shippingOrigin'))$('#shippingOrigin').value=String(shipping.origin||'');
   if($('#shippingRate'))$('#shippingRate').value=shipping.ratePerKm?String(shipping.ratePerKm).replace('.',','):'2,50';
@@ -235,7 +240,7 @@ function wrapEditorData(){
         origins,
         environment:$('#sfEnvironment')?.value==='sandbox'?'sandbox':'production',
         services:selectedServices(),
-        tokenCipher:sfTokenCipher||d.shipping?.superfrete?.tokenCipher||''
+        tokenCipher:sfTokenCipher||$('#superfreteSettings')?.dataset.tokenCipher||d.shipping?.superfrete?.tokenCipher||''
       };
       const cards=$$('#products .product');
       if(Array.isArray(d.products))d.products.forEach((p,i)=>{
