@@ -33,6 +33,7 @@ function installStyle(){
     body.chatshop-virtual-tiktok .spc-action.buy{background:var(--store-main,#7A2E3B);color:#fff}
     body.chatshop-virtual-tiktok .spc-action span{position:absolute;right:62px;background:rgba(17,24,39,.84);color:#fff;padding:6px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;opacity:0;pointer-events:none}
     body.chatshop-virtual-tiktok .spc-action:active span,body.chatshop-virtual-tiktok .spc-action:focus span{opacity:1}
+    body.chatshop-virtual-tiktok .csv-card,body.chatshop-virtual-tiktok .vs-card{content-visibility:auto;contain-intrinsic-size:auto 100dvh}
     body.chatshop-virtual-tiktok .csv-open,body.chatshop-virtual-tiktok .vs-open{display:none!important}
     body.chatshop-virtual-tiktok .virtual-seller-audio-btn,body.chatshop-virtual-tiktok .seller-audio-btn{display:none!important}
     .spc-editor-extra{margin-top:8px;padding:10px;border:1px dashed #c4b5fd;border-radius:10px;background:#faf5ff}
@@ -63,7 +64,7 @@ function decorateCard(card,index){
   if(photo&&imgs.length){
     photo.innerHTML='';photo.style.overflow='hidden';
     const gallery=document.createElement('div');gallery.className='spc-gallery';
-    imgs.forEach((src,i)=>{const img=document.createElement('img');img.className='spc-shot';img.src=src;img.alt=String(product.name||'Produto')+' - imagem '+(i+1);gallery.appendChild(img)});
+    imgs.forEach((src,i)=>{const img=document.createElement('img');img.className='spc-shot';img.loading=index===0&&i===0?'eager':'lazy';img.decoding='async';img.fetchPriority=index===0&&i===0?'high':'low';img.src=src;img.alt=String(product.name||'Produto')+' - imagem '+(i+1);gallery.appendChild(img)});
     photo.appendChild(gallery);
     if(imgs.length>1){const dots=document.createElement('div');dots.className='spc-dots';imgs.forEach((_,i)=>{const d=document.createElement('button');d.type='button';d.className='spc-dot'+(i===0?' active':'');dots.appendChild(d)});photo.appendChild(dots);gallery.addEventListener('scroll',()=>requestAnimationFrame(()=>{const active=Math.round(gallery.scrollLeft/Math.max(1,gallery.clientWidth));$$('.spc-dot',dots).forEach((d,i)=>d.classList.toggle('active',i===active))}),{passive:true});}
   }
