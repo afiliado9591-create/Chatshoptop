@@ -109,8 +109,9 @@ document.addEventListener('click',function(e){
     const url=String(p.link||p.affiliateLink||p.baseLink||p.checkoutUrl||original?.href||'').trim();
     if(!url||url==='#'){console.warn('ChatShop: link de compra do afiliado não encontrado',idx);return;}
     closeChat();
-    const anchor=document.createElement('a');anchor.href=url;anchor.target='_blank';anchor.rel='noopener noreferrer';anchor.style.display='none';
-    document.body.appendChild(anchor);anchor.click();anchor.remove();
+    let opened=null;
+    try{opened=window.open(url,'_blank')}catch(err){}
+    if(opened){try{opened.opener=null}catch(err){}}else{window.location.assign(url)}
     return;
   }
   withNavigationGuard(async()=>{
