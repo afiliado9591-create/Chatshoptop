@@ -8,6 +8,7 @@ function cleanHost(v){return String(v||'').split(',')[0].trim().toLowerCase().re
 function cleanSlug(v){return String(v||'').toLowerCase().trim().replace(/[^a-z0-9-]/g,'').slice(0,80)}
 function num(v){let s=String(v??'').replace(/[^0-9,.-]/g,'');if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');const n=Number(s);return Number.isFinite(n)?n:0}
 function digits(v){return String(v||'').replace(/\D/g,'')}
+function orderNumber(){return 'CS-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase()}
 async function slugFromHost(host){
   const h=cleanHost(host);
   if(h.endsWith('.'+BASE_DOMAIN)&&h!==('www.'+BASE_DOMAIN)) return cleanSlug(h.slice(0,-('.'+BASE_DOMAIN).length));
@@ -115,19 +116,25 @@ module.exports=async function handler(req,res){
     }
     if(freight>0) items.push({id:'frete',title:freightMeta.service?`Frete ${freightMeta.service}`:'Frete',quantity:1,currency_id:'BRL',unit_price:Number(freight.toFixed(2))});
 
+    const customerPhone=digits(body.customerPhone||body.phone||'');
+    const customerName=String(body.customerName||'').trim().slice(0,100);
+    if(customerPhone.length<10||customerPhone.length>13) return res.status(400).json({error:'customer_phone_required',message:'Informe um telefone válido para acompanhar o pedido.'});
+    const number=orderNumber();
+    const externalReference=`chatshop:${slug}:${number}`;
     const base=publicStoreUrl(store,slug);
+    const orderUrl=`${base.replace(/\/$/,'')}/meus-pedidos?pedido=${encodeURIComponent(number)}`;
     const preference={
       items,
-      external_reference:`chatshop:${slug}:${Date.now()}`,
+      external_reference:externalReference,
       statement_descriptor:'CHATSHOP',
-      back_urls:{success:base,failure:base,pending:base},
+      back_urls:{success:orderUrl,failure:orderUrl,pending:orderUrl},
       auto_return:'approved',
-      metadata:{chatshop_slug:slug,delivery_address:String(body.address||'').slice(0,250),distance_km:km||0,shipping_mode:freightMeta.mode||'',shipping_service:freightMeta.service||'',shipping_days:freightMeta.days||0,destination_postal_code:freightMeta.destination_postal_code||''}
+      metadata:{chatshop_slug:slug,order_number:number,customer_name:customerName,customer_phone:customerPhone,delivery_address:String(body.address||'').slice(0,250),distance_km:km||0,shipping_mode:freightMeta.mode||'',shipping_service:freightMeta.service||'',shipping_days:freightMeta.days||0,destination_postal_code:freightMeta.destination_postal_code||''}
     };
     const r=await fetch('https://api.mercadopago.com/checkout/preferences',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+vault.accessToken},body:JSON.stringify(preference)});
     const j=await parseJsonSafe(r);
     if(!r.ok||!j.init_point){console.error('MP preference error:',r.status,j);return res.status(400).json({error:'preference_failed',message:'O Mercado Pago não conseguiu criar o pagamento agora.'});}
-    return res.status(200).json({ok:true,checkoutUrl:j.init_point,preferenceId:j.id||'',freight:Number(freight.toFixed(2)),shipping:freightMeta});
+    return res.status(200).json({ok:true,checkoutUrl:j.init_point,preferenceId:j.id||'',orderNumber:number,orderUrl,freight:Number(freight.toFixed(2)),shipping:freightMeta});
   }catch(e){
     console.error('MP checkout:',e);
     const status=Number(e?.status)||500;

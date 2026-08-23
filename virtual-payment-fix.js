@@ -22,7 +22,7 @@ function productDesc(name){
 function installStyle(){
   if($('#csvPaymentFixStyle'))return;
   const s=document.createElement('style');s.id='csvPaymentFixStyle';s.textContent=`
-  .csv-mp-btn{width:100%;border:0;background:#009ee3;color:#fff;padding:13px;border-radius:12px;font-weight:900;font-size:15px;margin-top:10px;cursor:pointer}.csv-mp-btn:disabled{opacity:.55;cursor:not-allowed}.csv-pay-note{font-size:11px;color:#64748b;text-align:center;margin-top:6px}.csv-pay-actions{display:grid;gap:8px;margin-top:10px}.csv-pay-actions .csv-checkout,.csv-pay-actions .csv-mp-btn{margin-top:0}.vcd-description{margin:8px 0 12px!important;padding:11px 12px!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;border-radius:11px!important;color:#334155!important;line-height:1.45!important;font-size:14px!important;white-space:pre-wrap!important;max-height:none!important;overflow:visible!important}.vcd-description-title{font-weight:900;color:#111827;margin-bottom:5px}
+  .csv-mp-btn{width:100%;border:0;background:#009ee3;color:#fff;padding:13px;border-radius:12px;font-weight:900;font-size:15px;margin-top:10px;cursor:pointer}.csv-mp-btn:disabled{opacity:.55;cursor:not-allowed}.csv-pay-note{font-size:11px;color:#64748b;text-align:center;margin-top:6px}.csv-pay-actions{display:grid;gap:8px;margin-top:10px}.csv-customer-fields{display:grid;gap:8px;margin:14px 0}.csv-customer-fields input{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:11px;font:inherit}.csv-customer-fields small{color:#64748b;font-size:11px}.csv-pay-actions .csv-checkout,.csv-pay-actions .csv-mp-btn{margin-top:0}.vcd-description{margin:8px 0 12px!important;padding:11px 12px!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;border-radius:11px!important;color:#334155!important;line-height:1.45!important;font-size:14px!important;white-space:pre-wrap!important;max-height:none!important;overflow:visible!important}.vcd-description-title{font-weight:900;color:#111827;margin-bottom:5px}
   #sfQuoteOptions label{position:relative!important;z-index:2!important;pointer-events:auto!important;min-height:54px!important}
   #sfQuoteOptions input[name="sfQuote"]{width:20px!important;height:20px!important;min-width:20px!important;cursor:pointer!important;pointer-events:auto!important;position:relative!important;z-index:4!important}
   @media(max-width:520px){.csv-mainimg{max-height:48vh!important;object-fit:contain!important}.csv-sheet{max-height:96dvh!important}.vcd-description{font-size:13px!important}}
@@ -69,8 +69,23 @@ function installShippingClickGuard(){
     input.dispatchEvent(new Event('change',{bubbles:true}));
   },true);
 }
+function ensureOrdersLink(){
+  const cart=$('#csvCartBody');if(!cart||$('#csvOrdersLink'))return;
+  const button=$('#csvCheckoutMp',cart)||$('#csvCheckout',cart);if(!button)return;
+  const link=document.createElement('a');link.id='csvOrdersLink';link.href='/meus-pedidos';link.textContent='📦 Acompanhar meus pedidos';link.style.cssText='display:block;text-align:center;margin-top:12px;color:#6d28d9;font-weight:800;text-decoration:none';button.insertAdjacentElement('afterend',link);
+}
+function ensureCustomerFields(){
+  const cart=$('#csvCartBody');if(!cart||$('#csvCustomerFields'))return;
+  const actions=$('.csv-pay-actions',cart)||$('#csvCheckoutMp',cart)||$('#csvCheckout',cart);if(!actions)return;
+  const box=document.createElement('div');box.id='csvCustomerFields';box.className='csv-customer-fields';
+  box.innerHTML='<b>Dados para acompanhar o pedido</b><input id="csvCustomerName" autocomplete="name" placeholder="Nome do cliente"><input id="csvCustomerPhone" inputmode="tel" autocomplete="tel" placeholder="Telefone com DDD"><small>Você usará o número do pedido e este telefone em “Meus pedidos”.</small>';
+  actions.insertAdjacentElement('beforebegin',box);
+}
 async function payMercadoPago(btn){
   const address=$('#sfAddress')?.value?.trim()||$('#csvAddress')?.value?.trim()||'';
+  const customerName=$('#csvCustomerName')?.value?.trim()||'';
+  const customerPhone=String($('#csvCustomerPhone')?.value||'').replace(/\D/g,'');
+  if(customerPhone.length<10||customerPhone.length>13){alert('Digite um telefone válido com DDD para acompanhar o pedido.');$('#csvCustomerPhone')?.focus();return}
   const km=$('#csvKm')?.value||'';
   const err=$('#sfCalcStatus')||$('#csvShipError');
   if(!address){if(err){err.style.display='block';err.textContent='Digite o endereço de entrega antes de pagar.'}else alert('Digite o endereço de entrega.');return}
@@ -91,7 +106,7 @@ async function payMercadoPago(btn){
   const attributedValue=items.reduce((sum,item)=>{const p=(cfg?.products||[]).find(x=>String(x?.name||'').trim()===item.name);return sum+numericPrice(p?.price)*item.qty},0);
   const old=btn.textContent;btn.disabled=true;btn.textContent='Validando frete...';
   try{
-    const r=await fetch('/api/mercadopago/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({slug:cfg?.slug||'',host:host(),items,address,km,affiliateRef,destinationPostalCode:postalCode,shippingServiceName:shipping?.name||'',shippingOptionIndex:Number.isInteger(shipping?.index)?shipping.index:null})});
+    const r=await fetch('/api/mercadopago/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({slug:cfg?.slug||'',host:host(),items,address,customerName,customerPhone,km,affiliateRef,destinationPostalCode:postalCode,shippingServiceName:shipping?.name||'',shippingOptionIndex:Number.isInteger(shipping?.index)?shipping.index:null})});
     const j=await r.json();if(!r.ok||!j.checkoutUrl)throw new Error(j.message||'Não foi possível abrir o Mercado Pago.');
     window.dispatchEvent(new CustomEvent('chatshop:mercadopago-checkout',{detail:{affiliateRef,value:attributedValue}}));
     /* O Mercado Pago pode abrir fora desta aba no celular. Não deixe a loja presa no estado de carregamento. */
@@ -132,7 +147,7 @@ function setupCheckout(){
     }else if(existingMp){existingMp.textContent=connected?'🔵 Pagar com Mercado Pago':'Mercado Pago indisponível';existingMp.disabled=!connected}
   }
 }
-async function apply(){installStyle();installShippingClickGuard();await loadConfig();fixDescription();setupCheckout()}
+async function apply(){installStyle();installShippingClickGuard();await loadConfig();fixDescription();setupCheckout();ensureCustomerFields();ensureOrdersLink()}
 function observe(){
   let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(apply,25)}).observe(document.body,{childList:true,subtree:true});
   document.addEventListener('click',e=>{if(e.target.closest('[data-product],#csvBag,#csvAdd'))setTimeout(apply,35)},true);
