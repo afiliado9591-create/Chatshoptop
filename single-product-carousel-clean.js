@@ -106,6 +106,14 @@ function fillEditorFromData(){
   $$('#products .product').forEach((card,i)=>{const imgs=productImages(products[i]||{});[2,3,4].forEach((n,idx)=>{const input=card.querySelector('[data-spc-image="'+n+'"]');if(input&&!input.value)input.value=imgs[idx+1]||''})});
   const menu=$('#singleProductMenuEnabled');if(menu&&data)menu.checked=data.singleProductMenuEnabled===true;
 }
-function boot(){installStyle();wrapCollect();installEditorExtras();fillEditorFromData();decoratePublished();const obs=new MutationObserver(()=>{installEditorExtras();fillEditorFromData();decoratePublished();wrapCollect()});obs.observe(document.documentElement,{childList:true,subtree:true});setInterval(decoratePublished,1200)}
+function boot(){
+  installStyle();wrapCollect();installEditorExtras();fillEditorFromData();decoratePublished();
+  let queued=false;
+  const refreshEditor=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;installEditorExtras();fillEditorFromData();wrapCollect()})};
+  const attachEditorObserver=()=>{const products=$('#products');if(!products||products.dataset.spcObserved==='1')return false;products.dataset.spcObserved='1';new MutationObserver(refreshEditor).observe(products,{childList:true,subtree:true});return true};
+  if(!attachEditorObserver()){let tries=0;const timer=setInterval(()=>{tries++;installEditorExtras();fillEditorFromData();wrapCollect();if(attachEditorObserver()||tries>=40)clearInterval(timer)},250)}
+  const publicRoot=$('#pubFeed')||$('.csv-body')||$('.vs-body');
+  if(publicRoot&&document.body.classList.contains('chatshop-virtual-tiktok')){let publicQueued=false;new MutationObserver(()=>{if(publicQueued)return;publicQueued=true;requestAnimationFrame(()=>{publicQueued=false;decoratePublished()})}).observe(publicRoot,{childList:true,subtree:true})}
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
