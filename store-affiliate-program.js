@@ -4,7 +4,7 @@
 const $=s=>document.querySelector(s);
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function plan(){try{return (typeof myPlan!=='undefined'&&myPlan)||'aprendiz'}catch(e){return'aprendiz'}}
-function isPro(){return plan()==='profissional'}
+function isPro(){try{return plan()==='profissional'||(typeof isAdmin!=='undefined'&&isAdmin===true)}catch(e){return plan()==='profissional'}}
 function currentSlug(){try{return (typeof mySlug!=='undefined'&&mySlug)||$('#slug')?.value||window.__CHATSHOP_STORE_DATA?.slug||''}catch(e){return''}}
 function publicBase(slug,data){
   const custom=String(data?.customDomain||$('#customDomain')?.value||'').trim().replace(/^https?:\/\//,'').replace(/\/$/,'');
