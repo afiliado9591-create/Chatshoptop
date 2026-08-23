@@ -94,8 +94,18 @@ async function payMercadoPago(btn){
     const r=await fetch('/api/mercadopago/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({slug:cfg?.slug||'',host:host(),items,address,km,affiliateRef,destinationPostalCode:postalCode,shippingServiceName:shipping?.name||'',shippingOptionIndex:Number.isInteger(shipping?.index)?shipping.index:null})});
     const j=await r.json();if(!r.ok||!j.checkoutUrl)throw new Error(j.message||'Não foi possível abrir o Mercado Pago.');
     window.dispatchEvent(new CustomEvent('chatshop:mercadopago-checkout',{detail:{affiliateRef,value:attributedValue}}));
+    /* O Mercado Pago pode abrir fora desta aba no celular. Não deixe a loja presa no estado de carregamento. */
+    btn.disabled=false;btn.textContent=old;
     location.href=j.checkoutUrl;
   }catch(e){console.error(e);alert(e.message||'Não foi possível iniciar o pagamento.');btn.disabled=false;btn.textContent=old}
+}
+
+function resetMercadoPagoButtons(){
+  $('.csv-mp-btn,#csvCheckoutMp').forEach(btn=>{
+    const connected=cfg?.mercadoPagoConnected===true;
+    btn.disabled=!connected;
+    btn.textContent=connected?'🔵 Pagar com Mercado Pago':'Mercado Pago indisponível';
+  });
 }
 function setupCheckout(){
   const original=$('#csvCheckout');const existingMp=$('#csvCheckoutMp');
@@ -127,5 +137,8 @@ function observe(){
   let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(apply,25)}).observe(document.body,{childList:true,subtree:true});
   document.addEventListener('click',e=>{if(e.target.closest('[data-product],#csvBag,#csvAdd'))setTimeout(apply,35)},true);
 }
+window.addEventListener('pageshow',resetMercadoPagoButtons);
+window.addEventListener('focus',resetMercadoPagoButtons);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)resetMercadoPagoButtons()});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{apply();observe()});else{apply();observe()}
 })();
