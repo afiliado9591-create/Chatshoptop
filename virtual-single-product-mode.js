@@ -145,6 +145,7 @@ function installPublished(storeData){
       body.chatshop-virtual-tiktok .vts-category{pointer-events:auto!important;touch-action:manipulation;cursor:pointer;border:0;border-radius:999px;background:rgba(255,255,255,.96);color:${categoryColor};font-weight:900;padding:10px 14px;box-shadow:0 3px 12px rgba(0,0,0,.22);white-space:nowrap}
       body.chatshop-virtual-tiktok .vts-category.active{background:${categoryColor};color:${categoryText}}
       body.chatshop-virtual-tiktok #pubChatToggle{bottom:18px!important;right:16px!important;z-index:40!important}
+      body.chatshop-virtual-tiktok #vsCartModal,body.chatshop-virtual-tiktok #csvCartModal{z-index:80!important}
       body.chatshop-virtual-tiktok .vts-floating-cart{display:none;position:fixed;right:14px;top:14px;z-index:48;border:0;border-radius:999px;background:${main};color:#fff;min-height:48px;padding:10px 15px;align-items:center;gap:7px;font-size:15px;font-weight:900;box-shadow:0 5px 18px rgba(0,0,0,.32);cursor:pointer}
       body.chatshop-virtual-tiktok .vts-floating-cart.has-items{display:flex!important}
       body.chatshop-virtual-tiktok .vts-floating-cart-count{min-width:23px;height:23px;border-radius:50%;background:#fff;color:${main};display:grid;place-items:center;font-size:12px}
@@ -176,16 +177,23 @@ function installPublished(storeData){
       floatingBag.innerHTML='🛍️ Sacola <span class="vts-floating-cart-count">0</span>';
       document.body.appendChild(floatingBag);
     }
-    const originalBag=$('#csvBag,.vs-bag');
+    const getOriginalBag=()=>document.getElementById('vsBag')||document.getElementById('csvBag')||$('.vs-bag');
     const syncFloatingBag=()=>{
-      const countEl=$('#csvCount,#vsBagCount,#vsBag .vs-bag-count');
+      const originalBag=getOriginalBag();
+      const countEl=$('#vsBagCount,#csvCount,#vsBag .vs-bag-count');
       const match=String(countEl?.textContent||originalBag?.textContent||'0').match(/\d+/);
       const count=match?Number(match[0]):0;
       $('.vts-floating-cart-count',floatingBag).textContent=String(count);
       floatingBag.classList.toggle('has-items',count>0);
       floatingBag.setAttribute('aria-label','Abrir sacola com '+count+' item'+(count===1?'':'s'));
     };
-    floatingBag.onclick=event=>{event.preventDefault();event.stopPropagation();originalBag?.click()};
+    const openShoppingBag=event=>{
+      event?.preventDefault();event?.stopPropagation();
+      const originalBag=getOriginalBag();
+      if(originalBag)originalBag.click();
+    };
+    floatingBag.onclick=openShoppingBag;
+    const originalBag=getOriginalBag();
     if(originalBag&&!originalBag.dataset.floatingBagObserved){
       originalBag.dataset.floatingBagObserved='1';
       new MutationObserver(syncFloatingBag).observe(originalBag,{childList:true,subtree:true,characterData:true});
