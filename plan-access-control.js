@@ -59,9 +59,9 @@ function ensureFormatControls(){
 function consolidateFormatControls(){
   const main=$('#virtualStoreFormatRecovery');if(!main)return;
   const legacy=$('#virtualSingleProductField');
+  if(legacy)legacy.remove();
   const menu=$('#singleProductMenuField');
   if(menu&&!main.contains(menu)){menu.style.marginTop='10px';main.appendChild(menu)}
-  if(legacy)legacy.style.setProperty('display','none','important');
   const home=$('#homeLayoutField');if(home)home.style.setProperty('display','none','important');
   const extraMenu=$('#singleProductMenuOption');if(extraMenu)extraMenu.style.setProperty('display','none','important');
 }
