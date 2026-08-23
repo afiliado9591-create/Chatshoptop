@@ -247,7 +247,7 @@ function boot(){
   const host=location.hostname.toLowerCase(),editor=host==='alibr.com.br'||host==='www.alibr.com.br';
   let tries=0;const timer=setInterval(()=>{
     tries++;
-    const ready=editor?installEditor():(installVirtualProductGuard()&&installVirtualSizes()&&installPublic());
+    let ready=false;if(editor)ready=installEditor();else{ready=installVirtualProductGuard()&&installVirtualSizes();installPublic();}
     if(ready||tries>=30)clearInterval(timer);
   },200);
 }
