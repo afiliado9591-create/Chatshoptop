@@ -83,27 +83,20 @@ function decoratePublished(){
   $$('.csv-card,.vs-card').forEach(decorateCard);
 }
 function installEditorExtras(){
-  const products=$('#products');if(!products)return;
-  $$('.product',products).forEach((card,index)=>{
-    if(card.querySelector('.spc-editor-extra'))return;
-    const imageInput=card.querySelector('[data-k="imageUrl"]');
-    const anchor=imageInput?.closest('.field')||imageInput?.closest('.upload-box')||card.querySelector('.image-preview');if(!anchor)return;
-    const box=document.createElement('div');box.className='spc-editor-extra';box.innerHTML='<label>🖼️ Imagens extras para o carrossel (até 4 fotos)</label><input data-spc-image="2" placeholder="URL da imagem 2"><input data-spc-image="3" placeholder="URL da imagem 3"><input data-spc-image="4" placeholder="URL da imagem 4"><small>Na página de 1 produto por tela, arraste para os lados para ver essas imagens.</small>';
-    anchor.insertAdjacentElement('afterend',box);
-  });
-  if(!$('#singleProductMenuOption')){
-    const mode=$('#virtualSingleProductField');if(mode){const row=document.createElement('label');row.id='singleProductMenuOption';row.style.cssText='display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12px;font-weight:800';row.innerHTML='<input id="singleProductMenuEnabled" type="checkbox"> Mostrar menu lateral na página de 1 produto por tela';mode.appendChild(row)}
-  }
+  /* O editor principal já possui imageUrl2, imageUrl3 e imageUrl4.
+     Remove o bloco legado para não duplicar campos e altura no celular. */
+  $$('.spc-editor-extra').forEach(el=>el.remove());
 }
+
 function wrapCollect(){
   try{
     if(typeof collect!=='function'||collect.__spcWrapped)return;
-    const original=collect;const wrapped=function(){const value=original();const cards=$$('#products .product');if(Array.isArray(value?.products))value.products.forEach((p,i)=>{const card=cards[i];if(!card)return;const first=normUrl(card.querySelector('[data-k="imageUrl"]')?.value||p.image||p.imageUrl);const extras=[2,3,4].map(n=>normUrl(card.querySelector('[data-spc-image="'+n+'"]')?.value));p.images=unique([first,...extras,...productImages(p)]);p.image=p.images[0]||p.image||''});value.singleProductMenuEnabled=!!$('#singleProductMenuEnabled')?.checked;return value};wrapped.__spcWrapped=true;collect=wrapped;window.collect=wrapped;
+    const original=collect;const wrapped=function(){const value=original();const cards=$$('#products .product');if(Array.isArray(value?.products))value.products.forEach((p,i)=>{const card=cards[i];if(!card)return;const first=normUrl(card.querySelector('[data-k="imageUrl"]')?.value||p.image||p.imageUrl);const extras=[2,3,4].map(n=>normUrl(card.querySelector('[data-k="imageUrl'+n+'"]')?.value));p.images=unique([first,...extras,...productImages(p)]);p.image=p.images[0]||p.image||''});value.singleProductMenuEnabled=!!$('#singleProductMenuEnabled')?.checked;return value};wrapped.__spcWrapped=true;collect=wrapped;window.collect=wrapped;
   }catch(e){}
 }
 function fillEditorFromData(){
   const data=window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA;const products=Array.isArray(data?.products)?data.products:[];
-  $$('#products .product').forEach((card,i)=>{const imgs=productImages(products[i]||{});[2,3,4].forEach((n,idx)=>{const input=card.querySelector('[data-spc-image="'+n+'"]');if(input&&!input.value)input.value=imgs[idx+1]||''})});
+  $$('#products .product').forEach((card,i)=>{const imgs=productImages(products[i]||{});[2,3,4].forEach((n,idx)=>{const input=card.querySelector('[data-k="imageUrl'+n+'"]');if(input&&!input.value)input.value=imgs[idx+1]||''})});
   const menu=$('#singleProductMenuEnabled');if(menu&&data)menu.checked=data.singleProductMenuEnabled===true;
 }
 function boot(){
