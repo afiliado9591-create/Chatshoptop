@@ -65,6 +65,8 @@ function updateEditorVisibility(){
   if(isVirtual())refreshProductSelect();
 }
 function installEditor(){
+  /* O painel usa o controle roxo consolidado de três formatos. */
+  if(location.hostname==='alibr.com.br'||location.hostname==='www.alibr.com.br')return;
   if($('#virtualSingleProductField')||!$('#storeType'))return;
   const typeField=$('#storeType').closest('.field');if(!typeField)return;
   const box=document.createElement('div');
