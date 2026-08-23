@@ -1,0 +1,35 @@
+// Regras adicionais para a coleção blogPosts.
+// Devem ser incorporadas ao bloco match /databases/{database}/documents
+// das regras atuais, sem substituir as regras do ChatShop.
+match /blogPosts/{postId} {
+  function blogAdmin() {
+    return request.auth != null
+      && request.auth.token.email == "jeanaguiar636@gmail.com";
+  }
+
+  function signedMember() {
+    return request.auth != null
+      && request.auth.token.firebase.sign_in_provider != "anonymous";
+  }
+
+  allow read: if resource.data.status == "approved"
+    || (signedMember() && resource.data.authorUid == request.auth.uid)
+    || blogAdmin();
+
+  allow create: if signedMember()
+    && request.resource.data.authorUid == request.auth.uid
+    && request.resource.data.status == "pending"
+    && request.resource.data.title is string
+    && request.resource.data.title.size() >= 5
+    && request.resource.data.title.size() <= 120
+    && request.resource.data.body is string
+    && request.resource.data.body.size() >= 20
+    && request.resource.data.body.size() <= 5000;
+
+  allow update: if blogAdmin();
+
+  allow delete: if blogAdmin()
+    || (signedMember()
+      && resource.data.authorUid == request.auth.uid
+      && resource.data.status == "pending");
+}
