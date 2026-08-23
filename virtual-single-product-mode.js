@@ -162,12 +162,10 @@ function installPublished(storeData){
       if(body&&name&&product.category&&!body.querySelector('.vts-card-category')){const chip=document.createElement('span');chip.className='vts-card-category';chip.textContent=String(product.category);chip.style.cssText='display:inline-block;background:'+categoryColor+';color:'+categoryText+';font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;margin-bottom:8px';body.insertBefore(chip,name)}
       if(card.querySelector('.vts-actions'))return;
       const actions=document.createElement('div');actions.className='vts-actions';
-      const seller=document.createElement('button');seller.type='button';seller.className='vts-action vts-seller';seller.innerHTML='💬<span>Fale com o vendedor</span>';
-      seller.onclick=event=>{event.stopPropagation();window.__CHATSHOP_ACTIVE_PRODUCT=product;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=index;const chat=$('#pubChatToggle');if(chat){chat.dataset.productIndex=String(index);chat.dataset.productName=String(product.name||'');chat.click()}};
       const share=document.createElement('button');share.type='button';share.className='vts-action vts-share';share.innerHTML='↗️<span>Compartilhar</span>';
       share.onclick=async event=>{event.stopPropagation();const payload={title:String(product.name||publishedData.brand||'Produto'),text:String(product.name||'Confira este produto'),url:location.href.split('#')[0]+'#produto-'+(index+1)};try{if(navigator.share)await navigator.share(payload);else{await navigator.clipboard.writeText(payload.url);alert('Link do produto copiado!')}}catch(e){}};
       if(index===0){const bag=document.createElement('button');bag.type='button';bag.className='vts-action vts-bag';bag.innerHTML='🛍️<span>Abrir sacola</span>';bag.onclick=event=>{event.stopPropagation();$('#csvBag,.vs-bag')?.click()};actions.appendChild(bag)}
-      actions.append(seller,share);card.appendChild(actions);
+      actions.append(share);card.appendChild(actions);
       card.id='produto-'+(index+1);
     });
     /* Sacola flutuante: mantém a tela limpa enquanto vazia e aparece após adicionar um item. */
