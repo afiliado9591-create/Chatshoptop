@@ -37,7 +37,52 @@ function setSpeechState(state){speechMode=state;const btn=$('#spfSpeechToggle');
 function stopSpeech(){try{speechSynthesis.cancel()}catch(e){}setSpeechState('idle')}
 function speakText(text,onDone){if(!text)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='pt-BR';u.rate=1;u.onstart=()=>setSpeechState('speaking');u.onend=u.onerror=()=>{setSpeechState('idle');if(onDone)onDone()};speechSynthesis.speak(u)}catch(e){setSpeechState('idle')}}
 function toggleSpeech(){try{if(speechMode==='speaking'&&speechSynthesis.speaking&&!speechSynthesis.paused){speechSynthesis.pause();setSpeechState('paused');return}if(speechMode==='paused'&&speechSynthesis.paused){speechSynthesis.resume();setSpeechState('speaking');return}if(activeProduct)speakText(productSpeech(activeProduct))}catch(e){}}
-function bestProductAnswer(p,text){const q=norm(text);if(!q)return '';const rows=Array.isArray(p?.qna)?p.qna:[];let best=null,bestScore=0;const qWords=q.split(' ').filter(w=>w.length>2);for(const item of rows){if(!item?.question||!item?.answer)continue;const question=norm(item.question),words=question.split(' ').filter(w=>w.length>2);let score=0;if(q===question)score=100;else if(q.includes(question)||question.includes(q))score=85;else{const set=new Set([...qWords,...words]);let inter=0;set.forEach(w=>{if(qWords.includes(w)&&words.includes(w))inter++});score=set.size?Math.round(inter/set.size*100):0}if(score>bestScore){bestScore=score;best=item}}if(best&&bestScore>=22)return String(best.answer||'');if(/preco|valor|quanto custa/.test(q)&&p?.price)return 'O valor deste produto é '+String(p.price)+'.';const colors=Array.isArray(p?.colors)?p.colors:(typeof p?.colors==='string'?p.colors.split(','):[]);if(/cor|cores/.test(q)&&colors.length)return 'As cores disponíveis são: '+colors.join(', ')+'.';const sizes=Array.isArray(p?.sizes)?p.sizes:(typeof p?.sizes==='string'?p.sizes.split(','):[]);if(/tamanho|tamanhos|medida|veste/.test(q)&&sizes.length)return 'Os tamanhos disponíveis são: '+sizes.join(', ')+'.';if(/frete|entrega|prazo|chega/.test(q)){const f=String(p?.shippingText||data()?.shippingText||'').trim();if(f)return f}return 'Não encontrei uma resposta exata sobre este produto. Tente perguntar de outra forma.'}
+function qnaScore(query,candidate){
+  const q=norm(query),c=norm(candidate);if(!q||!c)return 0;
+  if(q===c)return 100;
+  if(q.includes(c)||c.includes(q))return 85;
+  const qw=q.split(' ').filter(w=>w.length>2),cw=c.split(' ').filter(w=>w.length>2);
+  const common=qw.filter(w=>cw.includes(w)).length;
+  return common?Math.round(common/Math.max(qw.length,cw.length)*100):0;
+}
+function bestGeneralAnswer(text){
+  const rows=Array.isArray(data()?.qna)?data().qna:[];let best='',bestScore=0;
+  for(const item of rows){
+    if(!item?.answer)continue;
+    const candidates=[];
+    if(item.question)candidates.push(item.question);
+    if(Array.isArray(item.keywords))candidates.push(...item.keywords);
+    else if(item.keywords)candidates.push(...String(item.keywords).split(','));
+    for(const candidate of candidates){const score=qnaScore(text,candidate);if(score>bestScore){bestScore=score;best=String(item.answer)}}
+  }
+  return bestScore>=22?best:'';
+}
+function bestProductAnswer(p,text){
+  const q=norm(text);if(!q)return '';
+  const rows=Array.isArray(p?.qna)?p.qna:[];let best=null,bestScore=0;
+  for(const item of rows){
+    if(!item?.question||!item?.answer)continue;
+    const score=qnaScore(text,item.question);
+    if(score>bestScore){bestScore=score;best=item}
+  }
+  if(best&&bestScore>=22)return String(best.answer||'');
+
+  /* Perguntas fixas da loja servem para todos os produtos. */
+  const general=bestGeneralAnswer(text);
+  if(general)return general;
+
+  if(/preco|valor|quanto custa/.test(q)&&p?.price)return 'O valor deste produto é '+String(p.price)+'.';
+  const colors=Array.isArray(p?.colors)?p.colors:(typeof p?.colors==='string'?p.colors.split(','):[]);
+  if(/cor|cores/.test(q)&&colors.length)return 'As cores disponíveis são: '+colors.join(', ')+'.';
+  const sizes=Array.isArray(p?.sizes)?p.sizes:(typeof p?.sizes==='string'?p.sizes.split(','):[]);
+  if(/tamanho|tamanhos|medida|veste/.test(q)&&sizes.length)return 'Os tamanhos disponíveis são: '+sizes.join(', ')+'.';
+  if(/frete|entrega|prazo|chega|envio|postagem/.test(q)){
+    const f=String(p?.shippingText||data()?.shippingText||'').trim();
+    if(f)return f;
+    return 'Adicione o produto à sacola e informe o CEP para calcular o frete e conferir o prazo de entrega.';
+  }
+  return 'Não encontrei uma resposta exata sobre este produto. Tente perguntar de outra forma.';
+}
 function addMessage(who,text){const box=$('#spfProductChatMessages');if(!box||!text)return;const m=document.createElement('div');m.className='spf-msg '+who;m.textContent=text;box.appendChild(m);box.scrollTop=box.scrollHeight}
 function renderProductCard(p,index){const box=$('#spfProductChatMessages');if(!box)return;box.innerHTML='';const card=document.createElement('div');card.className='spf-product-card';const img=firstImage(p),desc=productDescription(p),url=buyUrl(p,index);card.innerHTML=`<div class="spf-product-card-top">${img?`<img src="${esc(img)}" alt="${esc(p?.name||'Produto')}" loading="eager" decoding="async">`:''}<div><div class="spf-product-card-name">${esc(p?.name||'Produto')}</div><div class="spf-product-card-price">${esc(p?.price||'Consulte')}</div></div></div>${desc?`<div class="spf-product-card-desc">${esc(desc)}</div>`:''}<a class="spf-product-card-buy" href="${esc(url)}" target="_blank" rel="noopener">🛒 Comprar agora</a>`;box.appendChild(card);addMessage('bot','Olá! Vou te explicar este produto. Se quiser, pode perguntar por texto ou tocar em “Fazer pergunta por voz”.')}
 function submitQuestion(text,fromVoice){text=String(text||'').trim();if(!text||!activeProduct)return;addMessage('user',text);lastVoiceQuestion=!!fromVoice;setMicState('processing','Processando pergunta...');requestAnimationFrame(()=>setTimeout(()=>{const answer=bestProductAnswer(activeProduct,text);addMessage('bot',answer);setMicState('','Fazer pergunta por voz');if(lastVoiceQuestion)speakText(answer);lastVoiceQuestion=false},80))}
