@@ -106,8 +106,15 @@ function boot(){
   const refreshEditor=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;installEditorExtras();fillEditorFromData();wrapCollect()})};
   const attachEditorObserver=()=>{const products=$('#products');if(!products||products.dataset.spcObserved==='1')return false;products.dataset.spcObserved='1';new MutationObserver(refreshEditor).observe(products,{childList:true,subtree:true});return true};
   if(!attachEditorObserver()){let tries=0;const timer=setInterval(()=>{tries++;installEditorExtras();fillEditorFromData();wrapCollect();if(attachEditorObserver()||tries>=40)clearInterval(timer)},250)}
-  const publicRoot=$('#pubFeed')||$('.csv-body')||$('.vs-body');
-  if(publicRoot&&document.body.classList.contains('chatshop-virtual-tiktok')){let publicQueued=false;new MutationObserver(()=>{if(publicQueued)return;publicQueued=true;requestAnimationFrame(()=>{publicQueued=false;decoratePublished()})}).observe(publicRoot,{childList:true,subtree:true})}
+  /* A renderização publicada substitui cartões completos depois do primeiro paint.
+     Observa a vitrine inteira para restaurar carrossel, comprar e play no DOM final. */
+  let publicQueued=false;
+  const refreshPublished=()=>{if(publicQueued)return;publicQueued=true;requestAnimationFrame(()=>{publicQueued=false;decoratePublished()})};
+  new MutationObserver(mutations=>{
+    if(!document.body.classList.contains('chatshop-virtual-tiktok'))return;
+    if(mutations.some(m=>m.addedNodes.length||m.removedNodes.length))refreshPublished();
+  }).observe(document.body,{childList:true,subtree:true});
+  [100,300,700,1200,2000,3500].forEach(ms=>setTimeout(refreshPublished,ms));
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
