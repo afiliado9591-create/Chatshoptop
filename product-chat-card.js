@@ -49,12 +49,16 @@ function indexFromVisibleProduct(){
   return 0;
 }
 function captureContext(btn){
-  let idx=-1;
-  for(const v of [btn?.dataset?.productIndex,btn?.dataset?.chatProduct,btn?.dataset?.product]){const n=Number(v);if(Number.isInteger(n)&&n>=0){idx=n;break}}
-  if(idx<0){const card=btn?.closest?.('[data-product-index],.csv-card,.vs-card,.pub-slide,.sg-card,.cgc');if(card?.dataset?.productIndex!=null)idx=Number(card.dataset.productIndex);else if(card?.dataset?.i!=null)idx=Number(card.dataset.i);else if(card){const sel=card.matches('.pub-slide')?'.pub-slide':card.matches('.csv-card')?'.csv-card':card.matches('.vs-card')?'.vs-card':card.matches('.cgc')?'.cgc':'.sg-card';idx=$$(sel).indexOf(card)}}
-  if(Number.isInteger(idx)&&idx>=0){window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=idx;const p=products()[idx];if(usefulProduct(p))window.__CHATSHOP_ACTIVE_PRODUCT=p}
+  const list=products();let idx=-1;
+  const wantedId=String(btn?.dataset?.productId||'').trim();
+  const wantedName=norm(btn?.dataset?.productName||'');
+  if(wantedId)idx=list.findIndex((p,i)=>String(p?.id||p?.productId||'')===wantedId);
+  if(idx<0&&wantedName)idx=list.findIndex(p=>norm(p?.name)===wantedName);
+  if(idx<0)for(const v of [btn?.dataset?.productIndex,btn?.dataset?.chatProduct,btn?.dataset?.product]){const n=Number(v);if(Number.isInteger(n)&&n>=0){idx=n;break}}
+  if(idx<0){const card=btn?.closest?.('[data-product-index],.csv-card,.vs-card,.pub-slide,.sg-card,.cgc');if(card?.dataset?.productIndex!=null)idx=Number(card.dataset.productIndex);else if(card?.dataset?.i!=null)idx=Number(card.dataset.i);else if(card){const sel=card.matches('.pub-slide')?'.pub-slide':card.matches('.csv-card')?'.csv-card':card.matches('.vs-card')?'.vs-card':card.matches('.cgc')?'.cgc':'.sg-card';idx=$(sel).indexOf(card)}}
+  if(Number.isInteger(idx)&&idx>=0){window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=idx;const p=list[idx];if(usefulProduct(p)){window.__CHATSHOP_ACTIVE_PRODUCT=p;window.__CHATSHOP_ACTIVE_PRODUCT_ID=String(p?.id||p?.productId||wantedId||'')}}
 }
-function activeProduct(){const idx=indexFromVisibleProduct(),p=window.__CHATSHOP_ACTIVE_PRODUCT;if(usefulProduct(p))return p;return products()[idx]||null}
+function activeProduct(){const idx=indexFromVisibleProduct(),byIndex=products()[idx];if(usefulProduct(byIndex))return byIndex;const p=window.__CHATSHOP_ACTIVE_PRODUCT;return usefulProduct(p)?p:null}
 function hideNativeDuplicate(box,card,name){
   const wanted=norm(name);
   Array.from(box.children).forEach(el=>{
