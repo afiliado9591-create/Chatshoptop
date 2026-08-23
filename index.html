@@ -523,9 +523,12 @@ async function populateForm(data){
   $('#logoUrl').value = isUploadLogo ? '' : (data.logo || '');
   document.getElementById('logoField').dataset.upload = isUploadLogo ? data.logo : '';
   refreshLogo();
+  productsEl.style.display='none';
   productsEl.innerHTML=''; productCount=0;
-  (data.products||[]).forEach(p=>addProduct({id:p.id||p.productId||'',name:p.name,price:p.price,link:p.link||combineAffiliateLink(p.catalogBaseLink||'',p.affiliateParam||''),keywords:(p.keywords||[]).join(', '),category:p.category||'',imageUrl:(p.images&&p.images[0])||p.image||'',imageUrl2:(p.images&&p.images[1])||'',imageUrl3:(p.images&&p.images[2])||'',imageUrl4:(p.images&&p.images[3])||'',colors:Array.isArray(p.colors)?p.colors.join(', '):(p.colors||''),promo:p.promo||false,qna:p.qna||[],buttonText:p.buttonText||'Comprar agora',buttonColor:p.buttonColor||data.buyColor||data.mainColor||'#7A2E3B',displayText:p.displayText||'',voiceText:p.voiceText||''}));
+  (data.products||[]).forEach(p=>addProduct({id:p.id||p.productId||'',name:p.name,price:p.price,link:p.link||combineAffiliateLink(p.catalogBaseLink||'',p.affiliateParam||''),keywords:(p.keywords||[]).join(', '),category:p.category||'',imageUrl:(p.images&&p.images[0])||p.image||'',imageUrl2:(p.images&&p.images[1])||'',imageUrl3:(p.images&&p.images[2])||'',imageUrl4:(p.images&&p.images[3])||'',colors:Array.isArray(p.colors)?p.colors.join(', '):(p.colors||''),promo:p.promo||false,qna:p.qna||[],buttonText:p.buttonText||'Comprar agora',buttonColor:p.buttonColor||data.buyColor||data.mainColor||'#7A2E3B',displayText:p.displayText||'',voiceText:p.voiceText||''},{batch:true}));
+  updateProductPositions();
   updateStoreTypeUI();
+  productsEl.style.display='';
   qnaListEl.innerHTML=''; qnaCount=0;
   (data.qna||[]).forEach(q=>addQnA(q));
   try{window.ChatShopPopulateShipping?.(data)}catch(e){console.warn('shipping populate:',e)}
@@ -1977,8 +1980,12 @@ card.querySelector('[data-k="file"]').addEventListener('change',e=>{const f=e.ta
 card.querySelectorAll('[data-extra-file]').forEach(inp=>inp.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;if(f.size>2.5*1024*1024){toast('Use uma imagem menor que 2,5 MB');e.target.value='';return}const slot=e.target.dataset.extraFile;const r=new FileReader();r.onload=()=>{card.dataset['upload'+slot]=r.result;refreshExtraImage(card,slot);renderLive()};r.readAsDataURL(f)}));
 card.querySelectorAll('[data-k="imageUrl2"],[data-k="imageUrl3"],[data-k="imageUrl4"]').forEach(inp=>inp.addEventListener('input',()=>{const slot=inp.dataset.k.slice(-1);refreshExtraImage(card,slot)}));
 if(options.prepend&&productsEl.firstElementChild)productsEl.insertBefore(card,productsEl.firstElementChild);else productsEl.appendChild(card);
-updateProductPositions();refreshImage(card);['2','3','4'].forEach(slot=>refreshExtraImage(card,slot));updateStoreTypeUI();
-if(options.focus){requestAnimationFrame(()=>{card.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>card.querySelector('[data-k="name"]')?.focus(),350)})}}
+const hydratePreviews=()=>{if(card.dataset.previewsReady)return;card.dataset.previewsReady='1';refreshImage(card);['2','3','4'].forEach(slot=>refreshExtraImage(card,slot))};
+card.addEventListener('pointerdown',hydratePreviews,{once:true,passive:true});
+card.addEventListener('focusin',hydratePreviews,{once:true});
+if('IntersectionObserver' in window){const io=new IntersectionObserver(entries=>{if(entries.some(x=>x.isIntersecting)){hydratePreviews();io.disconnect()}},{rootMargin:'250px'});io.observe(card)}else if(!options.batch)hydratePreviews();
+if(!options.batch){updateProductPositions();updateStoreTypeUI()}
+if(options.focus){hydratePreviews();requestAnimationFrame(()=>{card.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>card.querySelector('[data-k="name"]')?.focus(),350)})}}
 function refreshImage(card){const img=card.dataset.upload||card.querySelector('[data-k="imageUrl"]').value.trim();const box=card.querySelector('.image-preview');box.innerHTML='';if(!img){box.innerHTML='<span>Nenhuma imagem selecionada</span>';return}const im=document.createElement('img');im.loading='lazy';im.decoding='async';im.src=img;im.alt='Prévia';im.onerror=()=>box.innerHTML='<span>Não foi possível abrir a imagem</span>';box.appendChild(im)}
 function refreshExtraImage(card,slot){const input=card.querySelector(`[data-k="imageUrl${slot}"]`);const img=card.dataset['upload'+slot]||(input?input.value.trim():'');const box=card.querySelector(`[data-preview-slot="${slot}"]`);if(!box)return;box.innerHTML='';if(!img){box.innerHTML='<span>Nenhuma imagem '+slot+'</span>';return}const im=document.createElement('img');im.src=img;im.alt='Prévia '+slot;im.onerror=()=>box.innerHTML='<span>Não foi possível abrir a imagem</span>';box.appendChild(im)}
 (function(){
