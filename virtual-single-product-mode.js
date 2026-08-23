@@ -145,6 +145,9 @@ function installPublished(storeData){
       body.chatshop-virtual-tiktok .vts-category{pointer-events:auto!important;touch-action:manipulation;cursor:pointer;border:0;border-radius:999px;background:rgba(255,255,255,.96);color:${categoryColor};font-weight:900;padding:10px 14px;box-shadow:0 3px 12px rgba(0,0,0,.22);white-space:nowrap}
       body.chatshop-virtual-tiktok .vts-category.active{background:${categoryColor};color:${categoryText}}
       body.chatshop-virtual-tiktok #pubChatToggle{bottom:18px!important;right:16px!important;z-index:40!important}
+      body.chatshop-virtual-tiktok .vts-floating-cart{display:none;position:fixed;right:14px;top:14px;z-index:48;border:0;border-radius:999px;background:${main};color:#fff;min-height:48px;padding:10px 15px;align-items:center;gap:7px;font-size:15px;font-weight:900;box-shadow:0 5px 18px rgba(0,0,0,.32);cursor:pointer}
+      body.chatshop-virtual-tiktok .vts-floating-cart.has-items{display:flex!important}
+      body.chatshop-virtual-tiktok .vts-floating-cart-count{min-width:23px;height:23px;border-radius:50%;background:#fff;color:${main};display:grid;place-items:center;font-size:12px}
       @media(max-width:560px){body.chatshop-virtual-tiktok .csv-body{left:18px!important;right:78px!important;bottom:92px!important;padding:14px!important}body.chatshop-virtual-tiktok .csv-name{font-size:20px!important}body.chatshop-virtual-tiktok .vts-actions{right:10px;bottom:106px}body.chatshop-virtual-tiktok .vts-action{width:52px;height:52px}.vts-categories{top:82px!important}}
     `;
     document.head.appendChild(style);
@@ -166,6 +169,30 @@ function installPublished(storeData){
       actions.append(seller,share);card.appendChild(actions);
       card.id='produto-'+(index+1);
     });
+    /* Sacola flutuante: mantém a tela limpa enquanto vazia e aparece após adicionar um item. */
+    let floatingBag=$('#vtsFloatingBag');
+    if(!floatingBag){
+      floatingBag=document.createElement('button');floatingBag.id='vtsFloatingBag';floatingBag.type='button';floatingBag.className='vts-floating-cart';
+      floatingBag.innerHTML='🛍️ Sacola <span class="vts-floating-cart-count">0</span>';
+      document.body.appendChild(floatingBag);
+    }
+    const originalBag=$('#csvBag,.vs-bag');
+    const syncFloatingBag=()=>{
+      const countEl=$('#csvCount,#vsBagCount,#vsBag .vs-bag-count');
+      const match=String(countEl?.textContent||originalBag?.textContent||'0').match(/\d+/);
+      const count=match?Number(match[0]):0;
+      $('.vts-floating-cart-count',floatingBag).textContent=String(count);
+      floatingBag.classList.toggle('has-items',count>0);
+      floatingBag.setAttribute('aria-label','Abrir sacola com '+count+' item'+(count===1?'':'s'));
+    };
+    floatingBag.onclick=event=>{event.preventDefault();event.stopPropagation();originalBag?.click()};
+    if(originalBag&&!originalBag.dataset.floatingBagObserved){
+      originalBag.dataset.floatingBagObserved='1';
+      new MutationObserver(syncFloatingBag).observe(originalBag,{childList:true,subtree:true,characterData:true});
+    }
+    document.addEventListener('click',event=>{if(event.target.closest?.('#csvAdd,#vsAdd'))setTimeout(syncFloatingBag,40)},true);
+    syncFloatingBag();
+
     const categoryValues=['Todas',...new Set(products.map(p=>String(p.category||'').trim()).filter(Boolean))];
     if(categoryValues.length>1){
       const rail=document.createElement('nav');rail.className='vts-categories';rail.setAttribute('aria-label','Categorias');
