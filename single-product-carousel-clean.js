@@ -106,15 +106,19 @@ function boot(){
   const refreshEditor=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;installEditorExtras();fillEditorFromData();wrapCollect()})};
   const attachEditorObserver=()=>{const products=$('#products');if(!products||products.dataset.spcObserved==='1')return false;products.dataset.spcObserved='1';new MutationObserver(refreshEditor).observe(products,{childList:true,subtree:true});return true};
   if(!attachEditorObserver()){let tries=0;const timer=setInterval(()=>{tries++;installEditorExtras();fillEditorFromData();wrapCollect();if(attachEditorObserver()||tries>=40)clearInterval(timer)},250)}
-  /* A renderização publicada substitui cartões completos depois do primeiro paint.
-     Observa a vitrine inteira para restaurar carrossel, comprar e play no DOM final. */
-  let publicQueued=false;
+  /* Observa somente a grade. Evita varrer o documento inteiro a cada alteração do chat,
+     da sacola ou de outros recursos da página. */
+  let publicQueued=false,gridObserver=null,observedGrid=null;
   const refreshPublished=()=>{if(publicQueued)return;publicQueued=true;requestAnimationFrame(()=>{publicQueued=false;decoratePublished()})};
-  new MutationObserver(mutations=>{
-    if(!document.body.classList.contains('chatshop-virtual-tiktok'))return;
-    if(mutations.some(m=>m.addedNodes.length||m.removedNodes.length))refreshPublished();
-  }).observe(document.body,{childList:true,subtree:true});
-  [100,300,700,1200,2000,3500].forEach(ms=>setTimeout(refreshPublished,ms));
+  const attachPublishedObserver=()=>{
+    const grid=$('.csv-grid,.vs-grid');if(!grid)return false;
+    if(grid===observedGrid)return true;
+    gridObserver?.disconnect();observedGrid=grid;
+    gridObserver=new MutationObserver(refreshPublished);
+    gridObserver.observe(grid,{childList:true,subtree:true});
+    return true;
+  };
+  [100,300,700,1200,2000].forEach(ms=>setTimeout(()=>{attachPublishedObserver();refreshPublished()},ms));
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
