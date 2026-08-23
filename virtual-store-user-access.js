@@ -63,12 +63,11 @@ function wrapCollect(){
 }
 
 function watchEditor(){
-  let tries=0;
-  const timer=setInterval(()=>{
-    tries++;wrapCollect();applyEditorAccess();
-    if(tries>120)clearInterval(timer);
-  },120);
-  if(document.body)new MutationObserver(()=>requestAnimationFrame(()=>{wrapCollect();applyEditorAccess()})).observe(document.body,{childList:true,subtree:true});
+  let queued=false,tries=0;
+  const refresh=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;wrapCollect();applyEditorAccess()})};
+  refresh();
+  const attach=()=>{const root=$('#editorView')||$('#products');if(!root||root.dataset.virtualAccessObserved==='1')return false;root.dataset.virtualAccessObserved='1';new MutationObserver(refresh).observe(root,{childList:true,subtree:true});return true};
+  if(!attach()){const timer=setInterval(()=>{tries++;refresh();if(attach()||tries>=40)clearInterval(timer)},250)}
 }
 
 function isLikelyAdminUser(u){return u?.isAdmin===true||u?.admin===true||String(u?.role||'').toLowerCase()==='admin'}
