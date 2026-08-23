@@ -1,6 +1,8 @@
 /* ChatShop — produto único limpo: Comprar, Ouvir descrição e Falar com vendedor; menu opcional. */
 (function(){
 'use strict';
+/* Recursos da vitrine publicada não devem executar dentro do painel/editor. */
+if(location.hostname==='alibr.com.br'||location.hostname==='www.alibr.com.br')return;
 const $=(s,r)=>(r||document).querySelector(s), $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 function storeData(){return window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||null}
 function isSingle(){const d=storeData();return d?.storeType==='virtual'&&d?.virtualDisplayMode==='single'}
