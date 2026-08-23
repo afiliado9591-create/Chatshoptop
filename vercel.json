@@ -13,6 +13,10 @@
   ],
   "routes": [
     {
+      "src": "/meus-pedidos/?",
+      "dest": "/api/app-superfrete.js?orders=1"
+    },
+    {
       "src": "/site/?",
       "dest": "/api/public-page.js?slug=inicio"
     },
