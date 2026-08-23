@@ -56,6 +56,16 @@ function ensureFormatControls(){
   box.style.display=isVirtual()?'block':'none';
 }
 
+function consolidateFormatControls(){
+  const main=$('#virtualStoreFormatRecovery');if(!main)return;
+  const legacy=$('#virtualSingleProductField');
+  const menu=$('#singleProductMenuField');
+  if(menu&&!main.contains(menu)){menu.style.marginTop='10px';main.appendChild(menu)}
+  if(legacy)legacy.style.setProperty('display','none','important');
+  const home=$('#homeLayoutField');if(home)home.style.setProperty('display','none','important');
+  const extraMenu=$('#singleProductMenuOption');if(extraMenu)extraMenu.style.setProperty('display','none','important');
+}
+
 /* ---------- FRETE / SUPERFRETE ---------- */
 function shippingMarkup(){return `<label style="font-size:14px;font-weight:900">🚚 Configuração de entrega</label>
   <div class="field chatshop-shipping-mode-field" style="margin-top:10px;display:flex!important;flex-direction:column!important;gap:6px!important">
@@ -132,7 +142,7 @@ function patchCollectOnce(){
 function patchPopulateOnce(){
   if(typeof window.populateForm!=='function'||window.populateForm.__virtualRecoveryWrapped)return;
   const original=window.populateForm;
-  async function wrapped(data){const r=await original.apply(this,arguments);setTimeout(()=>{ensureFormatControls();ensureShippingVisible();setRecoveryModeFromData(data||{});if(typeof window.ChatShopPopulateShipping==='function')try{window.ChatShopPopulateShipping(data||{})}catch(e){}},120);return r}
+  async function wrapped(data){const r=await original.apply(this,arguments);setTimeout(()=>{ensureFormatControls();consolidateFormatControls();ensureShippingVisible();setRecoveryModeFromData(data||{});if(typeof window.ChatShopPopulateShipping==='function')try{window.ChatShopPopulateShipping(data||{})}catch(e){}},120);return r}
   wrapped.__virtualRecoveryWrapped=true;window.populateForm=wrapped;try{populateForm=wrapped}catch(e){}
 }
 
@@ -140,7 +150,7 @@ function applyAccess(){
   const cap=POLICY[currentPlan()]||POLICY.aprendiz;try{myProductLimit=cap.products;myChatLimit=cap.chats}catch(e){}
   const type=$('#storeType'),allow=canUseVirtual();
   if(type){const opt=[...type.options].find(o=>o.value==='virtual');if(opt){opt.hidden=!allow;opt.disabled=!allow}if(!allow&&type.value==='virtual'){type.value='affiliate';try{type.dispatchEvent(new Event('change',{bubbles:true}))}catch(e){}}}
-  if(allow){ensureFormatControls();if(isVirtual())ensureShippingVisible();patchCollectOnce();patchPopulateOnce()}
+  if(allow){ensureFormatControls();consolidateFormatControls();if(isVirtual())ensureShippingVisible();patchCollectOnce();patchPopulateOnce()}
   const format=$('#virtualStoreFormatRecovery');if(format&&type)format.style.display=isVirtual()?'block':'none';
 }
 
