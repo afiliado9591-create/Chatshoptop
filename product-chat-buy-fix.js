@@ -99,11 +99,20 @@ document.addEventListener('click',function(e){
   if(seller)remember(seller);
   const buy=e.target?.closest?.('.spf-chat-product-buy');
   if(!buy)return;
-  const d=store();
-  if(String(d.storeType||'').toLowerCase()!=='virtual')return;
+  const d=store(),type=String(d.storeType||'').toLowerCase();
   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
   const idx=activeIndex();
   if(idx<0){console.warn('ChatShop: produto do chat não identificado');return;}
+  if(type!=='virtual'){
+    const p=products()[idx]||window.__CHATSHOP_ACTIVE_PRODUCT||{};
+    const original=$('.pub-slide')[idx]?.querySelector('.pub-slide-buy');
+    const url=String(p.link||p.affiliateLink||p.baseLink||p.checkoutUrl||original?.href||'').trim();
+    if(!url||url==='#'){console.warn('ChatShop: link de compra do afiliado não encontrado',idx);return;}
+    closeChat();
+    const anchor=document.createElement('a');anchor.href=url;anchor.target='_blank';anchor.rel='noopener noreferrer';anchor.style.display='none';
+    document.body.appendChild(anchor);anchor.click();anchor.remove();
+    return;
+  }
   withNavigationGuard(async()=>{
     closeChat();
     await wait(80);
