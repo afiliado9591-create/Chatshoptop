@@ -57,7 +57,7 @@ function buy(card){
   if(link){link.click();return}
 }
 function decorateCard(card,index){
-  if(card.dataset.spcReady==='1')return;
+  if(card.dataset.spcReady==='1'&&card.querySelector('.spc-actions'))return;
   const product=readProductData(index)||{};const imgs=productImages(product);
   const photo=card.querySelector('.csv-photo,.vs-card-img');
   if(photo&&imgs.length){
@@ -72,8 +72,7 @@ function decorateCard(card,index){
     const actions=document.createElement('div');actions.className='spc-actions';
     const b=document.createElement('button');b.type='button';b.className='spc-action buy';b.innerHTML='🛒<span>Comprar</span>';b.onclick=e=>{e.stopPropagation();buy(card)};
     const play=document.createElement('button');play.type='button';play.className='spc-action';play.innerHTML='▶️<span>Ouvir descrição</span>';play.onclick=e=>{e.stopPropagation();speak(product)};
-    const seller=document.createElement('button');seller.type='button';seller.className='spc-action';seller.innerHTML='💬<span>Falar com o vendedor</span>';seller.onclick=e=>{e.stopPropagation();openSeller(product,index)};
-    actions.append(b,play,seller);card.appendChild(actions);
+    actions.append(b,play);card.appendChild(actions);
   }
   card.dataset.spcReady='1';
 }
