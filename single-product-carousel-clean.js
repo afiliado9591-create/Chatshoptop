@@ -1,6 +1,8 @@
 /* ChatShop — produto único limpo + carrossel horizontal de até 4 imagens. */
 (function(){
 'use strict';
+/* Recursos da vitrine publicada não devem executar dentro do painel/editor. */
+if(location.hostname==='alibr.com.br'||location.hostname==='www.alibr.com.br')return;
 const $=(s,r)=>(r||document).querySelector(s), $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const normUrl=v=>String(v||'').trim();
 function unique(list){return [...new Set(list.map(normUrl).filter(Boolean))].slice(0,4)}
