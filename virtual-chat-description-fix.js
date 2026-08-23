@@ -404,7 +404,7 @@ function makeProductSellerButton(index,card=false){
   b.style.cssText=card
     ? `display:inline-block;width:100%;height:35px;margin:10px 0 0;padding:10px 4px;border:0;border-radius:9px;background:${color};color:#fff;font-size:12px;font-weight:900;line-height:15px;white-space:nowrap;text-align:center;cursor:pointer;box-shadow:none;box-sizing:border-box`
     : `display:block;width:100%;margin:9px 0;padding:12px 13px;border:0;border-radius:999px;background:${color};color:#fff;font-size:14px;font-weight:900;line-height:1.25;text-align:center;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.16);box-sizing:border-box`;
-  b.onclick=e=>{e.preventDefault();e.stopPropagation();window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=index;window.__CHATSHOP_ACTIVE_PRODUCT=p;window.__CHATSHOP_ACTIVE_PRODUCT_ID=productId(p,index);window.__CHATSHOP_OPEN_PRODUCT_CHAT?.(index)};return b;
+  b.onclick=e=>{e.preventDefault();e.stopPropagation();window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=index;window.__CHATSHOP_ACTIVE_PRODUCT=p;window.__CHATSHOP_ACTIVE_PRODUCT_ID=productId(p,index);window.__CHATSHOP_OPEN_PRODUCT_CHAT?.(p,index)};return b;
 }
 function injectProductSellerButtons(){
   Array.from(document.querySelectorAll('.csv-card,.vs-card')).forEach((card,fallbackIndex)=>{
