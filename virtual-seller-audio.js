@@ -242,9 +242,14 @@ document.addEventListener('click',e=>{
 },true);
 
 window.addEventListener('popstate',()=>{activeProductIndex=indexFromCurrentUrl();schedule()});
-new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
+function observeProductArea(){
+  const root=document.querySelector('.csv-grid,.vs-grid,#pubFeed,#csvProductModal,#vsProductModal');
+  if(!root||root.dataset.sellerAudioObserved==='1')return false;
+  root.dataset.sellerAudioObserved='1';
+  new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
+  return true;
+}
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',schedule,{once:true}); else schedule();
 loadStore();
-[100,300,700,1200,2000,3500].forEach(ms=>setTimeout(schedule,ms));
-setInterval(schedule,1500);
+[100,300,700,1200,2000].forEach(ms=>setTimeout(()=>{observeProductArea();schedule()},ms));
 })();
