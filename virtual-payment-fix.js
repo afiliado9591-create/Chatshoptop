@@ -69,6 +69,11 @@ function installShippingClickGuard(){
     input.dispatchEvent(new Event('change',{bubbles:true}));
   },true);
 }
+function ensureOrdersLink(){
+  const cart=$('#csvCartBody');if(!cart||$('#csvOrdersLink'))return;
+  const button=$('#csvCheckoutMp',cart)||$('#csvCheckout',cart);if(!button)return;
+  const link=document.createElement('a');link.id='csvOrdersLink';link.href='/meus-pedidos';link.textContent='📦 Acompanhar meus pedidos';link.style.cssText='display:block;text-align:center;margin-top:12px;color:#6d28d9;font-weight:800;text-decoration:none';button.insertAdjacentElement('afterend',link);
+}
 function ensureCustomerFields(){
   const cart=$('#csvCartBody');if(!cart||$('#csvCustomerFields'))return;
   const actions=$('.csv-pay-actions',cart)||$('#csvCheckoutMp',cart)||$('#csvCheckout',cart);if(!actions)return;
@@ -142,7 +147,7 @@ function setupCheckout(){
     }else if(existingMp){existingMp.textContent=connected?'🔵 Pagar com Mercado Pago':'Mercado Pago indisponível';existingMp.disabled=!connected}
   }
 }
-async function apply(){installStyle();installShippingClickGuard();await loadConfig();fixDescription();setupCheckout();ensureCustomerFields()}
+async function apply(){installStyle();installShippingClickGuard();await loadConfig();fixDescription();setupCheckout();ensureCustomerFields();ensureOrdersLink()}
 function observe(){
   let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(apply,25)}).observe(document.body,{childList:true,subtree:true});
   document.addEventListener('click',e=>{if(e.target.closest('[data-product],#csvBag,#csvAdd'))setTimeout(apply,35)},true);
