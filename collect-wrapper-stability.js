@@ -14,7 +14,8 @@ const markers=[
   '__planAccessWrapped',
   '__planPolicyWrapped',
   '__manualVirtualAccessWrapped',
-  '__affiliateCatalogQnaWrapped'
+  '__affiliateCatalogQnaWrapped',
+  '__spcWrapped'
 ];
 let lastCollect=null;
 function markCurrent(){
