@@ -17,7 +17,7 @@ function productImages(product){
 function installStyle(){
   if($('#singleProductCarouselCleanStyle'))return;
   const style=document.createElement('style');style.id='singleProductCarouselCleanStyle';style.textContent=`
-    body.chatshop-virtual-tiktok .vts-share,body.chatshop-virtual-tiktok .vts-bag{display:none!important}
+    body.chatshop-virtual-tiktok .vts-share,body.chatshop-virtual-tiktok .vts-bag,body.chatshop-virtual-tiktok .vs-head .vs-bag,body.chatshop-virtual-tiktok #vsBag{display:none!important}
     body.chatshop-virtual-tiktok .vts-categories{display:none!important}
     body.chatshop-virtual-tiktok.single-menu-enabled .vts-categories{display:flex!important}
     body.chatshop-virtual-tiktok #pubChatToggle{display:none!important}
