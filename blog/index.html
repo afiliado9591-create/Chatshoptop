@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Blog Alibr — ideias, produtos e oportunidades</title>
+  <meta name="description" content="Comunidade Alibr para publicar conteúdos, recomendações e links úteis.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://blog.alibr.com.br/">
+  <style>
+    :root{--blue:#1457d9;--dark:#0e2e69;--bg:#f4f7fb;--text:#172033;--muted:#667085;--line:#dbe3ef;--green:#078447;--red:#bd2430}
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+    button,input,textarea,select{font:inherit}.top{background:linear-gradient(135deg,var(--dark),var(--blue));color:#fff;position:sticky;top:0;z-index:10;box-shadow:0 3px 15px #08245d44}
+    .topin{max-width:1100px;margin:auto;padding:13px 16px;display:flex;gap:12px;align-items:center}.brand{font-size:23px;font-weight:900;flex:1}.brand small{display:block;font-size:11px;font-weight:400;opacity:.85}
+    .top button{border:1px solid #ffffff66;background:#ffffff18;color:#fff;border-radius:999px;padding:9px 12px;font-weight:800}.wrap{max-width:1100px;margin:auto;padding:18px 14px 50px}
+    .hero{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:16px}.hero h1{margin:0 0 6px;font-size:clamp(25px,5vw,39px)}.hero p{color:var(--muted);margin:0}
+    .tabs{display:flex;gap:8px;overflow:auto;margin-bottom:14px}.tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 13px;font-weight:800;white-space:nowrap}.tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+    .panel{display:none}.panel.active{display:block}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:13px}
+    .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin-bottom:12px}.field label{display:block;font-size:13px;font-weight:800;margin-bottom:5px}.field input,.field textarea,.field select{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:11px;background:#fff}.field textarea{resize:vertical;min-height:130px}
+    .hint{font-size:12px;color:var(--muted);line-height:1.45}.primary{border:0;background:var(--blue);color:#fff;border-radius:11px;padding:12px 16px;font-weight:900}.secondary{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:10px;padding:9px 12px;font-weight:800}.danger{background:#fff0f1;color:var(--red);border-color:#ffcdd2}
+    .notice{border-radius:11px;padding:11px;font-size:13px;margin:10px 0;background:#eff6ff;border:1px solid #bfdbfe}.notice.ok{background:#ecfdf3;border-color:#a7f3d0;color:#06683c}.notice.err{background:#fff1f2;border-color:#fecdd3;color:#9f1239}
+    .feed{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.post{background:#fff;border:1px solid var(--line);border-radius:17px;overflow:hidden;display:flex;flex-direction:column;min-width:0}.post img{width:100%;aspect-ratio:16/9;object-fit:cover;background:#e8eef7}.postbody{padding:15px;display:flex;flex-direction:column;flex:1}.tag{font-size:11px;font-weight:900;color:var(--blue);text-transform:uppercase}.post h2{font-size:20px;line-height:1.2;margin:7px 0}.post p{color:#475467;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}.meta{font-size:11px;color:var(--muted);margin-top:auto}.visit{display:inline-block;margin-top:11px;text-decoration:none;text-align:center;background:var(--blue);color:#fff;border-radius:9px;padding:10px;font-weight:900}
+    .status{display:inline-block;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:900}.pending{background:#fff7d6;color:#8a5700}.approved{background:#dcfce7;color:#166534}.rejected{background:#fee2e2;color:#991b1b}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row .grow{flex:1}.empty{text-align:center;color:var(--muted);padding:30px;background:#fff;border:1px dashed #cbd5e1;border-radius:15px}.modal{position:fixed;inset:0;background:#0009;z-index:30;display:none;align-items:center;justify-content:center;padding:16px}.modal.on{display:flex}.sheet{width:100%;max-width:440px;background:#fff;border-radius:18px;padding:18px}.sheet h2{margin-top:0}.close{float:right;border:0;background:#eef2f7;border-radius:50%;width:36px;height:36px;font-size:21px}
+    .adminActions{display:flex;gap:7px;margin-top:9px}.adminActions button{flex:1}.footer{text-align:center;color:var(--muted);font-size:12px;padding:22px}.skeleton{height:220px;background:linear-gradient(90deg,#edf1f7,#f8fafc,#edf1f7);background-size:200%;animation:p 1.2s infinite;border-radius:16px}@keyframes p{to{background-position:-200%}}
+    @media(max-width:700px){.feed{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}.topin{padding:10px}.brand{font-size:20px}.wrap{padding:12px 10px 40px}}
+  </style>
+</head>
+<body>
+<header class="top"><div class="topin"><div class="brand">🔵 Blog Alibr<small>Conteúdo criado pela comunidade</small></div><button id="authBtn">Entrar</button></div></header>
+<main class="wrap">
+  <section class="hero"><h1>Compartilhe ideias e oportunidades</h1><p>Publique textos, recomendações e links. As imagens são adicionadas somente por endereço HTTPS, sem upload.</p></section>
+  <nav class="tabs" aria-label="Áreas do blog">
+    <button class="tab active" data-tab="feed">Publicações</button>
+    <button class="tab" data-tab="write">Criar publicação</button>
+    <button class="tab" data-tab="mine">Minhas publicações</button>
+    <button class="tab" data-tab="admin" id="adminTab" hidden>Moderação</button>
+  </nav>
+  <section id="feedPanel" class="panel active"><div id="feed" class="feed"><div class="skeleton"></div><div class="skeleton"></div></div><div style="text-align:center;margin-top:14px"><button class="secondary" id="moreBtn" hidden>Carregar mais</button></div></section>
+  <section id="writePanel" class="panel">
+    <div class="card"><h2>Nova publicação</h2><div id="writeGate" class="notice">Entre com sua conta Alibr para publicar.</div>
+      <form id="postForm" hidden>
+        <div class="formgrid"><div class="field"><label>Título</label><input id="postTitle" maxlength="120" required></div><div class="field"><label>Categoria</label><select id="postCategory"><option>Produtos</option><option>Moda</option><option>Afiliados</option><option>Empreendedorismo</option><option>Dicas</option><option>Notícias</option><option>Outros</option></select></div></div>
+        <div class="field"><label>Texto</label><textarea id="postBody" maxlength="5000" required placeholder="Escreva o conteúdo da publicação..."></textarea><div class="hint">Máximo de 5.000 caracteres.</div></div>
+        <div class="field"><label>Link da imagem</label><input id="postImage" type="url" inputmode="url" placeholder="https://site.com/imagem.jpg"><div class="hint">Somente endereço HTTPS. Não existe upload de imagem.</div></div>
+        <div class="field"><label>Link externo (opcional)</label><input id="postLink" type="url" inputmode="url" placeholder="https://..."></div>
+        <button class="primary" id="submitPost" type="submit">Enviar para aprovação</button><div id="postMessage"></div>
+      </form>
+    </div>
+  </section>
+  <section id="minePanel" class="panel"><div id="mine" class="empty">Entre para ver suas publicações.</div></section>
+  <section id="adminPanel" class="panel"><div class="card"><h2>Moderação</h2><p class="hint">Aprove ou rejeite as publicações enviadas pela comunidade.</p></div><div id="adminList"></div></section>
+</main>
+<footer class="footer">© 2026 Alibr · Publicações passam por moderação.</footer>
+<div class="modal" id="authModal"><div class="sheet"><button class="close" id="closeAuth">×</button><h2 id="authTitle">Entrar</h2><div class="field"><label>E-mail</label><input id="email" type="email"></div><div class="field"><label>Senha</label><input id="password" type="password" minlength="6"></div><button class="primary" id="loginBtn">Entrar</button> <button class="secondary" id="signupBtn">Criar conta</button><div id="authMessage"></div></div></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig={apiKey:"AIzaSyBZlCM-6l_iV_GTirvTwUumKM3ZGRvgxt8",authDomain:"chatshop-97ea3.firebaseapp.com",projectId:"chatshop-97ea3",storageBucket:"chatshop-97ea3.firebasestorage.app",messagingSenderId:"372563156221",appId:"1:372563156221:web:fa2491999efb13f29e55bc"};
+firebase.initializeApp(firebaseConfig);const auth=firebase.auth(),db=firebase.firestore(),ADMIN_EMAILS=["jeanaguiar636@gmail.com"];let user=null,allApproved=[],visibleCount=10;
+const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function safeUrl(v){try{const u=new URL(String(v||"").trim());return u.protocol==="https:"?u.href:""}catch(e){return""}}
+function dateText(v){try{return(v?.toDate?v.toDate():new Date(v)).toLocaleDateString("pt-BR")}catch(e){return""}}
+function isAdmin(){return !!user&&ADMIN_EMAILS.includes(String(user.email||"").toLowerCase())}
+function switchTab(name){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));$("#"+name+"Panel").classList.add("active");if(name==="mine")loadMine();if(name==="admin"&&isAdmin())loadAdmin()}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+function postCard(p,admin=false){const image=safeUrl(p.imageUrl),link=safeUrl(p.externalUrl),status=String(p.status||"pending");return '<article class="post">'+(image?'<img src="'+esc(image)+'" alt="" loading="lazy" decoding="async" onerror="this.remove()">':'')+'<div class="postbody"><span class="tag">'+esc(p.category||"Outros")+'</span><h2>'+esc(p.title||"Sem título")+'</h2><p>'+esc(p.body||"")+'</p><div class="meta">Por '+esc(p.authorName||"Usuário Alibr")+(p.createdAt?" · "+dateText(p.createdAt):"")+'</div>'+(link?'<a class="visit" href="'+esc(link)+'" target="_blank" rel="nofollow noopener">Abrir link</a>':'')+(admin?'<div class="adminActions"><button class="secondary" data-action="approve" data-id="'+esc(p.id)+'">Aprovar</button><button class="secondary danger" data-action="reject" data-id="'+esc(p.id)+'">Rejeitar</button></div>':'')+'</div></article>'}
+async function loadFeed(){try{const s=await db.collection("blogPosts").where("status","==","approved").limit(80).get();allApproved=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));renderFeed()}catch(e){console.error(e);$("#feed").innerHTML='<div class="empty">Não foi possível carregar as publicações agora.</div>'}}
+function renderFeed(){const list=allApproved.slice(0,visibleCount);$("#feed").innerHTML=list.length?list.map(p=>postCard(p)).join(""):'<div class="empty">Ainda não há publicações aprovadas.</div>';$("#moreBtn").hidden=visibleCount>=allApproved.length}
+$("#moreBtn").onclick=()=>{visibleCount+=10;renderFeed()};
+auth.onAuthStateChanged(u=>{user=u;$("#authBtn").textContent=u?"Sair":"Entrar";$("#writeGate").textContent=u?"Sua publicação ficará pendente até aprovação do administrador.":"Entre com sua conta Alibr para publicar.";$("#writeGate").className="notice"+(u?" ok":"");$("#postForm").hidden=!u;$("#adminTab").hidden=!isAdmin();if(!u&&$("#adminPanel").classList.contains("active"))switchTab("feed");});
+$("#authBtn").onclick=()=>{if(user)auth.signOut();else $("#authModal").classList.add("on")};$("#closeAuth").onclick=()=>$("#authModal").classList.remove("on");
+function authMsg(t,ok=false){$("#authMessage").innerHTML='<div class="notice '+(ok?"ok":"err")+'">'+esc(t)+'</div>'}
+$("#loginBtn").onclick=async()=>{try{await auth.signInWithEmailAndPassword($("#email").value.trim(),$("#password").value);$("#authModal").classList.remove("on")}catch(e){authMsg("E-mail ou senha incorretos.")}};
+$("#signupBtn").onclick=async()=>{try{await auth.createUserWithEmailAndPassword($("#email").value.trim(),$("#password").value);$("#authModal").classList.remove("on")}catch(e){authMsg(e.code==="auth/email-already-in-use"?"Este e-mail já possui conta.":"Não foi possível criar a conta. Use uma senha com pelo menos 6 caracteres.")}};
+$("#postForm").onsubmit=async e=>{e.preventDefault();if(!user)return;const title=$("#postTitle").value.trim(),body=$("#postBody").value.trim(),image=$("#postImage").value.trim(),external=$("#postLink").value.trim();if(title.length<5||body.length<20){$("#postMessage").innerHTML='<div class="notice err">Preencha um título e um texto mais completos.</div>';return}if(image&&!safeUrl(image)){ $("#postMessage").innerHTML='<div class="notice err">O link da imagem precisa começar com HTTPS.</div>';return}if(external&&!safeUrl(external)){ $("#postMessage").innerHTML='<div class="notice err">O link externo precisa começar com HTTPS.</div>';return}const btn=$("#submitPost");btn.disabled=true;try{await db.collection("blogPosts").add({title:title.slice(0,120),body:body.slice(0,5000),category:$("#postCategory").value,imageUrl:safeUrl(image),externalUrl:safeUrl(external),authorUid:user.uid,authorName:(user.displayName||user.email.split("@")[0]).slice(0,80),authorEmail:user.email,status:"pending",createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});e.target.reset();$("#postMessage").innerHTML='<div class="notice ok">Publicação enviada! Ela aparecerá depois da aprovação.</div>'}catch(x){console.error(x);$("#postMessage").innerHTML='<div class="notice err">Não foi possível salvar. Verifique as permissões do Firebase.</div>'}btn.disabled=false};
+async function loadMine(){if(!user){$("#mine").className="empty";$("#mine").textContent="Entre para ver suas publicações.";return}$("#mine").className="";$("#mine").innerHTML='<div class="skeleton"></div>';try{const s=await db.collection("blogPosts").where("authorUid","==",user.uid).limit(80).get(),rows=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));$("#mine").innerHTML=rows.length?rows.map(p=>'<div class="card"><div class="row"><span class="status '+esc(p.status||"pending")+'">'+esc(p.status==="approved"?"Aprovada":p.status==="rejected"?"Rejeitada":"Aguardando aprovação")+'</span><b class="grow">'+esc(p.title)+'</b></div><p class="hint">'+esc(p.body).slice(0,240)+'</p></div>').join(""):'<div class="empty">Você ainda não publicou.</div>'}catch(e){$("#mine").innerHTML='<div class="empty">Não foi possível carregar suas publicações.</div>'}}
+async function loadAdmin(){if(!isAdmin())return;$("#adminList").innerHTML='<div class="skeleton"></div>';try{const s=await db.collection("blogPosts").limit(100).get(),rows=s.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.status==="pending").sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));$("#adminList").innerHTML=rows.length?'<div class="feed">'+rows.map(p=>postCard(p,true)).join("")+'</div>':'<div class="empty">Não há publicações aguardando aprovação.</div>'}catch(e){$("#adminList").innerHTML='<div class="empty">Não foi possível abrir a moderação.</div>'}}
+$("#adminList").onclick=async e=>{const b=e.target.closest("[data-action]");if(!b||!isAdmin())return;b.disabled=true;try{await db.collection("blogPosts").doc(b.dataset.id).update({status:b.dataset.action==="approve"?"approved":"rejected",moderatedAt:firebase.firestore.FieldValue.serverTimestamp(),moderatedBy:user.uid});await loadAdmin();await loadFeed()}catch(x){alert("Não foi possível alterar esta publicação.");b.disabled=false}};
+loadFeed();
+</script>
+</body></html>
