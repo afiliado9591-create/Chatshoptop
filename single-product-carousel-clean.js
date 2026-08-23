@@ -21,6 +21,7 @@ function installStyle(){
     body.chatshop-virtual-tiktok .vts-categories{display:none!important}
     body.chatshop-virtual-tiktok.single-menu-enabled .vts-categories{display:flex!important}
     body.chatshop-virtual-tiktok #pubChatToggle{display:none!important}
+    body.chatshop-virtual-tiktok #singleProductFloatingBag{display:none!important}
     body.chatshop-virtual-tiktok .csv-body .vts-card-category,body.chatshop-virtual-tiktok .vs-card-body .vts-card-category{display:none!important}
     body.chatshop-virtual-tiktok .spc-gallery{position:absolute!important;inset:0!important;z-index:1;display:flex!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory!important;overscroll-behavior-x:contain!important;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;background:#f7f3f3!important;scrollbar-width:none}
     body.chatshop-virtual-tiktok .spc-gallery::-webkit-scrollbar{display:none}
@@ -77,20 +78,9 @@ function decorateCard(card,index){
   }
   card.dataset.spcReady='1';
 }
-function hideDuplicateTopBag(){
-  /* O cabeçalho pode ser recriado depois do carregamento. Remove apenas o botão
-     textual preto "Sacola"; o botão vermelho lateral usa somente o ícone. */
-  $('button').forEach(button=>{
-    const text=String(button.textContent||'').replace(/\s+/g,' ').trim();
-    if(/^🛍️?\s*Sacola\b/i.test(text)||/^Sacola\b/i.test(text)){
-      if(!button.closest('.vs-modal,.spc-actions'))button.style.setProperty('display','none','important');
-    }
-  });
-}
 function decoratePublished(){
   if(!document.body.classList.contains('chatshop-virtual-tiktok'))return;
   installStyle();
-  hideDuplicateTopBag();
   const menuSetting=window.__CHATSHOP_STORE_DATA?.singleProductMenuEnabled??window.__CHATSHOP_STORE_FEATURE_DATA?.singleProductMenuEnabled;
   document.body.classList.toggle('single-menu-enabled',menuSetting===true);
   $$('.csv-card,.vs-card').forEach(decorateCard);
