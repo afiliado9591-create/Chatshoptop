@@ -17,7 +17,16 @@ function updatePreview(){
   const el=$('#affiliatePagePreview');if(!el)return;const slug=currentSlug()||'sua-loja';const base=publicBase(slug);el.textContent=base+'/afiliados';
 }
 function ensureEditor(){
-  if(!$('#editorView')||$('#affiliateProgramSettings'))return;
+  if(!$('#editorView'))return;
+  const existing=$('#affiliateProgramSettings');
+  if(existing){
+    if(existing.dataset.bound!=='1'){
+      existing.dataset.bound='1';
+      ['affiliateProgramEnabled','affiliateCommission','affiliateTerms'].forEach(id=>$('#'+id)?.addEventListener('input',()=>{try{debounce()}catch(e){}}));
+      $('#slug')?.addEventListener('input',updatePreview);$('#customDomain')?.addEventListener('input',updatePreview);
+    }
+    updatePreview();return;
+  }
   const sections=[...document.querySelectorAll('#editorView .section')];
   const publish=sections.find(s=>String(s.querySelector('h2')?.textContent||'').includes('4. Publicar'));
   if(!publish)return;
