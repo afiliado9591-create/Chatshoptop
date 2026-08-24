@@ -54,7 +54,15 @@ function upgrade(){try{if(typeof abrirPlanos==='function')return abrirPlanos()}c
 function notify(msg){try{if(typeof toast==='function')return toast(msg)}catch(e){};alert(msg)}
 function ensureApprenticeAffiliateLayouts(){
   if(currentPlan()!=='aprendiz'||!affiliateMode())return;
-  const box=$('#virtualStoreFormatRecovery');if(!box)return;
+  let box=$('#virtualStoreFormatRecovery');
+  if(!box){
+    const type=$('#storeType'),field=type?.closest('.field');if(!field)return;
+    box=document.createElement('div');box.id='virtualStoreFormatRecovery';box.className='field';box.dataset.aprendizFixed='recovered';
+    box.style.cssText='margin:10px 0 14px;padding:12px;border:1px solid #ddd6fe;background:#faf5ff;border-radius:12px';
+    box.innerHTML='<label id="chatshopFormatTitle" style="font-size:14px;font-weight:900;color:#4c1d95">📱 Formato do Catálogo de Afiliados</label><div style="display:grid;gap:8px;margin-top:8px"><label style="display:flex;gap:9px;align-items:flex-start;background:#fff;border:1px solid #ddd6fe;border-radius:10px;padding:10px"><input type="radio" name="virtualStoreFormatRecovery" value="single" checked><span><b>1 produto por página</b><small style="display:block;color:#6b7280">Um produto em destaque por vez.</small></span></label><label style="display:flex;gap:9px;align-items:flex-start;background:#fff;border:1px solid #ddd6fe;border-radius:10px;padding:10px"><input type="radio" name="virtualStoreFormatRecovery" value="grid"><span><b>Grade de 2 produtos</b><small style="display:block;color:#6b7280">Dois produtos lado a lado.</small></span></label></div>';
+    field.insertAdjacentElement('afterend',box);
+    box.addEventListener('change',e=>{const value=e.target?.value;if(!['single','grid'].includes(value))return;$('input[name="homeLayout"]').forEach(r=>r.checked=r.value===(value==='grid'?'grid':'single'));$('input[name="virtualDisplayMode"]').forEach(r=>r.checked=r.value===(value==='single'?'single':'catalog'));try{window.debounce?.()}catch(err){}});
+  }
   box.style.setProperty('display','block','important');
   box.dataset.aprendizAffiliateLayouts='1';
   const title=$('#chatshopFormatTitle',box);if(title)title.textContent='📱 Formato do Catálogo de Afiliados';
