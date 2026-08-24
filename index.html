@@ -234,6 +234,14 @@ html.store-public-boot #authScreen,html.store-public-boot #genApp{display:none!i
 <section class="panel">
 <div class="section"><h2>1. Dados da loja</h2>
 <div class="field"><label>Tipo de ChatShop</label><select id="storeType"><option value="affiliate">🔗 Afiliado — botão leva para o link do produto</option><option value="virtual">🛒 Loja virtual — carrinho, sacola, cores e quantidades</option></select><small id="storeTypeHint">No modo Afiliado o cliente compra pelo seu link. No modo Loja virtual ele adiciona os itens à sacola e finaliza o pedido pelo WhatsApp.</small></div>
+<div id="virtualStoreFormatRecovery" class="field" data-aprendiz-fixed="1" style="margin:10px 0 14px;padding:12px;border:1px solid #ddd6fe;background:#faf5ff;border-radius:12px">
+  <label id="chatshopFormatTitle" style="font-size:14px;font-weight:900;color:#4c1d95">📱 Formato do Catálogo de Afiliados</label>
+  <div style="display:grid;gap:8px;margin-top:8px">
+    <label data-format-option="catalog" style="display:none;gap:9px;align-items:flex-start;background:#fff;border:1px solid #ddd6fe;border-radius:10px;padding:10px"><input type="radio" name="virtualStoreFormatRecovery" value="catalog"><span><b>Catálogo completo</b><small style="display:block;color:#6b7280">Formato normal da loja com todos os produtos.</small></span></label>
+    <label style="display:flex;gap:9px;align-items:flex-start;background:#fff;border:1px solid #ddd6fe;border-radius:10px;padding:10px"><input type="radio" name="virtualStoreFormatRecovery" value="single" checked><span><b>1 produto por página</b><small style="display:block;color:#6b7280">Um produto em destaque por vez.</small></span></label>
+    <label style="display:flex;gap:9px;align-items:flex-start;background:#fff;border:1px solid #ddd6fe;border-radius:10px;padding:10px"><input type="radio" name="virtualStoreFormatRecovery" value="grid"><span><b>Grade de 2 produtos</b><small style="display:block;color:#6b7280">Dois produtos lado a lado.</small></span></label>
+  </div>
+</div>
 <div class="field"><label>Nome da loja</label><input id="brand" value="Minha Loja"></div>
 <div class="field" id="logoField">
 <label>Logo / foto da marca (avatar no topo do chat, estilo WhatsApp)</label>
