@@ -179,7 +179,8 @@ function injectUpgrades(html, storefrontMode, layout) {
     'seller-audio-admin-fix.js',
     'seller-audio-upload-fix.js',
     'product-seller-button-control.js',
-    'virtual-single-product-mode.js'
+    'virtual-single-product-mode.js',
+    'chat-model-default.js'
   ];
   scripts.forEach(name => { html = removeScript(html, name); });
 
@@ -202,6 +203,7 @@ function injectUpgrades(html, storefrontMode, layout) {
   }
   html = forceScript(html, 'product-seller-button-control.js', version);
   html = forceScript(html, 'virtual-single-product-mode.js', '20260817-2600-virtual-live-menu-production');
+  html = forceScript(html, 'chat-model-default.js', '20260824-0525-product-default');
   return html;
 }
 
