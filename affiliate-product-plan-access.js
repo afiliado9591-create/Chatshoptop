@@ -49,7 +49,7 @@ function currentPlan(){
 function affiliateMode(){try{return !isAdminUser()&&($('#storeType')?.value||'affiliate')==='affiliate'}catch(e){return false}}
 function canOwnProducts(){const p=currentPlan();return isAdminUser()||p==='basico'||p==='profissional'}
 function canEditCatalogQna(){const p=currentPlan();return affiliateMode()&&(p==='basico'||p==='profissional')}
-function limitFor(p){return p==='aprendiz'?10:(p==='basico'?50:1000000)}
+function limitFor(p){return p==='aprendiz'?10:(p==='basico'?30:1000000)}
 function upgrade(){try{if(typeof abrirPlanos==='function')return abrirPlanos()}catch(e){};try{window.abrirPlanos?.()}catch(e){}}
 function notify(msg){try{if(typeof toast==='function')return toast(msg)}catch(e){};alert(msg)}
 function ensureApprenticeAffiliateLayouts(){
@@ -86,7 +86,7 @@ function applyLimits(){
   try{
     if(typeof PLANOS!=='undefined'){
       if(PLANOS.aprendiz)PLANOS.aprendiz.limiteProdutos=10;
-      if(PLANOS.basico)PLANOS.basico.limiteProdutos=50;
+      if(PLANOS.basico)PLANOS.basico.limiteProdutos=30;
       if(PLANOS.profissional)PLANOS.profissional.limiteProdutos=1000000;
     }
     const p=currentPlan();
@@ -181,7 +181,7 @@ function updatePlanText(){
     const title=card.querySelector('h3')?.textContent||'';const lim=card.querySelector('.lim,.plan-benefits');if(!lim)return;
     let wanted='';
     if(/aprendiz|grátis/i.test(title))wanted='✅ Até 10 produtos<br>✅ Catálogo pronto<br>✅ 1 produto por página<br>✅ Grade de 2 produtos<br>✅ Chat Vendedor ativo<br>✅ Troca dos links de afiliado';
-    else if(/básico/i.test(title))wanted='✅ Até 50 produtos<br>✅ Catálogo pronto<br>✅ Editar perguntas do produto<br>✅ Produtos próprios<br>✅ Upload de imagem<br>✅ Link de imagem<br>✅ Chat Vendedor ativo';
+    else if(/básico/i.test(title))wanted='✅ Até 30 produtos<br>✅ Catálogo pronto<br>✅ Editar perguntas do produto<br>✅ Produtos próprios<br>✅ Upload de imagem<br>✅ Link de imagem<br>✅ Chat Vendedor ativo';
     else if(/profissional/i.test(title))wanted='✅ Produtos ilimitados<br>✅ Catálogo pronto<br>✅ Editar perguntas do produto<br>✅ Produtos próprios<br>✅ Upload e link de imagem<br>✅ Loja Virtual completa<br>✅ Recursos avançados';
     if(wanted&&lim.innerHTML!==wanted)lim.innerHTML=wanted;if(wanted){lim.classList.remove('lim');lim.classList.add('plan-benefits')}
   });
