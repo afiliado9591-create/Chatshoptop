@@ -105,7 +105,7 @@ function installEditor(){
 function publicData(){return window.__CHATSHOP_STORE_DATA||window.__CHATSHOP_STORE_FEATURE_DATA||null}
 function products(){const d=publicData();return Array.isArray(d?.products)?d.products:[]}
 function productByName(name){const n=String(name||'').trim();return products().find(p=>String(p?.name||'').trim()===n)||null}
-function allowedByPlan(){return String(publicData()?.planTier||'')!=='aprendiz'}
+function allowedByPlan(){return true}
 function setSellerButton(product,inProductPage){
   const btn=$('#pubChatToggle');if(!btn)return;
   const visible=allowedByPlan()&&(!product||product.showSellerButton!==false);
