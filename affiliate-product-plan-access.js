@@ -53,7 +53,9 @@ function limitFor(p){return p==='aprendiz'?10:(p==='basico'?50:1000000)}
 function upgrade(){try{if(typeof abrirPlanos==='function')return abrirPlanos()}catch(e){};try{window.abrirPlanos?.()}catch(e){}}
 function notify(msg){try{if(typeof toast==='function')return toast(msg)}catch(e){};alert(msg)}
 function ensureApprenticeAffiliateLayouts(){
-  if(currentPlan()!=='aprendiz'||!affiliateMode())return;
+  const realPlan=normalizePlan((typeof myPlan!=='undefined'&&myPlan)||'aprendiz');
+  const isAffiliate=($('#storeType')?.value||'affiliate')==='affiliate';
+  if(realPlan!=='aprendiz'||!isAffiliate)return;
   let box=$('#virtualStoreFormatRecovery');
   if(!box){
     const type=$('#storeType'),field=type?.closest('.field');if(!field)return;
