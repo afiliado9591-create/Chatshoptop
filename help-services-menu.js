@@ -67,11 +67,11 @@
               '<button class="btn primary" type="button" data-servico="Catálogo de 10 a 30 produtos — R$ 80,00 + Plano Básico">Contratar este pacote</button>' +
             '</article>' +
             '<article class="ajuda-pacote destaque">' +
-              '<span class="ajuda-etiqueta">Até 50 produtos</span>' +
+              '<span class="ajuda-etiqueta">31 a 50 produtos</span>' +
               '<h3>Catálogo Completo</h3>' +
               '<strong>R$ 120,00</strong>' +
-              '<p>Montagem do catálogo + contratação do Plano Básico.</p>' +
-              '<button class="btn primary" type="button" data-servico="Catálogo de até 50 produtos — R$ 120,00 + Plano Básico">Contratar este pacote</button>' +
+              '<p>Montagem do catálogo + contratação do Plano Profissional.</p>' +
+              '<button class="btn primary" type="button" data-servico="Catálogo de 31 a 50 produtos — R$ 120,00 + Plano Profissional">Contratar este pacote</button>' +
             '</article>' +
             '<article class="ajuda-pacote">' +
               '<span class="ajuda-etiqueta">Acima de 50 produtos</span>' +
