@@ -164,14 +164,30 @@
     `;
     document.head.appendChild(sellerStyle);
 
+    function syncSellerButtonWithChat(btn){
+      const overlay = document.getElementById('pubChatOverlay');
+      if(!btn || !overlay) return;
+      const sync = ()=>{
+        btn.style.setProperty('display', overlay.classList.contains('open') ? 'none' : 'flex', 'important');
+      };
+      if(btn.__sellerChatOverlay !== overlay){
+        btn.__sellerChatOverlay = overlay;
+        new MutationObserver(sync).observe(overlay,{attributes:true,attributeFilter:['class']});
+      }
+      sync();
+    }
+
     function upgradeSellerButton(){
       const btn = document.getElementById('pubChatToggle');
-      if(!btn || btn.dataset.sellerCta === '1') return;
-      btn.dataset.sellerCta = '1';
-      btn.classList.add('seller-cta');
-      btn.innerHTML = '<span class="seller-cta-icon">💬</span><span class="seller-cta-text">Fale com o vendedor</span>';
-      btn.title = 'Fale com o vendedor';
-      btn.setAttribute('aria-label','Fale com o vendedor');
+      if(!btn) return;
+      if(btn.dataset.sellerCta !== '1'){
+        btn.dataset.sellerCta = '1';
+        btn.classList.add('seller-cta');
+        btn.innerHTML = '<span class="seller-cta-icon">💬</span><span class="seller-cta-text">Fale com o vendedor</span>';
+        btn.title = 'Fale com o vendedor';
+        btn.setAttribute('aria-label','Fale com o vendedor');
+      }
+      syncSellerButtonWithChat(btn);
     }
     upgradeSellerButton();
     const sellerObserver = new MutationObserver(upgradeSellerButton);

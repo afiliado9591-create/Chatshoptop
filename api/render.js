@@ -165,7 +165,7 @@ function forceScript(html, filename, version) {
 }
 
 function injectUpgrades(html, storefrontMode, layout) {
-  const version = '20260817-1305-admin-store-export';
+  const version = '20260824-0505-hide-seller-cta-in-chat';
   const scripts = [
     'catalog-editor-upgrade.js',
     'store-layout-upgrade.js',
