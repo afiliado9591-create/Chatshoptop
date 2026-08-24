@@ -382,9 +382,9 @@ let myUid = null;
 let mySlug = null;        // slug já publicado por esse usuário (se houver)
 
 const PLANOS = {
-  aprendiz: { nome:'Aprendiz', preco:0, precoTexto:'Grátis', limiteProdutos:1, limiteChats:1 },
-  basico: { nome:'Básico', preco:18.00, precoTexto:'R$ 18,00/mês', limiteProdutos:10, limiteChats:1 },
-  profissional: { nome:'Profissional', preco:49.90, precoTexto:'R$ 49,90/mês', limiteProdutos:50, limiteChats:30 },
+  aprendiz: { nome:'Aprendiz', preco:0, precoTexto:'Grátis', limiteProdutos:10, limiteChats:1 },
+  basico: { nome:'Básico', preco:18.00, precoTexto:'R$ 18,00/mês', limiteProdutos:30, limiteChats:1 },
+  profissional: { nome:'Profissional', preco:49.90, precoTexto:'R$ 49,90/mês', limiteProdutos:1000000, limiteChats:2 },
 };
 let myPlan = 'aprendiz';
 let myCatalogAffiliateParams = {};
