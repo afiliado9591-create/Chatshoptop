@@ -564,11 +564,21 @@ function clearForm(){
   try{window.ChatShopClearShipping?.()}catch(e){console.warn('shipping clear:',e)}
 }
 
+function loadHelpMenuAfterLogin(){
+  if(!myUid || document.getElementById('chatshopHelpServicesScript')) return;
+  const script = document.createElement('script');
+  script.id = 'chatshopHelpServicesScript';
+  script.src = '/help-services-menu.js?v=20260824-post-login';
+  script.async = true;
+  script.onerror = ()=>console.warn('O menu Precisa de ajuda não carregou. O painel continua disponível.');
+  document.body.appendChild(script);
+}
 function openDashboard(){
   mySlug = null;
   $('#dashboard').style.display='block';
   $('#editorView').style.display='none';
   loadDashboard();
+  setTimeout(loadHelpMenuAfterLogin, 0);
 }
 function openEditor(slugToEdit, data){
   mySlug = slugToEdit || null;
@@ -1334,7 +1344,7 @@ if(auth && !STOREFRONT_MODE){
       const userDoc = await db.collection('users').doc(myUid).get();
       if(!userDoc.exists){
         const referredBy = localStorage.getItem('chatshop_ref') || null;
-        await db.collection('users').doc(myUid).set({ email:user.email, plan:'aprendiz', productLimit:1, chatLimit:1, referredBy, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        await db.collection('users').doc(myUid).set({ email:user.email, plan:'aprendiz', productLimit:10, chatLimit:1, referredBy, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
         if(referredBy) localStorage.removeItem('chatshop_ref');
       }
       openDashboard();
