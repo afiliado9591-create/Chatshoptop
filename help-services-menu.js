@@ -4,19 +4,7 @@
   const EMAIL_SUPORTE = 'jeanaguiar636@gmail.com';
 
   function enviarPedido(servico) {
-    const usuario = document.getElementById('userEmail')?.textContent?.trim() || '';
-    const assunto = 'Pedido de ajuda ChatShop - ' + servico;
-    const corpo = [
-      'Olá! Quero contratar este serviço do ChatShop:',
-      '',
-      servico,
-      usuario ? 'Conta: ' + usuario : '',
-      '',
-      'Por favor, envie as orientações para contratação.'
-    ].filter(Boolean).join('\n');
-    window.location.href = 'mailto:' + EMAIL_SUPORTE
-      + '?subject=' + encodeURIComponent(assunto)
-      + '&body=' + encodeURIComponent(corpo);
+    alert('O checkout deste serviço está em implantação. Nenhum pagamento foi gerado. Aguarde a liberação do pagamento seguro com valor fixo.');
   }
 
   function fechar() {
@@ -64,21 +52,21 @@
               '<h3>Catálogo Essencial</h3>' +
               '<strong>R$ 80,00</strong>' +
               '<p>Montagem do catálogo + contratação do Plano Básico.</p>' +
-              '<button class="btn primary" type="button" data-servico="Catálogo de 10 a 30 produtos — R$ 80,00 + Plano Básico">Contratar este pacote</button>' +
+              '<button class="btn primary" type="button" data-servico="Catálogo de 10 a 30 produtos — R$ 80,00 + Plano Básico">Checkout em implantação</button>' +
             '</article>' +
             '<article class="ajuda-pacote destaque">' +
               '<span class="ajuda-etiqueta">31 a 50 produtos</span>' +
               '<h3>Catálogo Completo</h3>' +
               '<strong>R$ 120,00</strong>' +
               '<p>Montagem do catálogo + contratação do Plano Profissional.</p>' +
-              '<button class="btn primary" type="button" data-servico="Catálogo de 31 a 50 produtos — R$ 120,00 + Plano Profissional">Contratar este pacote</button>' +
+              '<button class="btn primary" type="button" data-servico="Catálogo de 31 a 50 produtos — R$ 120,00 + Plano Profissional">Checkout em implantação</button>' +
             '</article>' +
             '<article class="ajuda-pacote">' +
               '<span class="ajuda-etiqueta">Acima de 50 produtos</span>' +
               '<h3>Catálogo Especial</h3>' +
               '<strong>Sob orçamento</strong>' +
               '<p>Plano Especial + montagem personalizada do catálogo.</p>' +
-              '<button class="btn primary" type="button" data-servico="Catálogo acima de 50 produtos — Plano Especial + orçamento">Pedir orçamento</button>' +
+              '<button class="btn primary" type="button" data-servico="Catálogo acima de 50 produtos — Plano Especial + orçamento">Solicitar em breve</button>' +
             '</article>' +
           '</div>' +
           '<small class="ajuda-aviso">A assinatura mensal do plano é informada e confirmada antes da contratação.</small>' +
@@ -89,7 +77,7 @@
           '<div class="ajuda-pacote">' +
             '<h3>Loja Virtual Personalizada</h3>' +
             '<p>Após o contato, definiremos a quantidade de produtos e as configurações necessárias para preparar o orçamento.</p>' +
-            '<button class="btn primary" type="button" data-servico="Montagem de Loja Virtual — solicitar orçamento">Solicitar orçamento</button>' +
+            '<button class="btn primary" type="button" data-servico="Montagem de Loja Virtual — solicitar orçamento">Solicitar em breve</button>' +
           '</div>' +
         '</div>' +
       '</section>';
