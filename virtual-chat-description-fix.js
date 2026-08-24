@@ -399,6 +399,7 @@ function installOriginalChat(){
 
 function makeProductSellerButton(index,card=false){
   const p=products[index]||{};
+  if(p.showSellerButton===false)return null;
   const b=document.createElement('button');b.type='button';b.className='vcd-product-seller'+(card?' vcd-product-seller-card':'');b.dataset.chatProduct=String(index);b.dataset.productId=productId(p,index);b.dataset.productName=String(p.name||'');b.textContent=card?'💬 Perguntar ao vendedor':'💬 Perguntar sobre este produto';
   const color=/^#[0-9a-f]{6}$/i.test(store?.mainColor||'')?store.mainColor:'#c2185b';
   b.style.cssText=card
@@ -413,7 +414,7 @@ function injectProductSellerButtons(){
     let i=Number(open?.dataset.product);if(!Number.isInteger(i)||i<0)i=fallbackIndex;
     if(products[i]){
       const target=card.querySelector('.csv-body,.vs-body')||card;
-      target.appendChild(makeProductSellerButton(i,true));
+      const button=makeProductSellerButton(i,true);if(button)target.appendChild(button);
     }
   });
   // Na página detalhada, mantém o foco em escolher variação e adicionar à sacola.
