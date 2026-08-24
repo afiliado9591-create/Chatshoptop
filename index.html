@@ -671,11 +671,14 @@ function abrirPlanos(){
     const p = PLANOS[key];
     const isCurrent = key === myPlan;
     const isFree = key === 'aprendiz';
+    const benefits = isFree
+      ? '✅ Até 10 produtos<br>✅ Catálogo pronto<br>✅ 1 produto por página<br>✅ Grade de 2 produtos<br>✅ Chat Vendedor ativo<br>✅ Troca dos links de afiliado'
+      : `até ${p.limiteChats} ChatShop(s)<br>até ${p.limiteProdutos} produtos por ChatShop`;
     return `
       <div class="plan-card ${isCurrent?'current':''}">
         <h3>${p.nome}</h3>
         <div class="preco">${p.precoTexto}</div>
-        <div class="lim">até ${p.limiteChats} ChatShop(s)<br>até ${p.limiteProdutos} produtos por ChatShop</div>
+        <div class="lim">${benefits}</div>
         <button data-plano="${key}" ${isCurrent||isFree?'disabled':''}>${isCurrent?'Plano atual':(isFree?'Grátis':'Assinar')}</button>
       </div>`;
   }).join('');
