@@ -6,14 +6,21 @@ window.__ALIBR_UNIFIED_PROFILE__=true;
 
 const $=(s,r)=>(r||document).querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let profilePhoto='',currentUser=null;
+let profilePhoto='',activeUser=null;
 
 function getDb(){try{return typeof db!=='undefined'&&db?db:null}catch(e){return null}}
 function resolveUser(){
-  try{if(typeof user!=='undefined'&&user&&!user.isAnonymous)return user}catch(e){}
-  try{if(typeof currentUser!=='undefined'&&currentUser&&!currentUser.isAnonymous)return currentUser}catch(e){}
-  try{if(typeof auth!=='undefined'&&auth.currentUser&&!auth.currentUser.isAnonymous)return auth.currentUser}catch(e){}
-  try{if(typeof myUid!=='undefined'&&myUid)return {uid:myUid,email:''}}catch(e){}
+  // A autenticação atual é sempre a fonte de verdade. Nunca reutilize a conta anterior.
+  try{
+    if(typeof auth!=='undefined' && auth && auth.currentUser && !auth.currentUser.isAnonymous){
+      return auth.currentUser;
+    }
+  }catch(e){}
+  try{
+    if(typeof myUid!=='undefined' && myUid){
+      return {uid:myUid,email:''};
+    }
+  }catch(e){}
   return null;
 }
 function message(text,ok){
@@ -89,12 +96,23 @@ function compressPhoto(file){
   });
 }
 async function loadProfile(){
-  const d=getDb();currentUser=resolveUser();if(!d||!currentUser)return;
+  const d=getDb();activeUser=resolveUser();if(!d||!activeUser)return;
   message('',true);
+  profilePhoto='';
+  $('#alibrProfileName').value='';
+  $('#alibrProfileLocation').value='';
+  $('#alibrProfileWhatsapp').value='';
+  $('#alibrProfileSocial').value='';
+  $('#alibrProfileBio').value='';
+  $('#alibrProfilePublic').checked=true;
+  showPhoto('','A');
   try{
-    const snap=await d.collection('profiles').doc(currentUser.uid).get();
+    const requestedUid=activeUser.uid;
+    const snap=await d.collection('profiles').doc(requestedUid).get();
+    const latest=resolveUser();
+    if(!latest || latest.uid!==requestedUid) return;
     const p=snap.exists?snap.data()||{}:{};
-    const fallback=(currentUser.displayName||String(currentUser.email||'').split('@')[0]||'').slice(0,80);
+    const fallback=(activeUser.displayName||String(activeUser.email||'').split('@')[0]||'').slice(0,80);
     $('#alibrProfileName').value=p.name||fallback;
     $('#alibrProfileLocation').value=p.location||'';
     $('#alibrProfileWhatsapp').value=p.whatsapp||'';
@@ -105,14 +123,14 @@ async function loadProfile(){
   }catch(e){console.error(e);message('Não foi possível abrir o perfil. É necessário liberar a coleção profiles no Firebase.',false)}
 }
 async function saveProfile(){
-  const d=getDb();currentUser=resolveUser();if(!d||!currentUser)return;
+  const d=getDb();activeUser=resolveUser();if(!d||!activeUser)return;
   const name=$('#alibrProfileName').value.trim(),social=$('#alibrProfileSocial').value.trim();
   if(name.length<2)return message('Digite seu nome público.',false);
   if(!validHttps(social))return message('A rede social ou site precisa começar com https://',false);
   const btn=$('#alibrProfileSave');btn.disabled=true;btn.textContent='Salvando...';
   try{
-    await d.collection('profiles').doc(currentUser.uid).set({
-      ownerUid:currentUser.uid,
+    await d.collection('profiles').doc(activeUser.uid).set({
+      ownerUid:activeUser.uid,
       name:name.slice(0,80),
       photo:profilePhoto,
       location:$('#alibrProfileLocation').value.trim().slice(0,100),
@@ -122,13 +140,13 @@ async function saveProfile(){
       public:$('#alibrProfilePublic').checked,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     },{merge:true});
-    try{if(currentUser.updateProfile)await currentUser.updateProfile({displayName:name.slice(0,80),photoURL:profilePhoto&&profilePhoto.length<1000?profilePhoto:null})}catch(e){}
-    window.dispatchEvent(new CustomEvent('alibr-profile-updated',{detail:{uid:currentUser.uid,name:name,photo:profilePhoto}}));
+    try{if(activeUser.updateProfile)await activeUser.updateProfile({displayName:name.slice(0,80),photoURL:profilePhoto&&profilePhoto.length<1000?profilePhoto:null})}catch(e){}
+    window.dispatchEvent(new CustomEvent('alibr-profile-updated',{detail:{uid:activeUser.uid,name:name,photo:profilePhoto}}));
     message('Perfil salvo! Ele já é o mesmo no ChatShop e no Blog Alibr.',true);
   }catch(e){console.error(e);message('Não foi possível salvar. Verifique as regras da coleção profiles no Firebase.',false)}
   finally{btn.disabled=false;btn.textContent='Salvar perfil'}
 }
-async function openModal(){currentUser=resolveUser();if(!currentUser){alert('Entre na sua conta Alibr para abrir o perfil.');return}modal();$('#alibrProfileModal').classList.add('open');await loadProfile()}
+async function openModal(){activeUser=resolveUser();if(!activeUser){alert('Entre na sua conta Alibr para abrir o perfil.');return}modal();$('#alibrProfileModal').classList.add('open');await loadProfile()}
 function closeModal(){$('#alibrProfileModal')?.classList.remove('open')}
 function addButton(){
   if($('#alibrProfileBtn'))return true;
@@ -139,6 +157,18 @@ function addButton(){
   if(authBtn&&authBtn.parentElement){b.className='alibr-profile-trigger';b.style.cssText='border:1px solid rgba(255,255,255,.55);background:#fff;color:#1d4ed8;border-radius:10px;padding:9px 12px;font-weight:900;cursor:pointer';authBtn.parentElement.insertBefore(b,authBtn);return true}
   return false;
 }
-function boot(){installStyle();modal();if(addButton())return;let n=0;const timer=setInterval(()=>{if(addButton()||++n>50)clearInterval(timer)},200)}
+function watchAuthentication(){
+  try{
+    if(typeof auth==='undefined'||!auth||typeof auth.onAuthStateChanged!=='function')return;
+    let lastUid=auth.currentUser&&!auth.currentUser.isAnonymous?auth.currentUser.uid:'';
+    auth.onAuthStateChanged(next=>{
+      const nextUid=next&&!next.isAnonymous?next.uid:'';
+      if(nextUid!==lastUid){
+        activeUser=null;profilePhoto='';closeModal();lastUid=nextUid;
+      }
+    });
+  }catch(e){}
+}
+function boot(){installStyle();modal();watchAuthentication();if(addButton())return;let n=0;const timer=setInterval(()=>{if(addButton()||++n>50)clearInterval(timer)},200)}
 boot();
 })();
