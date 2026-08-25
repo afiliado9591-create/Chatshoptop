@@ -590,6 +590,14 @@ function loadUnifiedProfileAfterLogin(){
   script.async = true;
   script.onerror = ()=>console.warn('O perfil Alibr não carregou. O painel continua disponível.');
   document.body.appendChild(script);
+  if(!document.getElementById('alibrPointsScript')){
+    const pointsScript = document.createElement('script');
+    pointsScript.id = 'alibrPointsScript';
+    pointsScript.src = '/alibr-points.js?v=20260825-safe-ledger';
+    pointsScript.async = true;
+    pointsScript.onerror = ()=>console.warn('Os Pontos Alibr não carregaram. O restante do painel continua disponível.');
+    document.body.appendChild(pointsScript);
+  }
 }
 function openDashboard(){
   mySlug = null;
@@ -863,13 +871,22 @@ async function mostrarAdminUsuarios(){
   box.innerHTML = '<p class="empty-hint">Carregando usuários...</p>';
   try{
     const snap = await db.collection('users').orderBy('createdAt','desc').limit(200).get();
+    const optionalUserData = await Promise.allSettled([
+      db.collection('profiles').limit(500).get(),
+      db.collection('pointTransactions').limit(1000).get()
+    ]);
     if(snap.empty){ box.innerHTML = '<p class="empty-hint">Nenhum usuário encontrado.</p>'; return; }
+    const profilesSnap=optionalUserData[0].status==='fulfilled'?optionalUserData[0].value:null;
+    const pointsSnap=optionalUserData[1].status==='fulfilled'?optionalUserData[1].value:null;
+    const profiles={};if(profilesSnap)profilesSnap.docs.forEach(p=>{profiles[p.id]=p.data()||{}});
+    const balances={};if(pointsSnap)pointsSnap.docs.forEach(p=>{const x=p.data()||{};if(x.status==='confirmed'&&x.beneficiaryUid)balances[x.beneficiaryUid]=(balances[x.beneficiaryUid]||0)+(Number(x.points)||0)});
     box.innerHTML = snap.docs.map(doc=>{
       const d = doc.data();
+      const profile=profiles[doc.id]||{};
       const planoAtual = (PLANOS[d.plan] || PLANOS.aprendiz).nome;
       const brinde = d.planBrinde ? ' <span style="color:#16a34a;font-size:11px">(brinde admin)</span>' : '';
       return `<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #eee">
-        <div style="min-width:0;flex:1"><b style="word-break:break-all">${esc(d.email||doc.id)}</b><br><span style="font-size:12px;color:var(--muted)">Plano: ${esc(planoAtual)}${brinde}</span></div>
+        <div style="min-width:0;flex:1"><b>${esc(profile.name||'Usuário sem nome')}</b><br><span style="word-break:break-all;font-size:12px">${esc(d.email||doc.id)}</span><br><span style="font-size:12px;color:var(--muted)">Telefone: ${esc(profile.whatsapp||'não informado')} · Plano: ${esc(planoAtual)}${brinde} · ⭐ ${balances[doc.id]||0} pontos</span></div>
         <button class="btn success" data-uid="${doc.id}" type="button" style="font-size:12px;white-space:nowrap">🎁 Dar Premium grátis</button>
         <button class="btn" data-excluir="${doc.id}" type="button" style="font-size:12px;white-space:nowrap;color:#dc2626">🗑️ Excluir conta</button>
       </div>`;

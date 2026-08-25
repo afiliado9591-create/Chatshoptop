@@ -71,6 +71,58 @@ match /blogLikes/{likeId} {
     && resource.data.ownerUid == request.auth.uid;
 }
 
+// Extrato imutável dos Pontos Alibr. O saldo é a soma das movimentações.
+match /pointTransactions/{transactionId} {
+  function pointsAdmin() {
+    return request.auth != null
+      && request.auth.token.email == "jeanaguiar636@gmail.com";
+  }
+
+  function pointsMember() {
+    return request.auth != null
+      && request.auth.token.firebase.sign_in_provider != "anonymous";
+  }
+
+  allow read: if pointsAdmin()
+    || (pointsMember() && resource.data.beneficiaryUid == request.auth.uid);
+
+  // Bônus único por perfil preenchido com nome e telefone.
+  allow create: if pointsMember()
+    && transactionId == "profile_" + request.auth.uid
+    && request.resource.data.beneficiaryUid == request.auth.uid
+    && request.resource.data.actorUid == request.auth.uid
+    && request.resource.data.type == "profile_completed"
+    && request.resource.data.sourceId == request.auth.uid
+    && request.resource.data.points == 20
+    && request.resource.data.status == "confirmed"
+    && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.name.size() >= 2
+    && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.whatsapp.size() >= 10
+    && request.resource.data.keys().hasOnly([
+      "beneficiaryUid", "actorUid", "type", "sourceId",
+      "points", "status", "createdAt"
+    ]);
+
+  // Uma recompensa para quem indicou cada nova conta.
+  allow create: if pointsMember()
+    && transactionId == "referral_" + request.auth.uid
+    && request.resource.data.actorUid == request.auth.uid
+    && request.resource.data.sourceId == request.auth.uid
+    && request.resource.data.type == "referral_signup"
+    && request.resource.data.points == 30
+    && request.resource.data.status == "confirmed"
+    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.referredBy
+      == get(/databases/$(database)/documents/users/$(request.resource.data.beneficiaryUid)).data.affiliateCode
+    && request.resource.data.keys().hasOnly([
+      "beneficiaryUid", "actorUid", "type", "sourceId",
+      "points", "status", "createdAt"
+    ]);
+
+  // Aprovação de postagem e ajustes futuros são exclusivos do administrador.
+  allow create: if pointsAdmin();
+  allow update: if false;
+  allow delete: if pointsAdmin();
+}
+
 match /blogPosts/{postId} {
   function blogPostsAdmin() {
     return request.auth != null
