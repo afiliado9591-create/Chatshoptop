@@ -107,4 +107,5 @@ document.addEventListener("click",e=>{const a=e.target.closest("a.visit");if(a)r
 $("#adminList").onclick=async e=>{const b=e.target.closest("[data-action]");if(!b||!isAdmin())return;b.disabled=true;try{await db.collection("blogPosts").doc(b.dataset.id).update({status:b.dataset.action==="approve"?"approved":"rejected",moderatedAt:firebase.firestore.FieldValue.serverTimestamp(),moderatedBy:user.uid});await loadAdmin();await loadFeed()}catch(x){alert("Não foi possível alterar esta publicação.");b.disabled=false}};
 loadBlogConfig();loadFeed();
 </script>
+<script src="/unified-profile.js?v=20260825-profile-v1" defer></script>
 </body></html>
