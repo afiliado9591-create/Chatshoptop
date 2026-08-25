@@ -43,6 +43,34 @@ match /profiles/{userId} {
       && resource.data.ownerUid == request.auth.uid);
 }
 
+// Curtidas das publicações do Blog Alibr.
+match /blogLikes/{likeId} {
+  function signedLikeMember() {
+    return request.auth != null
+      && request.auth.token.firebase.sign_in_provider != "anonymous";
+  }
+
+  // A contagem de curtidas é pública.
+  allow read: if true;
+
+  // Uma curtida por usuário em cada publicação.
+  allow create: if signedLikeMember()
+    && request.resource.data.ownerUid == request.auth.uid
+    && request.resource.data.postId is string
+    && request.resource.data.postId.size() > 0
+    && request.resource.data.postId.size() <= 120
+    && likeId == request.resource.data.postId + "_" + request.auth.uid
+    && request.resource.data.keys().hasOnly([
+      "postId", "ownerUid", "createdAt"
+    ]);
+
+  allow update: if false;
+
+  // Somente o titular retira a própria curtida.
+  allow delete: if signedLikeMember()
+    && resource.data.ownerUid == request.auth.uid;
+}
+
 match /blogPosts/{postId} {
   function blogPostsAdmin() {
     return request.auth != null
