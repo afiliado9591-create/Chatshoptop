@@ -582,6 +582,15 @@ function loadPromoterDirectoryAfterLogin(){
   script.onerror = ()=>console.warn('O programa de divulgadores não carregou. O painel continua disponível.');
   document.body.appendChild(script);
 }
+function loadUnifiedProfileAfterLogin(){
+  if(!myUid || document.getElementById('alibrUnifiedProfileScript')) return;
+  const script = document.createElement('script');
+  script.id = 'alibrUnifiedProfileScript';
+  script.src = '/unified-profile.js?v=20260825-profile-v1';
+  script.async = true;
+  script.onerror = ()=>console.warn('O perfil Alibr não carregou. O painel continua disponível.');
+  document.body.appendChild(script);
+}
 function openDashboard(){
   mySlug = null;
   $('#dashboard').style.display='block';
@@ -590,6 +599,7 @@ function openDashboard(){
   setTimeout(()=>{
     loadHelpMenuAfterLogin();
     loadPromoterDirectoryAfterLogin();
+    loadUnifiedProfileAfterLogin();
   }, 0);
 }
 function openEditor(slugToEdit, data){

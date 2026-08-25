@@ -3,6 +3,46 @@
 // match /databases/{database}/documents {
 // e ANTES do bloqueio final: match /{document=**} { allow read, write: if false; }
 
+// Perfil único usado pelo ChatShop e pelo Blog Alibr.
+match /profiles/{userId} {
+  function profilesAdmin() {
+    return request.auth != null
+      && request.auth.token.email == "jeanaguiar636@gmail.com";
+  }
+
+  function signedProfileMember() {
+    return request.auth != null
+      && request.auth.token.firebase.sign_in_provider != "anonymous";
+  }
+
+  // Perfil público pode aparecer no blog. O titular e o admin veem o próprio perfil.
+  allow read: if resource.data.public == true
+    || (signedProfileMember() && request.auth.uid == userId)
+    || profilesAdmin();
+
+  allow create: if signedProfileMember()
+    && request.auth.uid == userId
+    && request.resource.data.ownerUid == request.auth.uid
+    && request.resource.data.keys().hasOnly([
+      "ownerUid", "name", "photo", "location",
+      "whatsapp", "social", "bio", "public", "updatedAt"
+    ]);
+
+  allow update: if signedProfileMember()
+    && request.auth.uid == userId
+    && resource.data.ownerUid == request.auth.uid
+    && request.resource.data.ownerUid == request.auth.uid
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+      "name", "photo", "location", "whatsapp",
+      "social", "bio", "public", "updatedAt"
+    ]);
+
+  allow delete: if profilesAdmin()
+    || (signedProfileMember()
+      && request.auth.uid == userId
+      && resource.data.ownerUid == request.auth.uid);
+}
+
 match /blogPosts/{postId} {
   function blogPostsAdmin() {
     return request.auth != null
