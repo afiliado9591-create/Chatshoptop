@@ -228,10 +228,11 @@ function injectGridBootstrap(html, store, productSlug='') {
   return html.replace(/<\/head>/i, `${bootstrap}\n</head>`);
 }
 
-function injectDirectVirtualBootstrap(html, store) {
+function injectDirectVirtualBootstrap(html, store, productSlug='') {
   if (!store || store.storeType !== 'virtual') return html;
   const payload = safeJsonForScript(store);
-  const bootstrap = `<style id="chatshopDirectVirtualStyle">html.chatshop-virtual-pending body{background:#f8fafc!important}html.chatshop-virtual-pending #storefrontScreen{visibility:hidden!important}</style>\n<script id="chatshopDirectVirtualBootstrap">document.documentElement.classList.add('chatshop-virtual-pending');window.__CHATSHOP_DIRECT_STORE_ACTIVE=true;window.__CHATSHOP_STORE_DATA=${payload};</script>`;
+  const requested = safeJsonForScript(productSlug || '');
+  const bootstrap = `<style id="chatshopDirectVirtualStyle">html.chatshop-virtual-pending body{background:#f8fafc!important}html.chatshop-virtual-pending #storefrontScreen{visibility:hidden!important}</style>\n<script id="chatshopDirectVirtualBootstrap">document.documentElement.classList.add('chatshop-virtual-pending');window.__CHATSHOP_DIRECT_STORE_ACTIVE=true;window.__CHATSHOP_STORE_DATA=${payload};window.__CHATSHOP_PRODUCT_SLUG=${requested};</script>`;
   return html.replace(/<\/head>/i, `${bootstrap}\n</head>`);
 }
 
@@ -307,7 +308,7 @@ module.exports = async function handler(request, response) {
     } else if (store?.storeType === 'virtual') {
       // Domínios próprios não devem consultar a loja uma segunda vez no navegador.
       html = disableLegacyStoreAutoload(html);
-      html = injectDirectVirtualBootstrap(html, store);
+      html = injectDirectVirtualBootstrap(html, store, requestedProduct ? productSlugs[productIndex] : '');
     }
 
     const fallbackTitle = slug ? prettySlug(slug) : 'Loja online';

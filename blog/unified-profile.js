@@ -6,7 +6,7 @@ window.__ALIBR_UNIFIED_PROFILE__=true;
 
 const $=(s,r)=>(r||document).querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let profilePhoto='',activeUser=null;
+let profilePhoto='',profileSlug='',activeUser=null;
 
 function getDb(){try{return typeof db!=='undefined'&&db?db:null}catch(e){return null}}
 function resolveUser(){
@@ -29,6 +29,7 @@ function message(text,ok){
 }
 function initials(name){return String(name||'A').trim().split(/\s+/).slice(0,2).map(x=>x.charAt(0)).join('').toUpperCase()||'A'}
 function digits(v){return String(v||'').replace(/\D/g,'')}
+function slugify(v){return String(v||'usuario').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)||'usuario'}
 function validHttps(v){if(!String(v||'').trim())return true;try{return new URL(String(v).trim()).protocol==='https:'}catch(e){return false}}
 
 function installStyle(){
@@ -98,7 +99,7 @@ function compressPhoto(file){
 async function loadProfile(){
   const d=getDb();activeUser=resolveUser();if(!d||!activeUser)return;
   message('',true);
-  profilePhoto='';
+  profilePhoto='';profileSlug='';
   $('#alibrProfileName').value='';
   $('#alibrProfileLocation').value='';
   $('#alibrProfileWhatsapp').value='';
@@ -119,7 +120,7 @@ async function loadProfile(){
     $('#alibrProfileSocial').value=p.social||'';
     $('#alibrProfileBio').value=p.bio||'';
     $('#alibrProfilePublic').checked=p.public!==false;
-    profilePhoto=p.photo||'';showPhoto(profilePhoto,p.name||fallback);
+    profilePhoto=p.photo||'';profileSlug=p.slug||'';showPhoto(profilePhoto,p.name||fallback);
   }catch(e){console.error(e);message('Não foi possível abrir o perfil. É necessário liberar a coleção profiles no Firebase.',false)}
 }
 async function saveProfile(){
@@ -129,8 +130,10 @@ async function saveProfile(){
   if(!validHttps(social))return message('A rede social ou site precisa começar com https://',false);
   const btn=$('#alibrProfileSave');btn.disabled=true;btn.textContent='Salvando...';
   try{
+    const stableSlug=profileSlug||slugify(name)+'-'+activeUser.uid.slice(0,6).toLowerCase();
     await d.collection('profiles').doc(activeUser.uid).set({
       ownerUid:activeUser.uid,
+      slug:stableSlug,
       name:name.slice(0,80),
       photo:profilePhoto,
       location:$('#alibrProfileLocation').value.trim().slice(0,100),
@@ -141,7 +144,7 @@ async function saveProfile(){
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     },{merge:true});
     try{if(activeUser.updateProfile)await activeUser.updateProfile({displayName:name.slice(0,80),photoURL:profilePhoto&&profilePhoto.length<1000?profilePhoto:null})}catch(e){}
-    window.dispatchEvent(new CustomEvent('alibr-profile-updated',{detail:{uid:activeUser.uid,name:name,photo:profilePhoto}}));
+    profileSlug=stableSlug;window.dispatchEvent(new CustomEvent('alibr-profile-updated',{detail:{uid:activeUser.uid,name:name,photo:profilePhoto,slug:stableSlug}}));
     message('Perfil salvo! Ele já é o mesmo no ChatShop e no Blog Alibr.',true);
   }catch(e){console.error(e);message('Não foi possível salvar. Verifique as regras da coleção profiles no Firebase.',false)}
   finally{btn.disabled=false;btn.textContent='Salvar perfil'}
@@ -164,7 +167,7 @@ function watchAuthentication(){
     auth.onAuthStateChanged(next=>{
       const nextUid=next&&!next.isAnonymous?next.uid:'';
       if(nextUid!==lastUid){
-        activeUser=null;profilePhoto='';closeModal();lastUid=nextUid;
+        activeUser=null;profilePhoto='';profileSlug='';closeModal();lastUid=nextUid;
       }
     });
   }catch(e){}

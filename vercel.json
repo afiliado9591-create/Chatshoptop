@@ -50,6 +50,14 @@
       "dest": "/api/store-affiliate-page.js"
     },
     {
+      "src": "/post/([^/]+)/?",
+      "dest": "/api/app-superfrete.js"
+    },
+    {
+      "src": "/perfil/([^/]+)/?",
+      "dest": "/api/app-superfrete.js"
+    },
+    {
       "src": "/produto/([^/]+)/?",
       "dest": "/api/app-superfrete.js?product=$1"
     },
