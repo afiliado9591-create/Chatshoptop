@@ -134,6 +134,41 @@
         font-weight:900;
         box-shadow:0 2px 6px rgba(0,0,0,.14);
       }
+      .mp-store-header{
+        grid-column:1/-1;
+        display:flex;
+        align-items:center;
+        gap:12px;
+        padding:14px 15px;
+        background:#fff;
+        border:1px solid #ececec;
+        border-radius:14px;
+        box-shadow:0 2px 9px rgba(0,0,0,.09);
+      }
+      .mp-store-logo{
+        width:52px;
+        height:52px;
+        flex:0 0 52px;
+        display:grid;
+        place-items:center;
+        overflow:hidden;
+        border-radius:50%;
+        background:var(--store-main,#c2185b);
+        color:#fff;
+        font-size:22px;
+        font-weight:900;
+      }
+      .mp-store-logo img{width:100%;height:100%;object-fit:cover;display:block}
+      .mp-store-title{min-width:0}
+      .mp-store-title h1{
+        margin:0 0 3px;
+        color:#222;
+        font-size:19px;
+        line-height:1.2;
+        font-weight:950;
+        overflow-wrap:anywhere;
+      }
+      .mp-store-title p{margin:0;color:#666;font-size:12px;font-weight:650}
       .mp-empty{
         grid-column:1/-1;
         background:#fff;
@@ -256,6 +291,19 @@
     const products = Array.isArray(data.products) ? data.products : [];
     let activeCategory = '';
 
+    function headerHtml(){
+      const brand = String(data.brand || 'Minha Loja').trim() || 'Minha Loja';
+      const logo = safeImage(data.logo);
+      const initial = brand.charAt(0).toUpperCase();
+      return `<header class="mp-store-header">
+        <div class="mp-store-logo">${logo ? `<img src="${esc(logo)}" alt="Logo de ${esc(brand)}">` : esc(initial)}</div>
+        <div class="mp-store-title">
+          <h1>${esc(brand)}</h1>
+          <p>Catálogo de produtos</p>
+        </div>
+      </header>`;
+    }
+
     function cardHtml(p){
       const img = safeImage(p.image);
       const cat = String(p.category || '').trim();
@@ -285,7 +333,7 @@
       const list = activeCategory ? products.filter(p=>norm(p.category) === norm(activeCategory)) : products;
       feed.classList.add('marketplace-final');
       feed.classList.remove('catalog-grid');
-      feed.innerHTML = list.length ? list.map(cardHtml).join('') : '<div class="mp-empty">Nenhum produto nessa categoria.</div>';
+      feed.innerHTML = headerHtml() + (list.length ? list.map(cardHtml).join('') : '<div class="mp-empty">Nenhum produto nessa categoria.</div>');
       feed.scrollTop = 0;
       document.body.classList.add('marketplace-final-mode');
       document.body.classList.remove('store-grid-layout');
