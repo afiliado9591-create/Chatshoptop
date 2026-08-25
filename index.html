@@ -586,7 +586,7 @@ function loadUnifiedProfileAfterLogin(){
   if(!myUid || document.getElementById('alibrUnifiedProfileScript')) return;
   const script = document.createElement('script');
   script.id = 'alibrUnifiedProfileScript';
-  script.src = '/unified-profile.js?v=20260825-profile-v1';
+  script.src = '/unified-profile.js?v=20260825-uid-isolation';
   script.async = true;
   script.onerror = ()=>console.warn('O perfil Alibr não carregou. O painel continua disponível.');
   document.body.appendChild(script);
