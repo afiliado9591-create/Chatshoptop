@@ -24,7 +24,7 @@ match /profiles/{userId} {
     && request.auth.uid == userId
     && request.resource.data.ownerUid == request.auth.uid
     && request.resource.data.keys().hasOnly([
-      "ownerUid", "name", "photo", "location",
+      "ownerUid", "slug", "name", "photo", "location",
       "whatsapp", "social", "bio", "public", "updatedAt"
     ]);
 
@@ -33,7 +33,7 @@ match /profiles/{userId} {
     && resource.data.ownerUid == request.auth.uid
     && request.resource.data.ownerUid == request.auth.uid
     && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-      "name", "photo", "location", "whatsapp",
+      "slug", "name", "photo", "location", "whatsapp",
       "social", "bio", "public", "updatedAt"
     ]);
 
@@ -148,7 +148,24 @@ match /blogPosts/{postId} {
     && request.resource.data.body.size() >= 20
     && request.resource.data.body.size() <= 5000;
 
-  allow update: if blogPostsAdmin();
+  // O autor pode editar somente o próprio conteúdo. Toda edição volta para moderação.
+  allow update: if blogPostsAdmin()
+    || (signedBlogMember()
+      && resource.data.authorUid == request.auth.uid
+      && request.resource.data.authorUid == resource.data.authorUid
+      && request.resource.data.get("authorEmail", "") == resource.data.get("authorEmail", "")
+      && request.resource.data.get("slug", "") == resource.data.get("slug", "")
+      && request.resource.data.status == "pending"
+      && request.resource.data.title is string
+      && request.resource.data.title.size() >= 5
+      && request.resource.data.title.size() <= 120
+      && request.resource.data.body is string
+      && request.resource.data.body.size() >= 20
+      && request.resource.data.body.size() <= 5000
+      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        "title", "body", "category", "imageUrl", "externalUrl",
+        "authorName", "status", "updatedAt"
+      ]));
 
   allow delete: if blogPostsAdmin()
     || (signedBlogMember()

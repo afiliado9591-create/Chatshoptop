@@ -154,6 +154,9 @@ function installPublished(storeData){
     document.head.appendChild(style);
     const escText=value=>String(value||'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     const cards=$$('.csv-card,.vs-card',grid);
+    const usedSlugs={};
+    const productSlugs=products.map(product=>{const base=productSlug(product?.name);usedSlugs[base]=(usedSlugs[base]||0)+1;return usedSlugs[base]===1?base:base+'-'+usedSlugs[base]});
+    const productUrl=index=>location.origin+'/produto/'+encodeURIComponent(productSlugs[index]||('produto-'+(index+1)));
     cards.forEach((card,index)=>{
       const product=products[index]||{};
       const buy=card.querySelector('.csv-open,.vs-open,[data-product]');
@@ -163,10 +166,10 @@ function installPublished(storeData){
       if(card.querySelector('.vts-actions'))return;
       const actions=document.createElement('div');actions.className='vts-actions';
       const share=document.createElement('button');share.type='button';share.className='vts-action vts-share';share.innerHTML='↗️<span>Compartilhar</span>';
-      share.onclick=async event=>{event.stopPropagation();const payload={title:String(product.name||publishedData.brand||'Produto'),text:String(product.name||'Confira este produto'),url:location.href.split('#')[0]+'#produto-'+(index+1)};try{if(navigator.share)await navigator.share(payload);else{await navigator.clipboard.writeText(payload.url);alert('Link do produto copiado!')}}catch(e){}};
+      share.onclick=async event=>{event.stopPropagation();const payload={title:String(product.name||publishedData.brand||'Produto'),text:String(product.name||'Confira este produto'),url:productUrl(index)};try{if(navigator.share)await navigator.share(payload);else{await navigator.clipboard.writeText(payload.url);alert('Link do produto copiado!')}}catch(e){}};
       if(index===0){const bag=document.createElement('button');bag.type='button';bag.className='vts-action vts-bag';bag.innerHTML='🛍️<span>Abrir sacola</span>';bag.onclick=event=>{event.stopPropagation();$('#csvBag,.vs-bag')?.click()};actions.appendChild(bag)}
       actions.append(share);card.appendChild(actions);
-      card.id='produto-'+(index+1);
+      card.id='produto-'+productSlugs[index];card.dataset.productSlug=productSlugs[index];
     });
     /* Sacola flutuante: mantém a tela limpa enquanto vazia e aparece após adicionar um item. */
     let floatingBag=$('#vtsFloatingBag');
@@ -210,8 +213,12 @@ function installPublished(storeData){
       document.body.appendChild(rail);
     }
     let current=-1;
-    grid.addEventListener('scroll',()=>requestAnimationFrame(()=>{const center=innerHeight/2;let best=0,distance=Infinity;cards.forEach((card,i)=>{const rect=card.getBoundingClientRect(),delta=Math.abs((rect.top+rect.bottom)/2-center);if(delta<distance){distance=delta;best=i}});if(best!==current){current=best;window.__CHATSHOP_ACTIVE_PRODUCT=products[best]||null;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=best}}),{passive:true});
-    window.__CHATSHOP_ACTIVE_PRODUCT=products[0]||null;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=0;
+    const selectProduct=(best,replaceUrl=true)=>{if(best===current)return;current=best;window.__CHATSHOP_ACTIVE_PRODUCT=products[best]||null;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=best;if(replaceUrl){try{history.replaceState({chatshopProduct:best},'',productUrl(best))}catch(e){}}};
+    grid.addEventListener('scroll',()=>requestAnimationFrame(()=>{const center=innerHeight/2;let best=0,distance=Infinity;cards.forEach((card,i)=>{const rect=card.getBoundingClientRect(),delta=Math.abs((rect.top+rect.bottom)/2-center);if(delta<distance){distance=delta;best=i}});selectProduct(best,true)}),{passive:true});
+    const requested=String(window.__CHATSHOP_PRODUCT_SLUG||'').toLowerCase(),requestedIndex=requested?productSlugs.indexOf(requested):-1;
+    const initialIndex=requestedIndex>=0?requestedIndex:0;window.__CHATSHOP_ACTIVE_PRODUCT=products[initialIndex]||null;window.__CHATSHOP_ACTIVE_PRODUCT_INDEX=initialIndex;current=initialIndex;
+    if(requestedIndex>=0&&cards[requestedIndex])setTimeout(()=>cards[requestedIndex].scrollIntoView({block:'start'}),80);
+    window.addEventListener('popstate',()=>location.reload());
     const hint=document.createElement('div');hint.textContent='⬆️ Arraste para ver o próximo produto';hint.style.cssText='position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:45;background:rgba(17,24,39,.78);color:#fff;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:800;pointer-events:none';document.body.appendChild(hint);setTimeout(()=>hint.remove(),4200);
   })();
 }
