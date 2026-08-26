@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gerador de Vídeos · ChatShop</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+:root{--p:#6d28d9;--p2:#4c1d95;--bg:#f5f3ff;--card:#fff;--line:#e5e7eb;--text:#1f2937;--muted:#6b7280;--ok:#15803d;--danger:#b91c1c}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+.top{position:sticky;top:0;z-index:20;background:linear-gradient(135deg,var(--p2),var(--p));color:#fff;padding:13px 16px;box-shadow:0 4px 18px #312e8130}
+.topin{max-width:900px;margin:auto;display:flex;align-items:center;gap:12px}.back{color:#fff;text-decoration:none;font-weight:800;background:#ffffff1a;border:1px solid #ffffff45;padding:10px 13px;border-radius:10px}
+.top b{font-size:17px}.wrap{max-width:900px;margin:auto;padding:16px}.hero{margin:5px 0 14px}.hero h1{font-size:25px;margin:0 0 6px}.hero p{margin:0;color:var(--muted);line-height:1.45}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin:13px 0;box-shadow:0 5px 20px #312e8112}.section-title{font-weight:900;font-size:18px;margin-bottom:12px}
+label{display:block;font-size:13px;font-weight:800;margin:11px 0 6px}input,textarea,select,button{width:100%;border:1px solid #d1d5db;border-radius:10px;padding:11px;font:inherit;background:#fff;color:var(--text)}textarea{min-height:86px}
+button{border:0;background:var(--p);color:#fff;font-weight:900;cursor:pointer}.secondary{background:#ede9fe;color:#4c1d95}.danger{background:#fee2e2;color:var(--danger)}button:disabled{opacity:.5;cursor:default}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.track{display:grid;grid-template-columns:1fr auto auto auto;gap:7px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.track:first-child{border-top:0}.trackname{font-weight:800;font-size:13px}.mini{width:auto;padding:8px 10px;font-size:12px}.choose.selected{background:#dcfce7;color:#166534}
+.box{background:#f9fafb;border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:9px;color:var(--muted);font-size:13px}.notice{background:#fefce8;border:1px solid #fde68a;color:#713f12;border-radius:11px;padding:12px;line-height:1.45;font-weight:800}
+.lock{max-width:520px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;text-align:center;box-shadow:0 8px 28px #312e8120}.lock h1{font-size:22px}.hidden{display:none!important}
+audio{width:100%;margin-top:10px}canvas,video{width:100%;max-width:360px;display:block;margin:16px auto;border-radius:14px;background:#000}canvas{aspect-ratio:9/16}video{display:none}
+#imagePreview{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}#imagePreview img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px}
+.status{white-space:pre-line;font-size:13px;color:var(--muted);padding-top:8px}.ok{color:var(--ok)}.err{color:var(--danger)}
+@media(max-width:650px){.grid2{grid-template-columns:1fr}.track{grid-template-columns:1fr 1fr}.trackname{grid-column:1/-1}.mini{width:100%}.top b{font-size:14px}}
+</style>
+</head>
+<body>
+<div class="top"><div class="topin"><a class="back" href="/">← Voltar ao ChatShop</a><b>🎬 Gerador de Vídeos</b></div></div>
+<div id="checking" class="lock"><h1>Verificando seu plano...</h1><p>Aguarde um instante.</p></div>
+<div id="locked" class="lock hidden"><h1>🔒 Recurso dos planos pagos</h1><p>O Gerador de Vídeos está disponível nos planos <b>Básico</b> e <b>Profissional</b>.</p><a href="/" style="text-decoration:none"><button>Voltar e ver os planos</button></a></div>
+<div id="loginNeeded" class="lock hidden"><h1>Entre no ChatShop</h1><p>Faça login no ChatShop para usar o Gerador de Vídeos.</p><a href="/" style="text-decoration:none"><button>Entrar no ChatShop</button></a></div>
+
+<main id="app" class="wrap hidden">
+<div class="hero"><h1>Crie seu vídeo curto</h1><p>O vídeo é gerado no próprio aparelho. Nada fica salvo no ChatShop.</p></div>
+<div class="notice">⚠ Atenção: baixe o vídeo em seu aparelho porque ele não fica salvo aqui no site.</div>
+
+<div class="card"><div class="section-title">1. Produto</div>
+<label>Imagens do produto</label><input id="images" type="file" accept="image/*" multiple>
+<div id="imageStatus" class="box">Nenhuma imagem selecionada.</div><div id="imagePreview"></div>
+<label>Título</label><input id="title" value="Olha esse achadinho!">
+<label>Texto</label><textarea id="text">Produto bonito, útil e com ótimo custo-benefício. Confira agora.</textarea>
+<div class="grid2"><div><label>Preço</label><input id="price" value="R$ 129,90"></div><div><label>Duração</label><select id="duration"><option value="10">10 segundos</option><option value="15" selected>15 segundos</option><option value="30">30 segundos</option></select></div></div>
+</div>
+
+<div class="card"><div class="section-title">2. Música</div>
+<div id="tracks"></div><audio id="audioPlayer" controls preload="metadata"></audio>
+<div id="selectedMusic" class="box">Nenhuma música selecionada.</div>
+<label>Volume da música: <span id="musicVolLabel">30%</span></label><input id="musicVol" type="range" min="0" max="100" value="30">
+<label>Ou usar música do próprio celular</label><input id="ownMusic" type="file" accept="audio/*"><div id="ownMusicStatus" class="box">Nenhuma música do celular selecionada.</div>
+<button id="stopMusic" class="secondary" type="button">■ Parar música</button>
+</div>
+
+<div class="card"><div class="section-title">3. Narração</div>
+<div class="grid2"><button id="startMic" type="button">🎙️ Gravar narração</button><button id="stopMic" class="danger" type="button" disabled>■ Parar gravação</button></div>
+<audio id="voicePreview" controls class="hidden"></audio>
+<label>Ou selecionar narração do celular</label><input id="ownVoice" type="file" accept="audio/*">
+<label>Volume da narração: <span id="voiceVolLabel">100%</span></label><input id="voiceVol" type="range" min="0" max="200" value="100">
+<div id="voiceStatus" class="box">Nenhuma narração adicionada.</div>
+</div>
+
+<div class="card"><div class="section-title">4. Gerar</div><button id="generate" type="button">Gerar vídeo com música e narração</button><div id="status" class="status"></div></div>
+<canvas id="canvas" width="720" height="1280"></canvas><video id="preview" controls playsinline></video>
+<a id="download" class="hidden" download="video-chatshop.webm"><button type="button">⬇ Salvar vídeo no aparelho</button></a>
+</main>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyBZlCM-6l_iV_GTirvTwUumKM3ZGRvgxt8",authDomain:"chatshop-97ea3.firebaseapp.com",projectId:"chatshop-97ea3",storageBucket:"chatshop-97ea3.firebasestorage.app",messagingSenderId:"430779427610",appId:"1:430779427610:web:7418f6e4f6006535209aa3"};
+firebase.initializeApp(firebaseConfig);const db=firebase.firestore(),auth=firebase.auth();
+const ADMIN_EMAILS=['jeanaguiar636@gmail.com'];
+auth.onAuthStateChanged(async user=>{
+  document.getElementById('checking').classList.add('hidden');
+  if(!user){document.getElementById('loginNeeded').classList.remove('hidden');return}
+  try{
+    const snap=await db.collection('users').doc(user.uid).get();const plan=(snap.exists&&snap.data().plan)||'aprendiz';
+    const allowed=plan==='basico'||plan==='profissional'||ADMIN_EMAILS.includes((user.email||'').toLowerCase());
+    document.getElementById(allowed?'app':'locked').classList.remove('hidden');
+  }catch(e){document.getElementById('locked').classList.remove('hidden')}
+});
+
+(function(){
+const TRACKS=[
+{name:'Lançamento de Produto',src:'musica01.mp3'},
+{name:'Comercial Inspiradora',src:'musica02.mp3'},
+{name:'Marca Elegante',src:'musica03.mp3'},
+{name:'Comercial Moderna',src:'musica04.mp3'},
+{name:'Eletrônica Comercial',src:'musica05.mp3'},
+{name:'Instrumental Comercial',src:'musica06.mp3'},
+{name:'Comercial Dinâmica',src:'musica07.mp3'}
+];
+const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
+let selectedMusic='',recordedVoiceBlob=null,micRecorder=null,micStream=null,micChunks=[];
+$('tracks').innerHTML=TRACKS.map((t,i)=>`<div class="track"><div class="trackname">${t.name}</div><button class="mini listen" data-i="${i}" type="button">▶ Ouvir</button><button class="mini secondary choose" data-i="${i}" type="button">✓ Selecionar</button><a href="${t.src}" download><button class="mini secondary" type="button">⬇ Baixar</button></a></div>`).join('');
+$('tracks').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.classList.contains('listen')){const t=TRACKS[+b.dataset.i],p=$('audioPlayer');p.src=t.src;p.volume=+$('musicVol').value/100;p.load();p.play().catch(()=>{$('selectedMusic').textContent='Não foi possível tocar '+t.name})}if(b.classList.contains('choose')){const t=TRACKS[+b.dataset.i];selectedMusic=t.src;$('ownMusic').value='';document.querySelectorAll('.choose').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');$('selectedMusic').textContent='✓ Música selecionada: '+t.name}};
+$('musicVol').oninput=function(){$('musicVolLabel').textContent=this.value+'%';$('audioPlayer').volume=+this.value/100};$('voiceVol').oninput=function(){$('voiceVolLabel').textContent=this.value+'%'};
+$('stopMusic').onclick=()=>{$('audioPlayer').pause();$('audioPlayer').currentTime=0};
+$('images').onchange=function(){const fs=[...this.files];$('imageStatus').textContent=fs.length?'✓ '+fs.length+' imagem(ns) selecionada(s).':'Nenhuma imagem selecionada.';$('imagePreview').innerHTML='';fs.slice(0,8).forEach(f=>{const im=new Image();im.src=URL.createObjectURL(f);$('imagePreview').appendChild(im)})};
+$('ownMusic').onchange=function(){const f=this.files?.[0];if(!f)return;selectedMusic='';document.querySelectorAll('.choose').forEach(x=>x.classList.remove('selected'));$('ownMusicStatus').textContent='✓ '+f.name;const p=$('audioPlayer');p.src=URL.createObjectURL(f);p.volume=+$('musicVol').value/100};
+$('ownVoice').onchange=function(){const f=this.files?.[0];if(!f)return;recordedVoiceBlob=null;$('voiceStatus').textContent='✓ Narração: '+f.name;$('voicePreview').src=URL.createObjectURL(f);$('voicePreview').classList.remove('hidden')};
+$('startMic').onclick=async()=>{try{micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});micChunks=[];micRecorder=new MediaRecorder(micStream);micRecorder.ondataavailable=e=>{if(e.data.size)micChunks.push(e.data)};micRecorder.onstop=()=>{recordedVoiceBlob=new Blob(micChunks,{type:micRecorder.mimeType||'audio/webm'});$('ownVoice').value='';$('voicePreview').src=URL.createObjectURL(recordedVoiceBlob);$('voicePreview').classList.remove('hidden');$('voiceStatus').textContent='✓ Narração gravada.';micStream.getTracks().forEach(t=>t.stop())};micRecorder.start();$('startMic').disabled=true;$('stopMic').disabled=false;$('voiceStatus').textContent='● Gravando...'}catch(e){$('voiceStatus').textContent='Permita o microfone no navegador.'}};
+$('stopMic').onclick=()=>{if(micRecorder?.state!=='inactive')micRecorder.stop();$('startMic').disabled=false;$('stopMic').disabled=true};
+function loadImg(f){return new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=URL.createObjectURL(f)})}
+function cover(i,z){const ir=i.width/i.height,cr=720/1280;let w,h;if(ir>cr){h=1280*z;w=h*ir}else{w=720*z;h=w/ir}ctx.drawImage(i,(720-w)/2,(1280-h)/2,w,h)}
+function wrap(s,m){const words=String(s||'').trim().split(/\s+/),lines=[];let line='';for(const word of words){const t=line?line+' '+word:word;if(ctx.measureText(t).width>m&&line){lines.push(line);line=word}else line=t}if(line)lines.push(line);return lines}
+function frame(img,t,total){ctx.clearRect(0,0,720,1280);ctx.fillStyle='#000';ctx.fillRect(0,0,720,1280);if(img){cover(img,1+.08*(t/Math.max(total,.001)));const g=ctx.createLinearGradient(0,0,0,1280);g.addColorStop(0,'#0004');g.addColorStop(.55,'#0001');g.addColorStop(1,'#000d');ctx.fillStyle=g;ctx.fillRect(0,0,720,1280)}ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='bold 52px Arial';wrap($('title').value,620).slice(0,3).forEach((x,i)=>ctx.fillText(x,360,110+i*62));ctx.font='38px Arial';wrap($('text').value,610).slice(0,5).forEach((x,i)=>ctx.fillText(x,360,950+i*48));const p=$('price').value.trim();if(p){ctx.font='bold 56px Arial';const w=Math.min(620,ctx.measureText(p).width+70);ctx.fillStyle='#fffffff0';ctx.fillRect((720-w)/2,1155,w,82);ctx.fillStyle='#111';ctx.fillText(p,360,1212)}}
+async function decode(ac,source){if(!source)return null;let a;if(source instanceof Blob)a=await source.arrayBuffer();else{const r=await fetch(source);if(!r.ok)throw new Error('Música não encontrada');a=await r.arrayBuffer()}return ac.decodeAudioData(a.slice(0))}
+function mime(){for(const m of ['video/webm;codecs=vp8,opus','video/webm;codecs=vp9,opus','video/webm'])if(MediaRecorder.isTypeSupported(m))return m;return''}
+$('generate').onclick=async()=>{const fs=[...$('images').files];if(!fs.length){alert('Escolha pelo menos uma imagem.');return}if(!canvas.captureStream||!window.MediaRecorder){$('status').textContent='Use o Chrome atualizado.';return}$('generate').disabled=true;$('download').classList.add('hidden');$('preview').style.display='none';let ac,ms,vs;try{const imgs=await Promise.all(fs.map(loadImg)),total=+$('duration').value,AC=window.AudioContext||window.webkitAudioContext;ac=new AC();await ac.resume();const dest=ac.createMediaStreamDestination();const mb=await decode(ac,$('ownMusic').files?.[0]||selectedMusic);if(mb){ms=ac.createBufferSource();const g=ac.createGain();g.gain.value=+$('musicVol').value/100;ms.buffer=mb;ms.loop=true;ms.connect(g);g.connect(dest);ms.start()}const vb=await decode(ac,$('ownVoice').files?.[0]||recordedVoiceBlob);if(vb){vs=ac.createBufferSource();const g=ac.createGain();g.gain.value=+$('voiceVol').value/100;vs.buffer=vb;vs.connect(g);g.connect(dest);vs.start()}const stream=canvas.captureStream(24),combined=new MediaStream([...stream.getVideoTracks(),...dest.stream.getAudioTracks()]),mt=mime();if(!mt)throw new Error('Formato não suportado');const chunks=[],rec=new MediaRecorder(combined,{mimeType:mt,videoBitsPerSecond:3200000,audioBitsPerSecond:128000});rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};rec.onstop=async()=>{try{ms?.stop();vs?.stop()}catch(e){}const blob=new Blob(chunks,{type:mt}),url=URL.createObjectURL(blob);$('preview').src=url;$('preview').style.display='block';$('download').href=url;$('download').classList.remove('hidden');$('status').textContent='✓ Vídeo pronto. Salve no aparelho.';$('status').className='status ok';$('generate').disabled=false;try{await ac.close()}catch(e){}};frame(imgs[0],0,total/imgs.length);rec.start(250);const start=performance.now();function anim(now){const e=(now-start)/1000,idx=Math.min(imgs.length-1,Math.floor((e/total)*imgs.length)),slot=total/imgs.length;frame(imgs[idx],e%slot,slot);if(e<total)requestAnimationFrame(anim);else setTimeout(()=>rec.stop(),350)}requestAnimationFrame(anim)}catch(e){console.error(e);$('status').textContent='Erro ao gerar: '+(e.message||e);$('status').className='status err';$('generate').disabled=false;try{await ac?.close()}catch(x){}}};
+frame(null,0,1);
+})();
+</script>
+</body></html>
