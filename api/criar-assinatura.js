@@ -25,9 +25,6 @@ async function getPlatformAccessToken() {
   const cfg = env();
   if (!cfg.clientId || !cfg.clientSecret) return '';
 
-  // Fallback para instalações que guardam apenas Client ID / Client Secret.
-  // Se a conta Mercado Pago não aceitar client_credentials, a resposta abaixo
-  // será tratada e a Vercel mostrará que é necessário cadastrar MP_ACCESS_TOKEN.
   try {
     const r = await fetch('https://api.mercadopago.com/oauth/token', {
       method: 'POST',
@@ -50,7 +47,7 @@ async function getPlatformAccessToken() {
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'method_not_allowed', message: 'Método não permitido.' });
+    return res.status(405).json({ code: 'method_not_allowed', error: 'Método não permitido.' });
   }
 
   try {
@@ -61,17 +58,17 @@ module.exports = async function handler(req, res) {
     const email = clean(body.email, 180).toLowerCase();
 
     if (!cfgPlano) {
-      return res.status(400).json({ error: 'invalid_plan', message: 'Plano inválido.' });
+      return res.status(400).json({ code: 'invalid_plan', error: 'Plano inválido.' });
     }
     if (!uid || !validEmail(email)) {
-      return res.status(400).json({ error: 'user_required', message: 'Usuário ou e-mail inválido. Entre novamente no ChatShop.' });
+      return res.status(400).json({ code: 'user_required', error: 'Entre novamente no ChatShop para assinar.' });
     }
 
     const accessToken = await getPlatformAccessToken();
     if (!accessToken) {
       return res.status(503).json({
-        error: 'mp_credentials_missing',
-        message: 'O pagamento ainda não está configurado. Cadastre MP_ACCESS_TOKEN nas variáveis de ambiente da Vercel.'
+        code: 'mp_credentials_missing',
+        error: 'Pagamento ainda não configurado. Cadastre MP_ACCESS_TOKEN na Vercel.'
       });
     }
 
@@ -105,13 +102,14 @@ module.exports = async function handler(req, res) {
       console.error('MP subscription error:', r.status, j);
       const detail = j && (j.message || j.error || j.cause?.[0]?.description);
       return res.status(400).json({
-        error: 'subscription_failed',
-        message: detail ? `Mercado Pago: ${String(detail).slice(0, 220)}` : 'O Mercado Pago não conseguiu criar a assinatura agora.'
+        code: 'subscription_failed',
+        error: detail ? `Mercado Pago: ${String(detail).slice(0, 220)}` : 'O Mercado Pago não conseguiu criar a assinatura agora.'
       });
     }
 
     return res.status(200).json({
       ok: true,
+      link: j.init_point,
       init_point: j.init_point,
       checkoutUrl: j.init_point,
       subscriptionId: j.id || '',
@@ -122,8 +120,8 @@ module.exports = async function handler(req, res) {
   } catch (e) {
     console.error('criar-assinatura:', e);
     return res.status(500).json({
-      error: 'subscription_exception',
-      message: 'Não foi possível iniciar a assinatura. Tente novamente em instantes.'
+      code: 'subscription_exception',
+      error: 'Não foi possível iniciar a assinatura. Tente novamente em instantes.'
     });
   }
 };
