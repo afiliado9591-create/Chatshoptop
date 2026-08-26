@@ -33,6 +33,20 @@
     const planosBtn = document.getElementById('verPlanosBtn');
     if (!planosBtn || document.getElementById('precisaAjudaBtn')) return;
 
+    /* Módulo isolado: o próprio /video-generator/ valida o plano no Firebase. */
+    if (!document.getElementById('videoGeneratorBtn')) {
+      const videoBtn = document.createElement('button');
+      videoBtn.className = 'btn';
+      videoBtn.id = 'videoGeneratorBtn';
+      videoBtn.type = 'button';
+      videoBtn.textContent = '🎬 Gerador de Vídeos';
+      videoBtn.title = 'Disponível nos planos Básico e Profissional';
+      videoBtn.addEventListener('click', function () {
+        window.location.href = '/video-generator/';
+      });
+      planosBtn.parentElement.insertBefore(videoBtn, planosBtn);
+    }
+
     const wrapper = document.createElement('div');
     wrapper.className = 'ajuda-menu-wrap';
     wrapper.innerHTML =
