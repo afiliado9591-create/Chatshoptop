@@ -58,6 +58,22 @@
       "dest": "/api/app-superfrete.js"
     },
     {
+      "src": "/loja/([^/]+)/produto/([^/]+)/?",
+      "dest": "/api/store-url.js?slug=$1&product=$2"
+    },
+    {
+      "src": "/catalogo/([^/]+)/produto/([^/]+)/?",
+      "dest": "/api/store-url.js?slug=$1&product=$2"
+    },
+    {
+      "src": "/loja/([^/]+)/?",
+      "dest": "/api/store-url.js?slug=$1"
+    },
+    {
+      "src": "/catalogo/([^/]+)/?",
+      "dest": "/api/store-url.js?slug=$1"
+    },
+    {
       "src": "/produto/([^/]+)/?",
       "dest": "/api/app-superfrete.js?product=$1"
     },
