@@ -7,7 +7,6 @@ function htmlEscape(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
@@ -92,15 +91,22 @@ async function getStoreBySlug(slug) {
 }
 
 async function getStoreByCustomDomain(host) {
-  const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery?key=${API_KEY}`;
-  const body = { structuredQuery: { from: [{ collectionId: COLLECTION }], where: { fieldFilter: {
-    field: { fieldPath: 'customDomain' }, op: 'EQUAL', value: { stringValue: host }
-  }}, limit: 1 }};
-  const r = await fetch(url, { method:'POST', headers:{'content-type':'application/json',accept:'application/json'}, body:JSON.stringify(body) });
-  if (!r.ok) return null;
-  const rows = await r.json();
-  const doc = Array.isArray(rows) ? rows.find(x => x.document)?.document : null;
-  return doc ? decodeFirestoreFields(doc.fields || {}) : null;
+  const rawHost = String(host || '').toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '');
+  const rootHost = rawHost.replace(/^www\./, '');
+  const candidates = [...new Set([rawHost, rootHost, rootHost ? `www.${rootHost}` : ''].filter(Boolean))];
+
+  for (const candidate of candidates) {
+    const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery?key=${API_KEY}`;
+    const body = { structuredQuery: { from: [{ collectionId: COLLECTION }], where: { fieldFilter: {
+      field: { fieldPath: 'customDomain' }, op: 'EQUAL', value: { stringValue: candidate }
+    }}, limit: 1 }};
+    const r = await fetch(url, { method:'POST', headers:{'content-type':'application/json',accept:'application/json'}, body:JSON.stringify(body) });
+    if (!r.ok) continue;
+    const rows = await r.json();
+    const doc = Array.isArray(rows) ? rows.find(x => x.document)?.document : null;
+    if (doc) return decodeFirestoreFields(doc.fields || {});
+  }
+  return null;
 }
 
 async function getPlatformSeo() {
