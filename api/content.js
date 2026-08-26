@@ -2,6 +2,11 @@ const PROJECT_ID = 'chatshop-97ea3';
 const API_KEY = 'AIzaSyBZlCM-6l_iV_GTirvTwUumKM3ZGRvgxt8';
 const BASE_DOMAIN = 'www.alibr.com.br';
 
+const PLANOS_ASSINATURA={
+  basico:{nome:'ChatShop Básico',valor:18.00},
+  profissional:{nome:'ChatShop Profissional',valor:49.90}
+};
+
 function decodeValue(v){
   if(!v || typeof v !== 'object') return null;
   if('stringValue' in v) return v.stringValue;
@@ -28,11 +33,50 @@ function decodeFields(fields){
 function esc(value){
   return String(value == null ? '' : value)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    .replace(/\"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function cleanSlug(value){
   return String(value || '').toLowerCase().trim().replace(/[^a-z0-9-]/g,'').slice(0,90);
+}
+function clean(v,max=200){return String(v||'').trim().slice(0,max)}
+function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())}
+async function parseJsonSafe(r){const t=await r.text();try{return t?JSON.parse(t):{}}catch(_){return{raw:t}}}
+
+async function getPlatformAccessToken(){
+  const direct=clean(process.env.MP_ACCESS_TOKEN||process.env.MERCADOPAGO_ACCESS_TOKEN||process.env.MERCADO_PAGO_ACCESS_TOKEN||'',500);
+  if(direct)return direct;
+  const clientId=clean(process.env.MP_CLIENT_ID||process.env.MERCADOPAGO_CLIENT_ID||'',300);
+  const clientSecret=clean(process.env.MP_CLIENT_SECRET||process.env.MERCADOPAGO_CLIENT_SECRET||'',300);
+  if(!clientId||!clientSecret)return '';
+  try{
+    const r=await fetch('https://api.mercadopago.com/oauth/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded','accept':'application/json'},body:new URLSearchParams({grant_type:'client_credentials',client_id:clientId,client_secret:clientSecret}).toString()});
+    const j=await parseJsonSafe(r);
+    if(r.ok&&j?.access_token)return String(j.access_token);
+  }catch(_){}
+  return '';
+}
+
+async function handleSubscription(req,res){
+  res.setHeader('Cache-Control','no-store');
+  if(req.method!=='POST')return res.status(405).json({error:'method_not_allowed',message:'Método não permitido.'});
+  try{
+    const body=typeof req.body==='string'?JSON.parse(req.body||'{}'):(req.body||{});
+    const plano=clean(body.plano,30).toLowerCase();
+    const cfg=PLANOS_ASSINATURA[plano];
+    const uid=clean(body.uid,160);
+    const email=clean(body.email,180).toLowerCase();
+    if(!cfg)return res.status(400).json({error:'Plano inválido.',message:'Plano inválido.'});
+    if(!uid||!validEmail(email))return res.status(400).json({error:'Usuário ou e-mail inválido. Entre novamente no ChatShop.',message:'Usuário ou e-mail inválido. Entre novamente no ChatShop.'});
+    const accessToken=await getPlatformAccessToken();
+    if(!accessToken)return res.status(503).json({error:'Pagamento ainda não configurado. Cadastre MP_ACCESS_TOKEN na Vercel.',message:'Pagamento ainda não configurado. Cadastre MP_ACCESS_TOKEN na Vercel.'});
+    const origin='https://www.alibr.com.br';
+    const payload={reason:cfg.nome,external_reference:`chatshop-plan:${uid}:${plano}:${Date.now()}`,payer_email:email,back_url:`${origin}/?assinatura=retorno&plano=${encodeURIComponent(plano)}`,auto_recurring:{frequency:1,frequency_type:'months',transaction_amount:cfg.valor,currency_id:'BRL'}};
+    const r=await fetch('https://api.mercadopago.com/preapproval',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+accessToken,'x-idempotency-key':`chatshop-${uid}-${plano}-${Date.now()}`},body:JSON.stringify(payload)});
+    const j=await parseJsonSafe(r);
+    if(!r.ok||!j?.init_point){console.error('MP subscription error:',r.status,j);const detail=j&&(j.message||j.error||j.cause?.[0]?.description);const msg=detail?`Mercado Pago: ${String(detail).slice(0,220)}`:'O Mercado Pago não conseguiu criar a assinatura agora.';return res.status(400).json({error:msg,message:msg});}
+    return res.status(200).json({ok:true,link:j.init_point,init_point:j.init_point,checkoutUrl:j.init_point,subscriptionId:j.id||'',status:j.status||'',plano,valor:cfg.valor});
+  }catch(e){console.error('assinatura:',e);return res.status(500).json({error:'Não foi possível iniciar a assinatura. Tente novamente em instantes.',message:'Não foi possível iniciar a assinatura. Tente novamente em instantes.'});}
 }
 
 function bodyHtml(text){
@@ -55,6 +99,7 @@ async function getPlatformSeo(){
 }
 
 module.exports = async function handler(req,res){
+  if(String(req.query?.action||'')==='assinatura')return handleSubscription(req,res);
   try{
     const slug = cleanSlug(req.query && req.query.slug);
     if(!slug){ res.status(404).send('Página não encontrada.'); return; }
