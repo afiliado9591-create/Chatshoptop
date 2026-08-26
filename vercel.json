@@ -22,6 +22,10 @@
   ],
   "routes": [
     {
+      "src": "/api/criar-assinatura/?",
+      "dest": "/api/content.js?action=assinatura"
+    },
+    {
       "src": "/meus-pedidos/?",
       "dest": "/api/app-superfrete.js?orders=1"
     },
