@@ -7,7 +7,18 @@ const dbRef=()=>{try{return typeof db!=='undefined'&&db?db:null}catch(e){return 
 const adminOk=()=>{try{return typeof isAdmin!=='undefined'&&isAdmin===true}catch(e){return false}};
 const notify=msg=>{try{if(typeof toast==='function')return toast(msg)}catch(e){} alert(msg)};
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ADMIN_EMAILS_SAFE=['jeanaguiar636@gmail.com','afiliado9591@gmail.com'];
 let signupEnabled=false;
+
+function ensureAdminIdentity(user){
+  const email=String(user?.email||'').toLowerCase().trim();
+  const allowed=ADMIN_EMAILS_SAFE.includes(email);
+  if(!allowed)return false;
+  try{isAdmin=true}catch(e){}
+  try{window.isAdmin=true}catch(e){}
+  try{const btn=$('#adminBtn');if(btn)btn.style.display='inline-block'}catch(e){}
+  return true;
+}
 
 function userTitle(id,u){return u?.name||u?.displayName||u?.email||id}
 function isLikelyAdminUser(u){return u?.isAdmin===true||u?.admin===true||String(u?.role||'').toLowerCase()==='admin'}
@@ -114,6 +125,14 @@ function installAdminHook(){
   let tries=0;const timer=setInterval(()=>{tries++;if(adminOk()&&$('#adminTabUsuarios')){clearInterval(timer);if($('#adminTabUsuarios')?.classList.contains('active'))setTimeout(renderAdminProfessionalControls,220)}else if(tries>120)clearInterval(timer)},150);
 }
 
-function boot(){installPlanVisibility();installAdminHook();try{if(window.auth&&typeof auth.onAuthStateChanged==='function')auth.onAuthStateChanged(user=>{if(user)loadCurrentUserFlags(user)});else if(typeof currentUser!=='undefined'&&currentUser?.uid)loadCurrentUserFlags(currentUser)}catch(e){}}
+function boot(){
+  installPlanVisibility();installAdminHook();
+  try{
+    if(window.auth&&typeof auth.onAuthStateChanged==='function')auth.onAuthStateChanged(user=>{
+      if(user){ensureAdminIdentity(user);loadCurrentUserFlags(user)}
+    });
+    else if(typeof currentUser!=='undefined'&&currentUser?.uid){ensureAdminIdentity(currentUser);loadCurrentUserFlags(currentUser)}
+  }catch(e){}
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
