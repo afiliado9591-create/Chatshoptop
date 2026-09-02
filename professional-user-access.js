@@ -24,7 +24,7 @@ function userTitle(id,u){return u?.name||u?.displayName||u?.email||id}
 function isLikelyAdminUser(u){return u?.isAdmin===true||u?.admin===true||String(u?.role||'').toLowerCase()==='admin'}
 function isFreeProfessional(u){return u?.professionalGrantedFree===true}
 function canSignupProfessional(u){return u?.professionalSignupEnabled===true}
-function limitsFor(plan){return plan==='profissional'?{productLimit:1000000,chatLimit:2}:plan==='basico'?{productLimit:30,chatLimit:1}:{productLimit:10,chatLimit:1}}
+function limitsFor(plan){return plan==='profissional'?{productLimit:1000000,chatLimit:2}:{productLimit:30,chatLimit:1}}
 
 async function loadCurrentUserFlags(user){
   const d=dbRef();if(!d||!user?.uid)return;
@@ -37,12 +37,33 @@ async function loadCurrentUserFlags(user){
     if(u.professionalGrantedFree===true||u.plan==='profissional'){
       try{myPlan='profissional';myProductLimit=1000000;myChatLimit=2}catch(e){}
       window.__CHATSHOP_VIRTUAL_STORE_UNLOCKED=true;
+    }else{
+      try{if(!myPlan||myPlan==='aprendiz')myPlan='basico';myProductLimit=30;myChatLimit=1}catch(e){}
     }
     installPlanVisibility();
   }catch(e){console.warn('Não foi possível ler permissões do Profissional',e)}
 }
 
+function sanitizePlansModal(){
+  const cols=$('#plansCols');if(!cols)return;
+  const cards=$$('.plan-card',cols);
+  cards.forEach(card=>{
+    const title=String(card.querySelector('h3')?.textContent||'').trim().toLowerCase();
+    if(title.includes('aprendiz')){card.remove();return;}
+    if(title.includes('básico')||title.includes('basico')){
+      const price=card.querySelector('.preco');if(price)price.textContent='Grátis';
+      const lim=card.querySelector('.lim');
+      if(lim)lim.innerHTML='✅ Até 30 produtos<br>✅ Catálogo pronto<br>✅ Editar perguntas do produto<br>✅ Produtos próprios<br>✅ Upload de imagem<br>✅ Link de imagem<br>✅ Chat Vendedor ativo<br>✅ Gerador de Vídeos — GRATUITO TEMPORARIAMENTE';
+      card.querySelectorAll('button').forEach(btn=>btn.remove());
+      card.querySelectorAll('div,small,p').forEach(el=>{
+        if(/assinar|pagamento|r\$\s*18|18,00/i.test(el.textContent||''))el.remove();
+      });
+    }
+  });
+}
+
 function appendProfessionalCard(){
+  sanitizePlansModal();
   if(!(signupEnabled||window.__CHATSHOP_PRO_SIGNUP_ENABLED===true))return;
   const cols=$('#plansCols');if(!cols||cols.querySelector('[data-pro-manual-card]'))return;
   if(cols.querySelector('button[data-plano="profissional"]'))return;
@@ -58,10 +79,10 @@ function installPlanVisibility(){
     tries++;
     if(typeof window.abrirPlanos==='function'&&!window.abrirPlanos.__proSignupWrapped){
       const original=window.abrirPlanos;
-      const wrapped=function(){const r=original.apply(this,arguments);setTimeout(appendProfessionalCard,0);return r};
+      const wrapped=function(){const r=original.apply(this,arguments);setTimeout(()=>{sanitizePlansModal();appendProfessionalCard()},0);return r};
       wrapped.__proSignupWrapped=true;window.abrirPlanos=wrapped;try{abrirPlanos=wrapped}catch(e){}
     }
-    if($('#plansModal')?.style.display==='flex')appendProfessionalCard();
+    if($('#plansModal')?.style.display==='flex'){sanitizePlansModal();appendProfessionalCard()}
     if(tries>120)clearInterval(timer);
   },120);
 }
@@ -80,8 +101,8 @@ async function renderAdminProfessionalControls(){
     rows.sort((a,b)=>userTitle(a.id,a.data).localeCompare(userTitle(b.id,b.data),'pt-BR'));
     if(!rows.length){list.innerHTML='<p style="color:#6b7280">Nenhum usuário encontrado.</p>';return;}
     list.innerHTML=rows.map(({id,data})=>{
-      const free=isFreeProfessional(data),signup=canSignupProfessional(data),plan=data.plan||'aprendiz';
-      return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:11px;margin-bottom:8px;background:#fff"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div style="min-width:190px;flex:1"><b>${esc(userTitle(id,data))}</b><div style="font-size:11px;color:#6b7280;margin-top:3px">Plano atual: ${esc(plan)} · Cortesia Pro: <b>${free?'SIM':'NÃO'}</b> · Pode assinar Pro: <b>${signup?'SIM':'NÃO'}</b></div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ${free?'danger':'success'}" type="button" data-pro-free-user="${esc(id)}" data-pro-free-next="${free?'0':'1'}">${free?'↩️ Retirar Profissional grátis':'🎁 Liberar Profissional grátis'}</button><button class="btn" type="button" data-pro-signup-user="${esc(id)}" data-pro-signup-next="${signup?'0':'1'}">${signup?'🙈 Ocultar assinatura Profissional':'💳 Liberar para assinar Profissional'}</button></div></div></div>`;
+      const free=isFreeProfessional(data),signup=canSignupProfessional(data),plan=data.plan||'basico';
+      return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:11px;margin-bottom:8px;background:#fff"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div style="min-width:190px;flex:1"><b>${esc(userTitle(id,data))}</b><div style="font-size:11px;color:#6b7280;margin-top:3px">Plano atual: ${esc(plan==='aprendiz'?'basico':plan)} · Cortesia Pro: <b>${free?'SIM':'NÃO'}</b> · Pode assinar Pro: <b>${signup?'SIM':'NÃO'}</b></div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ${free?'danger':'success'}" type="button" data-pro-free-user="${esc(id)}" data-pro-free-next="${free?'0':'1'}">${free?'↩️ Retirar Profissional grátis':'🎁 Liberar Profissional grátis'}</button><button class="btn" type="button" data-pro-signup-user="${esc(id)}" data-pro-signup-next="${signup?'0':'1'}">${signup?'🙈 Ocultar assinatura Profissional':'💳 Liberar para assinar Profissional'}</button></div></div></div>`;
     }).join('');
     $$('[data-pro-free-user]',list).forEach(btn=>btn.onclick=()=>toggleFreeProfessional(btn));
     $$('[data-pro-signup-user]',list).forEach(btn=>btn.onclick=()=>toggleProfessionalSignup(btn));
@@ -96,11 +117,11 @@ async function toggleFreeProfessional(btn){
   try{
     const ref=d.collection('users').doc(uid),snap=await ref.get(),u=snap.exists?(snap.data()||{}):{};
     if(next){
-      const previous=u.plan&&u.plan!=='profissional'?u.plan:(u.previousPlanBeforeFreeProfessional||'aprendiz');
+      const previous=u.plan&&u.plan!=='profissional'?(u.plan==='aprendiz'?'basico':u.plan):(u.previousPlanBeforeFreeProfessional||'basico');
       await ref.set({professionalGrantedFree:true,previousPlanBeforeFreeProfessional:previous,plan:'profissional',...limitsFor('profissional'),professionalAccessUpdatedAt:firebase.firestore.FieldValue.serverTimestamp(),professionalAccessUpdatedBy:(typeof currentUser!=='undefined'&&currentUser?.email)||''},{merge:true});
       notify('Plano Profissional liberado gratuitamente!');
     }else{
-      const restore=u.previousPlanBeforeFreeProfessional||'aprendiz';
+      const restore=(u.previousPlanBeforeFreeProfessional&&u.previousPlanBeforeFreeProfessional!=='aprendiz')?u.previousPlanBeforeFreeProfessional:'basico';
       await ref.set({professionalGrantedFree:false,plan:restore,...limitsFor(restore),professionalAccessUpdatedAt:firebase.firestore.FieldValue.serverTimestamp(),professionalAccessUpdatedBy:(typeof currentUser!=='undefined'&&currentUser?.email)||''},{merge:true});
       notify('Cortesia do Profissional retirada.');
     }
