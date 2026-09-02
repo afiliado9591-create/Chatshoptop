@@ -2,7 +2,7 @@
 (function(){
 'use strict';const $=(s,r)=>(r||document).querySelector(s);
 function dbRef(){try{return typeof db!=='undefined'&&db?db:null}catch(e){return null}}function uid(){try{return typeof myUid!=='undefined'&&myUid?myUid:(typeof currentUser!=='undefined'&&currentUser?.uid?currentUser.uid:'')}catch(e){return''}}function email(){try{return String((typeof currentUser!=='undefined'&&currentUser?.email)||'')}catch(e){return''}}function brl(v){return'R$ '+Number(v||0).toFixed(2).replace('.',',')}function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function hasProfile(){const d=dbRef();if(!d||!uid())return false;try{const s=await d.collection('divulgadores').doc(uid()).get();return s.exists&&s.data()?.profileCreated===true}catch(e){return false}}
+async function hasProfile(){const d=dbRef();if(!d||!uid())return false;try{const s=await d.collection('divulgadores').doc(uid()).get();return s.exists&&s.data()?.profileCreated!==false}catch(e){return false}}
 async function getClicks(){const d=dbRef();if(!d||!uid())return[];try{const s=await d.collection('shopadsClicks').where('promoterUid','==',uid()).get();return s.docs.map(x=>({id:x.id,...x.data()}))}catch(e){return[]}}
 async function getCampaigns(){const d=dbRef();if(!d)return{};try{const s=await d.collection('shopadsCampaigns').get(),m={};s.docs.forEach(x=>m[x.id]={id:x.id,...x.data()});return m}catch(e){return{}}}
 async function getWithdrawals(){const d=dbRef();if(!d||!uid())return[];try{const s=await d.collection('shopadsWithdrawals').where('promoterUid','==',uid()).get();return s.docs.map(x=>({id:x.id,...x.data()}))}catch(e){return[]}}
