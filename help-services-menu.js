@@ -33,14 +33,14 @@
     const planosBtn = document.getElementById('verPlanosBtn');
     if (!planosBtn || document.getElementById('precisaAjudaBtn')) return;
 
-    /* Módulo isolado: o próprio /video-generator/ valida o plano no Firebase. */
+    /* Gerador liberado gratuitamente por período temporário. */
     if (!document.getElementById('videoGeneratorBtn')) {
       const videoBtn = document.createElement('button');
       videoBtn.className = 'btn';
       videoBtn.id = 'videoGeneratorBtn';
       videoBtn.type = 'button';
-      videoBtn.textContent = '🎬 Gerador de Vídeos';
-      videoBtn.title = 'Disponível nos planos Básico e Profissional';
+      videoBtn.innerHTML = '🎬 Gerador de Vídeos <small style="font-size:10px;font-weight:900;background:#dcfce7;color:#166534;padding:3px 6px;border-radius:999px;white-space:nowrap">GRATUITO TEMPORARIAMENTE</small>';
+      videoBtn.title = 'Gerador de vídeos gratuito temporariamente';
       videoBtn.addEventListener('click', function () {
         window.location.href = '/video-generator/';
       });
@@ -67,32 +67,32 @@
         '<button class="ajuda-fechar" type="button" data-fechar-ajuda aria-label="Fechar">×</button>' +
         '<div data-ajuda-view="catalogo">' +
           '<h2 id="ajudaTitulo">📦 Contratar catálogo pronto</h2>' +
-          '<p class="ajuda-intro">Escolha o tamanho do catálogo. O valor mostrado é da montagem e o pacote inclui a contratação do plano indicado.</p>' +
+          '<p class="ajuda-intro">O Plano Básico é gratuito e permite criar seu próprio catálogo com até 30 produtos. Se preferir, você pode contratar apenas o serviço de montagem do catálogo.</p>' +
           '<div class="ajuda-pacotes">' +
             '<article class="ajuda-pacote">' +
-              '<span class="ajuda-etiqueta">10 a 30 produtos</span>' +
+              '<span class="ajuda-etiqueta">Até 30 produtos</span>' +
               '<h3>Catálogo Essencial</h3>' +
               '<strong>R$ 80,00</strong>' +
-              '<p>Montagem do catálogo + contratação do Plano Básico.</p>' +
-              '<button class="btn primary" type="button" data-servico="Quero contratar o plano básico para construção de catálogo.">Contratar pelo WhatsApp</button>' +
+              '<p>Serviço de montagem do catálogo. O Plano Básico do ChatShop é gratuito.</p>' +
+              '<button class="btn primary" type="button" data-servico="Quero contratar a montagem de um catálogo de até 30 produtos. Sei que o Plano Básico do ChatShop é gratuito.">Contratar pelo WhatsApp</button>' +
             '</article>' +
             '<article class="ajuda-pacote destaque">' +
-              '<span class="ajuda-etiqueta">31 a 50 produtos</span>' +
-              '<h3>Catálogo Completo</h3>' +
+              '<span class="ajuda-etiqueta">Mais de 30 produtos</span>' +
+              '<h3>Catálogo Profissional</h3>' +
               '<strong>R$ 120,00</strong>' +
-              '<p>Montagem do catálogo + contratação do Plano Profissional.</p>' +
-              '<button class="btn primary" type="button" data-servico="Quero contratar o plano profissional para construção de catálogo.">Contratar pelo WhatsApp</button>' +
+              '<p>Serviço de montagem para catálogo maior. Produtos ilimitados e Loja Virtual pertencem ao Plano Profissional.</p>' +
+              '<button class="btn primary" type="button" data-servico="Quero contratar a montagem de um catálogo profissional com mais de 30 produtos.">Contratar pelo WhatsApp</button>' +
             '</article>' +
           '</div>' +
-          '<small class="ajuda-aviso">A contratação é combinada diretamente pelo WhatsApp. Nenhum Pix ou pagamento automático é gerado por estes botões.</small>' +
+          '<small class="ajuda-aviso">Os valores acima são do serviço de montagem do catálogo. O Plano Básico é gratuito. O Plano Profissional custa R$ 49,90/mês.</small>' +
         '</div>' +
         '<div data-ajuda-view="loja" style="display:none">' +
           '<h2 id="ajudaTituloLoja">🛒 Contratar Loja Virtual</h2>' +
-          '<p class="ajuda-intro">Solicite a montagem da sua loja virtual com produtos, aparência e configurações iniciais.</p>' +
+          '<p class="ajuda-intro">A Loja Virtual faz parte do Plano Profissional de R$ 49,90/mês. Se quiser, você também pode solicitar o serviço de montagem e configuração inicial.</p>' +
           '<div class="ajuda-pacote">' +
             '<h3>Loja Virtual Personalizada</h3>' +
-            '<p>Após o contato, definiremos a quantidade de produtos e as configurações necessárias para preparar o orçamento.</p>' +
-            '<button class="btn primary" type="button" data-servico="Quero contratar a construção da loja virtual.">Contratar pelo WhatsApp</button>' +
+            '<p>Após o contato, definiremos a quantidade de produtos e as configurações necessárias para preparar o orçamento do serviço de montagem.</p>' +
+            '<button class="btn primary" type="button" data-servico="Quero contratar a construção da loja virtual do Plano Profissional.">Contratar pelo WhatsApp</button>' +
           '</div>' +
         '</div>' +
       '</section>';
