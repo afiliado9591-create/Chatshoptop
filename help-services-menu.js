@@ -29,12 +29,29 @@
     });
   }
 
+  function carregarShopAdsAdmin() {
+    if (document.getElementById('chatshopShopAdsAdminScript')) return;
+    const adminScript = document.createElement('script');
+    adminScript.id = 'chatshopShopAdsAdminScript';
+    adminScript.src = '/shopads-admin.js?v=20260902-admin';
+    adminScript.async = true;
+    adminScript.onerror = function () {
+      console.warn('O painel administrativo do ShopAds não carregou.');
+    };
+    document.body.appendChild(adminScript);
+  }
+
   function carregarShopAds() {
-    if (document.getElementById('chatshopShopAdsScript')) return;
+    const existente = document.getElementById('chatshopShopAdsScript');
+    if (existente) {
+      carregarShopAdsAdmin();
+      return;
+    }
     const script = document.createElement('script');
     script.id = 'chatshopShopAdsScript';
-    script.src = '/shopads.js?v=20260902-panel';
+    script.src = '/shopads.js?v=20260902-etapa4';
     script.async = true;
+    script.onload = carregarShopAdsAdmin;
     script.onerror = function () {
       console.warn('A área ShopAds não carregou. O restante do ChatShop continua disponível.');
     };
