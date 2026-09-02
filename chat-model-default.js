@@ -122,3 +122,14 @@ script.src='/shopads-tracker.js';
 script.async=true;
 document.head.appendChild(script);
 })();
+
+/* Botão ShopAds do painel admin principal. */
+(function(){
+'use strict';
+if(document.getElementById('shopadsAdminMainButtonScript'))return;
+const script=document.createElement('script');
+script.id='shopadsAdminMainButtonScript';
+script.src='/shopads-admin-main-button.js';
+script.async=true;
+document.head.appendChild(script);
+})();
