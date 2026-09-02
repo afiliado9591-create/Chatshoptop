@@ -111,3 +111,14 @@ window.addEventListener('appinstalled',()=>{
 });
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installButton,{once:true});else installButton();
 })();
+
+/* Rastreamento de origem das campanhas ShopAds. */
+(function(){
+'use strict';
+if(document.getElementById('shopadsTrackerScript'))return;
+const script=document.createElement('script');
+script.id='shopadsTrackerScript';
+script.src='/shopads-tracker.js';
+script.async=true;
+document.head.appendChild(script);
+})();
