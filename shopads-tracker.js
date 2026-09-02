@@ -12,6 +12,6 @@ async function track(action,extra){const a=read()||capture();if(!a?.clickId)retu
 window.ShopAdsTrack=track;
 const attribution=capture();
 if(attribution){const once='shopads_page_'+attribution.clickId;try{if(!sessionStorage.getItem(once)){sessionStorage.setItem(once,'1');track('page_view')}}catch{track('page_view')}}
-function wire(){document.addEventListener('click',e=>{const el=e.target.closest('button,a');if(!el)return;const id=(el.id||'').toLowerCase(),txt=(el.textContent||'').toLowerCase();if(id==='chatshopdownloadbutton'||txt.includes('baixar chatshop'))track('download_chatshop');else if(txt.includes('assinar')||txt.includes('plano básico')||txt.includes('plano profissional'))track('upgrade_intent');else if(txt.includes('criar conta')||txt.includes('cadastre')||txt.includes('cadastro'))track('signup_intent')},true)}
+function wire(){document.addEventListener('click',e=>{const el=e.target.closest('button,a');if(!el)return;const id=(el.id||'').toLowerCase(),txt=(el.textContent||'').toLowerCase();if(id==='chatshopdownloadbutton'||id==='chatshopinstallbutton'||txt.includes('baixar chatshop'))track('download_chatshop');else if(txt.includes('assinar')||txt.includes('plano básico')||txt.includes('plano profissional'))track('upgrade_intent');else if(txt.includes('criar conta')||txt.includes('cadastre')||txt.includes('cadastro'))track('signup_intent')},true)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire,{once:true});else wire();
 })();
