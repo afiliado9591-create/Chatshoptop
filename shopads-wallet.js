@@ -1,7 +1,7 @@
 /* ShopAds Wallet — privada e exclusiva para divulgadores cadastrados. */
 (function(){
 'use strict';const $=(s,r)=>(r||document).querySelector(s);
-function dbRef(){try{return typeof db!=='undefined'&&db?db:null}catch(e){return null}}function uid(){try{return typeof myUid!=='undefined'&&myUid?myUid:(typeof currentUser!=='undefined'&&currentUser?.uid?currentUser.uid:'')}catch(e){return''}}function email(){try{return String((typeof currentUser!=='undefined'&&currentUser?.email)||'')}catch(e){return''}}function brl(v){return'R$ '+Number(v||0).toFixed(2).replace('.',',')}function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function dbRef(){try{return typeof db!=='undefined'&&db?db:null}catch(e){return null}}function uid(){try{return typeof myUid!=='undefined'&&myUid?myUid:(typeof currentUser!=='undefined'&&currentUser?.uid?currentUser.uid:'')}catch(e){return''}}function email(){try{return String((typeof currentUser!=='undefined'&&currentUser?.email)||'')}catch(e){return''}}function brl(v){return'R$ '+Number(v||0).toFixed(2).replace('.',',')}function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]))}
 async function hasProfile(){const d=dbRef();if(!d||!uid())return false;try{const s=await d.collection('divulgadores').doc(uid()).get();return s.exists&&s.data()?.profileCreated!==false}catch(e){return false}}
 async function getClicks(){const d=dbRef();if(!d||!uid())return[];try{const s=await d.collection('shopadsClicks').where('promoterUid','==',uid()).get();return s.docs.map(x=>({id:x.id,...x.data()}))}catch(e){return[]}}
 async function getCampaigns(){const d=dbRef();if(!d)return{};try{const s=await d.collection('shopadsCampaigns').get(),m={};s.docs.forEach(x=>m[x.id]={id:x.id,...x.data()});return m}catch(e){return{}}}
@@ -11,4 +11,32 @@ function styles(){if($('#shopAdsWalletStyles'))return;const s=document.createEle
 async function openWallet(){if(!(await hasProfile())){alert('A Carteira ShopAds é exclusiva para divulgadores cadastrados. Crie seu perfil de divulgador primeiro.');window.openPromoterProfile?.();return}styles();let el=$('#shopAdsWallet');if(!el){el=document.createElement('div');el.id='shopAdsWallet';document.body.appendChild(el)}el.classList.add('open');el.innerHTML='<div class="saw-top"><div class="saw-head"><b>💰 Minha Carteira ShopAds</b><button class="saw-close">×</button></div></div><main class="saw-body"><section class="saw-card" id="sawContent">Carregando...</section></main>';$('.saw-close',el).onclick=()=>el.classList.remove('open');const box=$('#sawContent',el),[clicks,camps,withdrawals]=await Promise.all([getClicks(),getCampaigns(),getWithdrawals()]),valid=clicks.filter(x=>x.valid!==false&&!x.duplicate);let pending=0,approved=0;const rows=[];valid.forEach(x=>{const c=camps[x.campaignId]||{},value=Number(x.reward!=null?x.reward:c.reward||0),status=x.paymentStatus||x.balanceStatus||'pendente';status==='aprovado'?approved+=value:pending+=value;rows.push({x,c,value,status})});const withdrawn=withdrawals.filter(x=>x.status==='aprovado').reduce((s,x)=>s+Number(x.amount||0),0),requested=withdrawals.filter(x=>x.status==='pendente').reduce((s,x)=>s+Number(x.amount||0),0),available=Math.max(0,approved-withdrawn-requested);box.innerHTML=`<h2>Área financeira privada</h2><p class="saw-note">Somente você e o administrador têm acesso a estes valores.</p><div class="saw-grid"><div class="saw-metric">Pendente<b>${brl(pending)}</b></div><div class="saw-metric">Aprovado<b>${brl(approved)}</b></div><div class="saw-metric">Disponível<b>${brl(available)}</b></div></div><h3>Solicitar saque</h3><button class="saw-btn" id="sawWithdraw" ${available<=0||requested>0?'disabled':''}>${requested>0?'Saque aguardando análise':available>0?'Solicitar '+brl(available):'Sem saldo disponível'}</button><h3>Minhas ações e ganhos</h3>${rows.length?rows.slice().reverse().slice(0,100).map(r=>`<div class="saw-row"><b>${esc(r.c.title||r.x.campaignId||'Campanha')}</b><br>${brl(r.value)} · ${esc(r.status)}</div>`).join(''):'<p>Nenhuma ação registrada ainda.</p>'}`;const wb=$('#sawWithdraw',box);if(wb&&!wb.disabled)wb.onclick=async()=>{try{await requestWithdrawal(available);alert('Solicitação enviada.');openWallet()}catch(e){alert(e.message)}}}
 async function syncButton(){const shop=$('#shopAdsBtn,[data-open-shopads]'),old=$('#shopAdsWalletBtn');if(!(await hasProfile())){old?.remove();return false}if(old)return true;if(!shop||!shop.parentElement)return false;const b=document.createElement('button');b.id='shopAdsWalletBtn';b.className=shop.className||'btn';b.textContent='💰 Carteira ShopAds';b.onclick=openWallet;shop.parentElement.insertBefore(b,shop.nextSibling);return true}
 function install(){window.openShopAdsWallet=openWallet;syncButton();window.addEventListener('chatshop:promoter-profile-saved',syncButton);let n=0,t=setInterval(()=>{if(++n>40||$('#shopAdsWalletBtn'))clearInterval(t);else syncButton()},300)}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+})();
+
+/* Correção visual dos planos: Básico é grátis e Aprendiz não é mais exibido. */
+(function(){
+'use strict';
+function fixPlans(){
+  const cols=document.querySelector('#plansCols');
+  if(!cols)return;
+  Array.from(cols.querySelectorAll('.plan-card')).forEach(card=>{
+    const title=String(card.querySelector('h3')?.textContent||'').trim().toLowerCase();
+    if(title.includes('aprendiz')){card.remove();return;}
+    if(title.includes('básico')||title.includes('basico')){
+      const price=card.querySelector('.preco');if(price)price.textContent='Grátis';
+      card.querySelectorAll('button').forEach(btn=>btn.remove());
+      Array.from(card.querySelectorAll('div,small,p')).forEach(el=>{
+        const txt=String(el.textContent||'');
+        if(/assinar|pagamento|r\$\s*18|18,00/i.test(txt)&&!el.classList.contains('preco'))el.remove();
+      });
+    }
+  });
+}
+function boot(){
+  fixPlans();
+  document.addEventListener('click',e=>{if(e.target.closest?.('#verPlanosBtn'))setTimeout(fixPlans,0)},true);
+  const obs=new MutationObserver(()=>fixPlans());obs.observe(document.documentElement,{childList:true,subtree:true});
+  let n=0,t=setInterval(()=>{fixPlans();if(++n>120)clearInterval(t)},250);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
