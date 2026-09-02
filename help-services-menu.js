@@ -29,6 +29,18 @@
     });
   }
 
+  function carregarShopAds() {
+    if (document.getElementById('chatshopShopAdsScript')) return;
+    const script = document.createElement('script');
+    script.id = 'chatshopShopAdsScript';
+    script.src = '/shopads.js?v=20260902-panel';
+    script.async = true;
+    script.onerror = function () {
+      console.warn('A área ShopAds não carregou. O restante do ChatShop continua disponível.');
+    };
+    document.body.appendChild(script);
+  }
+
   function instalar() {
     const planosBtn = document.getElementById('verPlanosBtn');
     if (!planosBtn || document.getElementById('precisaAjudaBtn')) return;
@@ -46,6 +58,9 @@
       });
       planosBtn.parentElement.insertBefore(videoBtn, planosBtn);
     }
+
+    /* ShopAds: carrega em módulo separado para não mexer no motor do chatbot. */
+    carregarShopAds();
 
     const wrapper = document.createElement('div');
     wrapper.className = 'ajuda-menu-wrap';
