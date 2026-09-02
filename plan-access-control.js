@@ -2,8 +2,13 @@
 (function(){
 'use strict';
 
+/* Modelo comercial 2026:
+   - Básico: gratuito, até 30 produtos, catálogo de afiliado.
+   - Profissional: R$ 49,90/mês, produtos ilimitados + Loja Virtual.
+   - Aprendiz virou legado e é tratado como Básico para não quebrar usuários antigos.
+*/
 const POLICY={
-  aprendiz:{products:10,chats:1,virtual:false},
+  aprendiz:{products:30,chats:1,virtual:false},
   basico:{products:30,chats:1,virtual:false},
   profissional:{products:1000000,chats:2,virtual:true}
 };
@@ -11,10 +16,10 @@ const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 
 function adminMode(){try{return typeof isAdmin!=='undefined'&&isAdmin===true}catch(e){return false}}
-function normalizePlan(v){const s=String(v||'aprendiz').toLowerCase();if(s.includes('prof')||s==='pro'||s.includes('premium'))return'profissional';if(s.includes('bas'))return'basico';return'aprendiz'}
-function currentPlan(){try{return adminMode()?'profissional':normalizePlan((typeof myPlan!=='undefined'&&myPlan)||'aprendiz')}catch(e){return'aprendiz'}}
+function normalizePlan(v){const s=String(v||'basico').toLowerCase();if(s.includes('prof')||s==='pro'||s.includes('premium'))return'profissional';return'basico'}
+function currentPlan(){try{return adminMode()?'profissional':normalizePlan((typeof myPlan!=='undefined'&&myPlan)||'basico')}catch(e){return'basico'}}
 function manualVirtualAccess(){try{return window.__CHATSHOP_VIRTUAL_STORE_ACCESS===true}catch(e){return false}}
-function canUseVirtual(){return adminMode()||(POLICY[currentPlan()]||POLICY.aprendiz).virtual||manualVirtualAccess()}
+function canUseVirtual(){return adminMode()||(POLICY[currentPlan()]||POLICY.basico).virtual||manualVirtualAccess()}
 function isVirtual(){return $('#storeType')?.value==='virtual'}
 
 function loadScriptFresh(src,id){
@@ -155,8 +160,38 @@ function patchPopulateOnce(){
   wrapped.__virtualRecoveryWrapped=true;window.populateForm=wrapped;try{populateForm=wrapped}catch(e){}
 }
 
+function applyBusinessModelUi(){
+  try{
+    // Esconde controles/cartões legados do Aprendiz sem tocar no chatbot.
+    $$('[data-plan="aprendiz"],[data-plano="aprendiz"],[data-plan-key="aprendiz"]').forEach(el=>{el.style.display='none'});
+    $$('button,a,div,section,article').forEach(el=>{
+      if(el.children.length>18)return;
+      const txt=(el.textContent||'').replace(/\s+/g,' ').trim();
+      if(/^Aprendiz$/i.test(txt))el.style.display='none';
+    });
+
+    // Atualiza textos visíveis do Básico e remove referência ao preço antigo.
+    $$('body *').forEach(el=>{
+      if(el.children.length)return;
+      let t=(el.textContent||'').trim();
+      if(!t)return;
+      if(/^R\$\s*18([,.]00)?(\/m[eê]s)?$/i.test(t))el.textContent='Grátis';
+      else if(/B[aá]sico/i.test(t)&&/R\$\s*18/i.test(t))el.textContent=t.replace(/R\$\s*18(?:[,.]00)?(?:\/m[eê]s)?/ig,'Grátis');
+    });
+
+    // Selo temporário no acesso ao gerador de vídeos.
+    $$('a,button').forEach(el=>{
+      const txt=(el.textContent||'').toLowerCase(),href=String(el.getAttribute?.('href')||'').toLowerCase();
+      if((txt.includes('vídeo')||txt.includes('video')||href.includes('video-generator'))&&!el.dataset.videoFreeBadge){
+        el.dataset.videoFreeBadge='1';
+        if(!txt.includes('gratuito temporariamente'))el.insertAdjacentHTML('beforeend',' <small style="font-size:10px;font-weight:900;background:#dcfce7;color:#166534;padding:3px 6px;border-radius:999px;white-space:nowrap">GRATUITO TEMPORARIAMENTE</small>');
+      }
+    });
+  }catch(e){console.warn('ChatShop: ajuste visual do modelo comercial',e)}
+}
+
 function applyAccess(){
-  const cap=POLICY[currentPlan()]||POLICY.aprendiz;try{myProductLimit=cap.products;myChatLimit=cap.chats}catch(e){}
+  const cap=POLICY[currentPlan()]||POLICY.basico;try{myProductLimit=cap.products;myChatLimit=cap.chats}catch(e){}
   const type=$('#storeType'),allow=canUseVirtual();
   if(type){
     const opt=[...type.options].find(o=>o.value==='virtual');
@@ -165,18 +200,31 @@ function applyAccess(){
   }
   ensureFormatControls();consolidateFormatControls();
   if(allow&&isVirtual())ensureShippingVisible();
-  patchCollectOnce();patchPopulateOnce();
+  patchCollectOnce();patchPopulateOnce();applyBusinessModelUi();
 }
 
 async function syncLoggedUser(){
-  try{if(typeof db==='undefined'||!db||typeof myUid==='undefined'||!myUid)return;const snap=await db.collection('users').doc(myUid).get();const u=snap.exists?(snap.data()||{}):{};const plan=adminMode()?'profissional':normalizePlan(u.plan||u.plano||currentPlan());try{myPlan=plan;myProductLimit=POLICY[plan].products;myChatLimit=POLICY[plan].chats}catch(e){}window.__CHATSHOP_VIRTUAL_STORE_ACCESS=adminMode()||u.virtualStoreAccess===true||POLICY[plan].virtual;setTimeout(applyAccess,60)}catch(e){console.warn('Falha ao sincronizar Loja Virtual',e)}
+  try{
+    if(typeof db==='undefined'||!db||typeof myUid==='undefined'||!myUid)return;
+    const ref=db.collection('users').doc(myUid),snap=await ref.get(),u=snap.exists?(snap.data()||{}):{};
+    const raw=String(u.plan||u.plano||'').toLowerCase();
+    const plan=adminMode()?'profissional':normalizePlan(raw);
+    try{myPlan=plan;myProductLimit=POLICY[plan].products;myChatLimit=POLICY[plan].chats}catch(e){}
+    window.__CHATSHOP_VIRTUAL_STORE_ACCESS=adminMode()||u.virtualStoreAccess===true||POLICY[plan].virtual;
+    // Migração segura: qualquer plano antigo Aprendiz/sem plano passa a Básico gratuito.
+    if(!adminMode()&&plan==='basico'&&raw!=='basico'){
+      ref.set({plan:'basico',plano:'basico',productLimit:30,chatLimit:1,basicAccess:true,basicPlanAccess:true,planMigration:'basico-gratuito-2026'}, {merge:true}).catch(()=>{});
+    }
+    setTimeout(applyAccess,60);
+  }catch(e){console.warn('Falha ao sincronizar Loja Virtual',e)}
 }
 
 function install(){
   applyAccess();
   document.addEventListener('change',e=>{if(e.target?.id==='storeType')setTimeout(()=>{applyAccess();if(isVirtual())ensureShippingVisible()},40)},true);
   try{if(window.auth&&typeof auth.onAuthStateChanged==='function')auth.onAuthStateChanged(user=>{if(user)setTimeout(syncLoggedUser,120)})}catch(e){}
-  let tries=0;const timer=setInterval(()=>{tries++;applyAccess();const ready=$('#virtualStoreFormatRecovery')&&(!isVirtual()||($('#shippingSettings')&&$('#shippingMode')));if(ready||tries>=16)clearInterval(timer)},250);
+  let tries=0;const timer=setInterval(()=>{tries++;applyAccess();const ready=$('#virtualStoreFormatRecovery')&&(!isVirtual()||($('#shippingSettings')&&$('#shippingMode')));if(ready||tries>=24)clearInterval(timer)},250);
+  const observer=new MutationObserver(()=>applyBusinessModelUi());observer.observe(document.documentElement,{childList:true,subtree:true});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
