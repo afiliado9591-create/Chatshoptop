@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6d28d9">
+<title>ShopAds • Impulsionar</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f7f5ff;color:#1f2937;font-family:Arial,sans-serif}.top{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;padding:20px 16px 30px}.wrap{max-width:680px;margin:auto}.brand{font-size:28px;font-weight:900}.brand span{color:#facc15}.top h1{margin:22px 0 6px;font-size:26px}.top p{margin:0;color:#ede9fe}.main{max-width:680px;margin:auto;padding:14px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 8px 24px #4c1d9510}.note{padding:11px 12px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:12px;font-size:13px;margin-bottom:14px}.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}.field{display:grid;gap:6px;margin:13px 0}.field label{font-size:13px;font-weight:800}.field input,.field select,.field textarea{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;font:inherit}.field textarea{min-height:90px;resize:vertical}.budgets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.budget{border:1px solid #ddd6fe;background:#fff;border-radius:12px;padding:13px;font-weight:900;color:#5b21b6}.budget.active{background:#6d28d9;color:#fff;border-color:#6d28d9}.btn{width:100%;border:0;border-radius:12px;padding:14px;font-weight:900;font-size:15px;cursor:pointer}.primary{background:#6d28d9;color:#fff}.secondary{background:#f3f4f6;color:#374151;margin-top:8px}.hidden{display:none!important}.status{font-size:13px;margin-top:10px;min-height:18px}.origin{display:inline-block;padding:5px 8px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:900;margin-top:8px}@media(max-width:520px){.budgets{grid-template-columns:repeat(2,1fr)}}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<header class="top"><div class="wrap"><div class="brand">Shop<span>Ads</span></div><span class="origin" id="originBadge">Origem: Chama</span><h1>🚀 Impulsionar</h1><p>Campanha integrada entre Chama e ChatShop.</p></div></header>
+<main class="main">
+<section class="card" id="loginCard"><div class="note warn"><b>Entre na sua conta do ChatShop.</b><br>Se você já estiver logado neste navegador, a tela de campanha abrirá automaticamente.</div><button class="btn primary" id="goLogin">Entrar no ChatShop</button></section>
+<section class="card hidden" id="formCard"><div class="note"><b>Fase de teste.</b> Nenhuma cobrança real será feita agora. A campanha será salva como rascunho no Shop Ads.</div><form id="campaignForm">
+<div class="field"><label>O que será impulsionado?</label><select id="type"><option value="catalogo">Catálogo</option><option value="produto">Produto</option><option value="anuncio">Anúncio</option><option value="perfil">Perfil/loja</option></select></div>
+<div class="field"><label>Nome da campanha</label><input id="title" maxlength="120" required placeholder="Ex.: Catálogo de ofertas"></div>
+<div class="field"><label>Link de destino</label><input id="url" type="url" required placeholder="https://..."></div>
+<div class="field"><label>Imagem do anúncio (opcional)</label><input id="image" type="url" placeholder="https://..."></div>
+<div class="field"><label>Descrição (opcional)</label><textarea id="description" maxlength="500"></textarea></div>
+<div class="field"><label>Orçamento</label><div class="budgets" id="budgets"></div></div>
+<div class="field"><label>Modelo inicial</label><select id="resultType"><option value="clique">Cobrar por clique válido</option><option value="visita">Cobrar por visita válida</option></select></div>
+<button class="btn primary" type="submit" id="saveBtn">Salvar campanha no Shop Ads</button><button class="btn secondary" type="button" id="openShopAds">Abrir painel ChatShop</button><div class="status" id="status"></div>
+</form></section>
+</main>
+<script>
+const firebaseConfig={apiKey:"AIzaSyBZlCM-6l_iV_GTirvTwUumKM3ZGRvgxt8",authDomain:"chatshop-97ea3.firebaseapp.com",projectId:"chatshop-97ea3",storageBucket:"chatshop-97ea3.firebasestorage.app",messagingSenderId:"430779427610",appId:"1:430779427610:web:7418f6e4f6006535209aa3"};
+firebase.initializeApp(firebaseConfig);const auth=firebase.auth(),db=firebase.firestore();
+const p=new URLSearchParams(location.search),source=(p.get('source')||'chama').toLowerCase();
+const CHAMA_BUDGETS=[5,10,15,20,30,50],SHOPADS_BUDGETS=[5,10,15,20,50,100],allowed=source==='chama'?CHAMA_BUDGETS:SHOPADS_BUDGETS;
+let selected=allowed.includes(Number(p.get('budget')))?Number(p.get('budget')):allowed[0];
+const $=id=>document.getElementById(id);$('originBadge').textContent='Origem: '+(source==='chama'?'Chama':'Shop Ads');
+function fill(){const t=p.get('type')||'catalogo';if([...$('type').options].some(o=>o.value===t))$('type').value=t;$('title').value=p.get('title')||'';$('url').value=p.get('url')||'';renderBudgets()}
+function renderBudgets(){$('budgets').innerHTML=allowed.map(v=>`<button type="button" class="budget ${v===selected?'active':''}" data-v="${v}">R$ ${v}</button>`).join('');$('budgets').onclick=e=>{const b=e.target.closest('[data-v]');if(!b)return;selected=Number(b.dataset.v);renderBudgets()}}
+function rememberIncoming(){try{localStorage.setItem('shopads_chama_incoming_v1',JSON.stringify({source,type:p.get('type')||'',budget:selected,title:p.get('title')||'',url:p.get('url')||'',savedAt:new Date().toISOString()}))}catch(e){}}
+rememberIncoming();fill();
+$('goLogin').onclick=()=>{rememberIncoming();location.href='/?shopads=1&from=chama'};$('openShopAds').onclick=()=>location.href='/?shopads=1';
+auth.onAuthStateChanged(user=>{$('loginCard').classList.toggle('hidden',!!user);$('formCard').classList.toggle('hidden',!user)});
+$('campaignForm').onsubmit=async e=>{e.preventDefault();const user=auth.currentUser;if(!user){$('status').textContent='Faça login no ChatShop para salvar.';return}const title=$('title').value.trim(),url=$('url').value.trim();if(!title||!url)return;const id='sa_'+Date.now()+'_'+user.uid.slice(0,8);const now=new Date().toISOString();const data={id,ownerUid:user.uid,ownerEmail:user.email||'',title,url,image:$('image').value.trim(),description:$('description').value.trim(),budget:selected,reward:0,resultType:$('resultType').value,sourceType:'bridge_'+source,sourcePlatform:source,sourceItemType:$('type').value,status:'rascunho',billingMode:'teste',paymentEnabled:false,createdAt:now,updatedAt:now};const btn=$('saveBtn');btn.disabled=true;btn.textContent='Salvando...';try{await db.collection('shopadsCampaigns').doc(id).set(data,{merge:true});$('status').textContent='✅ Campanha salva como rascunho. Nenhuma cobrança foi realizada.';btn.textContent='Salvo ✓'}catch(err){console.error(err);$('status').textContent='Não foi possível salvar: '+(err.message||'erro');btn.disabled=false;btn.textContent='Tentar novamente'}};
+</script>
+</body></html>
