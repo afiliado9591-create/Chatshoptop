@@ -27,8 +27,7 @@ audio{width:100%;margin-top:10px}canvas,video{width:100%;max-width:360px;display
 </head>
 <body>
 <div class="top"><div class="topin"><a class="back" href="/">← Voltar ao ChatShop</a><b>🎬 Gerador de Vídeos</b></div></div>
-<div id="checking" class="lock"><h1>Verificando seu plano...</h1><p>Aguarde um instante.</p></div>
-<div id="locked" class="lock hidden"><h1>🔒 Recurso dos planos pagos</h1><p>O Gerador de Vídeos está disponível nos planos <b>Básico</b> e <b>Profissional</b>.</p><a href="/" style="text-decoration:none"><button>Voltar e ver os planos</button></a></div>
+<div id="checking" class="lock"><h1>Liberando acesso gratuito...</h1><p>Aguarde um instante.</p></div>
 <div id="loginNeeded" class="lock hidden"><h1>Entre no ChatShop</h1><p>Faça login no ChatShop para usar o Gerador de Vídeos.</p><a href="/" style="text-decoration:none"><button>Entrar no ChatShop</button></a></div>
 
 <main id="app" class="wrap hidden">
@@ -67,15 +66,10 @@ audio{width:100%;margin-top:10px}canvas,video{width:100%;max-width:360px;display
 <script>
 const firebaseConfig={apiKey:"AIzaSyBZlCM-6l_iV_GTirvTwUumKM3ZGRvgxt8",authDomain:"chatshop-97ea3.firebaseapp.com",projectId:"chatshop-97ea3",storageBucket:"chatshop-97ea3.firebasestorage.app",messagingSenderId:"430779427610",appId:"1:430779427610:web:7418f6e4f6006535209aa3"};
 firebase.initializeApp(firebaseConfig);const db=firebase.firestore(),auth=firebase.auth();
-const ADMIN_EMAILS=['jeanaguiar636@gmail.com'];
-auth.onAuthStateChanged(async user=>{
+auth.onAuthStateChanged(user=>{
   document.getElementById('checking').classList.add('hidden');
   if(!user){document.getElementById('loginNeeded').classList.remove('hidden');return}
-  try{
-    const snap=await db.collection('users').doc(user.uid).get();const plan=(snap.exists&&snap.data().plan)||'aprendiz';
-    const allowed=plan==='basico'||plan==='profissional'||ADMIN_EMAILS.includes((user.email||'').toLowerCase());
-    document.getElementById(allowed?'app':'locked').classList.remove('hidden');
-  }catch(e){document.getElementById('locked').classList.remove('hidden')}
+  document.getElementById('app').classList.remove('hidden');
 });
 
 (function(){
