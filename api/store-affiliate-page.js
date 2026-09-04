@@ -5,7 +5,7 @@ const COLLECTION='chatshops';
 const BASE_DOMAIN='alibr.com.br';
 
 function host(v){return String(v||'').split(',')[0].trim().toLowerCase().replace(/:\d+$/,'').replace(/\.$/,'')}
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]))}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fv(v){if(!v)return null;if('stringValue'in v)return v.stringValue;if('booleanValue'in v)return!!v.booleanValue;if('integerValue'in v)return Number(v.integerValue);if('doubleValue'in v)return Number(v.doubleValue);if('timestampValue'in v)return v.timestampValue;if(v.arrayValue)return(v.arrayValue.values||[]).map(fv);if(v.mapValue){const o={};for(const[k,x]of Object.entries(v.mapValue.fields||{}))o[k]=fv(x);return o}return null}
 function docData(doc){const o={};for(const[k,v]of Object.entries(doc?.fields||{}))o[k]=fv(v);return o}
 function slugify(s){return String(s||'produto').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90)||'produto'}
@@ -15,11 +15,34 @@ function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').tr
 function affiliateCode(){return'af_'+Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 function json(res,status,data){res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');return res.status(status).end(JSON.stringify(data))}
 
+function parseServiceAccount(raw){
+  let text=String(raw||'').trim();
+  if(!text)throw new Error('CHATSHOP_FIREBASE_SERVICE_ACCOUNT ausente');
+  try{
+    let parsed=JSON.parse(text);
+    if(typeof parsed==='string')parsed=JSON.parse(parsed);
+    return parsed;
+  }catch(_){ }
+  const start=text.indexOf('{');
+  if(start<0)throw new Error('CHATSHOP_FIREBASE_SERVICE_ACCOUNT inválida');
+  let depth=0,inString=false,escapeNext=false,end=-1;
+  for(let i=start;i<text.length;i++){
+    const ch=text[i];
+    if(escapeNext){escapeNext=false;continue}
+    if(ch==='\\'&&inString){escapeNext=true;continue}
+    if(ch==='"'){inString=!inString;continue}
+    if(inString)continue;
+    if(ch==='{')depth++;
+    else if(ch==='}'){depth--;if(depth===0){end=i;break}}
+  }
+  if(end<0)throw new Error('CHATSHOP_FIREBASE_SERVICE_ACCOUNT inválida');
+  const parsed=JSON.parse(text.slice(start,end+1));
+  if(parsed.private_key)parsed.private_key=String(parsed.private_key).replace(/\\n/g,'\n');
+  return parsed;
+}
 function getAdmin(){
   if(admin.apps.length)return admin.app();
-  const raw=process.env.CHATSHOP_FIREBASE_SERVICE_ACCOUNT;
-  if(!raw)throw new Error('CHATSHOP_FIREBASE_SERVICE_ACCOUNT ausente');
-  const service=JSON.parse(raw);
+  const service=parseServiceAccount(process.env.CHATSHOP_FIREBASE_SERVICE_ACCOUNT);
   return admin.initializeApp({credential:admin.credential.cert(service),projectId:PROJECT_ID});
 }
 
@@ -27,8 +50,7 @@ async function getBySlug(slug){
   const u=`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION}/${encodeURIComponent(slug)}?key=${API_KEY}`;
   const r=await fetch(u,{headers:{accept:'application/json'},cache:'no-store'});
   if(!r.ok)return null;
-  const d=await r.json();
-  return{slug,data:docData(d)};
+  return{slug,data:docData(await r.json())};
 }
 async function getByCustomDomain(h){
   const candidates=h.startsWith('www.')?[h,h.slice(4)]:[h,'www.'+h];
@@ -64,15 +86,15 @@ async function handleAffiliatePost(req,res,found){
   const name=clean(body.name,120),whatsapp=clean(body.whatsapp,30).replace(/\D/g,''),email=clean(body.email,180).toLowerCase(),social=clean(body.social,220);
   if(!name||whatsapp.length<10||!validEmail(email))return json(res,400,{ok:false,error:'Preencha nome, WhatsApp e e-mail corretamente.'});
   try{
-    const app=getAdmin(),db=app.firestore(),code=affiliateCode(),entry={affiliateCode:code,affiliateName:name,affiliateWhatsapp:whatsapp,affiliateEmail:email,affiliateSocial:social,affiliateStatus:'active',createdAt:admin.firestore.FieldValue.serverTimestamp()};
+    const app=getAdmin(),db=app.firestore(),code=affiliateCode();
+    const entry={affiliateCode:code,affiliateName:name,affiliateWhatsapp:whatsapp,affiliateEmail:email,affiliateSocial:social,affiliateStatus:'active',createdAt:admin.firestore.FieldValue.serverTimestamp()};
     await db.collection('chatshops').doc(found.slug).collection('leads').add({type:'affiliate_application',...entry});
     await db.collection('chatshops').doc(found.slug).set({affiliateDirectory:{[code]:entry}},{merge:true});
     const products=Array.isArray(s.products)?s.products:[],slugs=productSlugs(products);
     return json(res,200,{ok:true,code,products:products.map((p,i)=>({name:String(p?.name||'Produto'),slug:slugs[i]}))});
   }catch(e){
     console.error('affiliate-register',e);
-    const setup=String(e?.message||'').includes('CHATSHOP_FIREBASE_SERVICE_ACCOUNT');
-    return json(res,setup?503:500,{ok:false,error:setup?'Cadastro ainda não configurado no servidor.':'Não foi possível concluir o cadastro agora.'});
+    return json(res,500,{ok:false,error:'Não foi possível concluir o cadastro agora.'});
   }
 }
 
@@ -101,28 +123,14 @@ module.exports=async function(req,res){
     const commission=Math.max(0,Math.min(100,Number(ap.commissionPercent||0)));
     const terms=esc(ap.terms||'As regras de comissão são definidas pelo lojista.');
     const prod=JSON.stringify(productData).replace(/</g,'\\u003c');
+    const ctaJson=JSON.stringify(cta).replace(/</g,'\\u003c');
 
     const body=`<h1>${esc(headline)}</h1><p>${esc(description)}</p>${commission?'<div class="pill">Comissão informada: '+commission+'%</div>':''}<p class="muted">${terms}</p><div id="form"><div class="field"><label>Seu nome</label><input id="name" autocomplete="name"></div><div class="field"><label>WhatsApp</label><input id="whatsapp" inputmode="tel" autocomplete="tel"></div><div class="field"><label>E-mail</label><input id="email" type="email" autocomplete="email"></div><div class="field"><label>Instagram ou rede social (opcional)</label><input id="social"></div><button class="btn" id="send" type="button">${esc(cta)}</button><div id="err" style="color:#b91c1c;font-size:12px;margin-top:8px"></div></div><div class="ok" id="ok"><b>✅ Cadastro realizado!</b><p class="muted">Link geral da loja:</p><div class="url" id="link"></div><button class="btn" id="copy" type="button">Copiar link da loja</button><div id="productLinks"></div></div><script>
-const PRODUCTS=${prod};
-const byId=id=>document.getElementById(id);
-const formEl=byId('form'),nameEl=byId('name'),whatsappEl=byId('whatsapp'),emailEl=byId('email'),socialEl=byId('social'),sendEl=byId('send'),errEl=byId('err'),okEl=byId('ok'),linkEl=byId('link'),copyEl=byId('copy'),productLinksEl=byId('productLinks');
+const PRODUCTS=${prod};const CTA=${ctaJson};
+const byId=id=>document.getElementById(id);const formEl=byId('form'),nameEl=byId('name'),whatsappEl=byId('whatsapp'),emailEl=byId('email'),socialEl=byId('social'),sendEl=byId('send'),errEl=byId('err'),okEl=byId('ok'),linkEl=byId('link'),copyEl=byId('copy'),productLinksEl=byId('productLinks');
 function copyText(t,b){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(()=>b.textContent='✅ Copiado').catch(()=>fallbackCopy(t,b));}else fallbackCopy(t,b)}
 function fallbackCopy(t,b){const x=document.createElement('textarea');x.value=t;x.style.position='fixed';x.style.opacity='0';document.body.appendChild(x);x.select();try{document.execCommand('copy');b.textContent='✅ Copiado'}catch(e){}x.remove()}
-sendEl.addEventListener('click',async()=>{
-  const n=String(nameEl.value||'').trim(),w=String(whatsappEl.value||'').replace(/\\D/g,''),e=String(emailEl.value||'').trim(),so=String(socialEl.value||'').trim();
-  errEl.textContent='';
-  if(!n||w.length<10||!e||!e.includes('@')){errEl.textContent='Preencha nome, WhatsApp e e-mail corretamente.';return}
-  sendEl.disabled=true;sendEl.textContent='Cadastrando...';
-  try{
-    const r=await fetch(location.pathname+location.search,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:n,whatsapp:w,email:e,social:so})});
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok||!j.ok)throw new Error(j.error||'Não foi possível concluir o cadastro agora.');
-    const c=j.code,general=location.origin+'/?ref='+encodeURIComponent(c),products=Array.isArray(j.products)?j.products:PRODUCTS;
-    formEl.style.display='none';okEl.style.display='block';linkEl.textContent=general;copyEl.onclick=()=>copyText(general,copyEl);
-    productLinksEl.innerHTML=products.length?'<p class="muted"><b>Links dos produtos:</b></p><div class="products">'+products.map(p=>{const u=location.origin+'/produto/'+encodeURIComponent(p.slug)+'?ref='+encodeURIComponent(c);return'<div class="product-link"><span>'+String(p.name||'Produto').replace(/[&<>]/g,'')+'</span><button type="button" data-url="'+u.replace(/"/g,'&quot;')+'">Copiar</button></div>'}).join('')+'</div>':'';
-    productLinksEl.querySelectorAll('button').forEach(b=>b.onclick=()=>copyText(b.dataset.url,b));
-  }catch(x){console.error(x);errEl.textContent=x.message||'Não foi possível concluir o cadastro agora.';sendEl.disabled=false;sendEl.textContent=${JSON.stringify(cta)};}
-});
+sendEl.addEventListener('click',async()=>{const n=String(nameEl.value||'').trim(),w=String(whatsappEl.value||'').replace(/\\D/g,''),e=String(emailEl.value||'').trim(),so=String(socialEl.value||'').trim();errEl.textContent='';if(!n||w.length<10||!e||!e.includes('@')){errEl.textContent='Preencha nome, WhatsApp e e-mail corretamente.';return}sendEl.disabled=true;sendEl.textContent='Cadastrando...';try{const r=await fetch(location.pathname+location.search,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:n,whatsapp:w,email:e,social:so})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||'Não foi possível concluir o cadastro agora.');const c=j.code,general=location.origin+'/?ref='+encodeURIComponent(c),products=Array.isArray(j.products)?j.products:PRODUCTS;formEl.style.display='none';okEl.style.display='block';linkEl.textContent=general;copyEl.onclick=()=>copyText(general,copyEl);productLinksEl.innerHTML=products.length?'<p class="muted"><b>Links dos produtos:</b></p><div class="products">'+products.map(p=>{const u=location.origin+'/produto/'+encodeURIComponent(p.slug)+'?ref='+encodeURIComponent(c);return'<div class="product-link"><span>'+String(p.name||'Produto').replace(/[&<>]/g,'')+'</span><button type="button" data-url="'+u.replace(/"/g,'&quot;')+'">Copiar</button></div>'}).join('')+'</div>':'';productLinksEl.querySelectorAll('button').forEach(b=>b.onclick=()=>copyText(b.dataset.url,b));}catch(x){console.error(x);errEl.textContent=x.message||'Não foi possível concluir o cadastro agora.';sendEl.disabled=false;sendEl.textContent=CTA;}});
 <\/script>`;
     return res.status(200).send(shell(s,found,headline,body,true));
   }catch(e){
