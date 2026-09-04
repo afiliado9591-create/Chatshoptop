@@ -133,3 +133,14 @@ script.src='/shopads-admin-main-button.js';
 script.async=true;
 document.head.appendChild(script);
 })();
+
+/* Painel de afiliados das lojas do usuário. */
+(function(){
+'use strict';
+if(document.getElementById('storeAffiliatesManagerScript'))return;
+const script=document.createElement('script');
+script.id='storeAffiliatesManagerScript';
+script.src='/store-affiliates-manager.js';
+script.async=true;
+document.head.appendChild(script);
+})();
