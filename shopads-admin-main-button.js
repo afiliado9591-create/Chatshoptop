@@ -9,11 +9,16 @@ function admin(){
   const email=String(user()?.email||'').trim().toLowerCase();
   return ADMIN_EMAILS.includes(email);
 }
+function ensureCampaignControls(){
+  if(document.getElementById('shopAdsCampaignControlsScript'))return;
+  const s=document.createElement('script');s.id='shopAdsCampaignControlsScript';s.src='/shopads-campaign-controls.js';s.async=true;document.head.appendChild(s);
+}
 function ensureAdminScript(){
   if(typeof window.openShopAdsAdmin==='function'||document.getElementById('shopAdsAdminScriptMain'))return;
   const s=document.createElement('script');s.id='shopAdsAdminScriptMain';s.src='/shopads-admin.js';s.async=true;document.head.appendChild(s);
 }
 function install(){
+  ensureCampaignControls();
   const anchor=document.getElementById('adminBtn');
   let b=document.getElementById('shopAdsAdminMainBtn');
   if(!admin()){
