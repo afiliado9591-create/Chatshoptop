@@ -155,3 +155,14 @@ script.src='/ganhe-dinheiro-options.js?v=20260905';
 script.async=true;
 document.head.appendChild(script);
 })();
+
+/* Painel de cliques, indicações e ganhos do afiliado dentro do Meu Perfil. */
+(function(){
+'use strict';
+if(document.getElementById('affiliateProfileDashboardScript'))return;
+const script=document.createElement('script');
+script.id='affiliateProfileDashboardScript';
+script.src='/affiliate-profile-dashboard.js?v=20260905';
+script.async=true;
+document.head.appendChild(script);
+})();
