@@ -144,3 +144,14 @@ script.src='/store-affiliates-manager.js';
 script.async=true;
 document.head.appendChild(script);
 })();
+
+/* Opções do botão Ganhe dinheiro: indicação ou perfil de divulgador. */
+(function(){
+'use strict';
+if(document.getElementById('ganheDinheiroOptionsScript'))return;
+const script=document.createElement('script');
+script.id='ganheDinheiroOptionsScript';
+script.src='/ganhe-dinheiro-options.js?v=20260905';
+script.async=true;
+document.head.appendChild(script);
+})();
