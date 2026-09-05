@@ -36,133 +36,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 'use strict';
 const host=location.hostname.toLowerCase();
 if(host!=='alibr.com.br'&&host!=='www.alibr.com.br')return;
-
 let deferredInstallPrompt=null;
-
-function ensurePwaMeta(){
-  if(!document.querySelector('link[rel="manifest"]')){
-    const link=document.createElement('link');
-    link.rel='manifest';
-    link.href='/manifest.webmanifest';
-    document.head.appendChild(link);
-  }
-  if(!document.querySelector('meta[name="theme-color"]')){
-    const meta=document.createElement('meta');
-    meta.name='theme-color';
-    meta.content='#6d28d9';
-    document.head.appendChild(meta);
-  }
-  if(!document.querySelector('link[rel="apple-touch-icon"]')){
-    const icon=document.createElement('link');
-    icon.rel='apple-touch-icon';
-    icon.href='/chatshop-icon.svg';
-    document.head.appendChild(icon);
-  }
-}
-
-function alreadyInstalled(){
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
-}
-
-function showManualInstructions(){
-  const old=document.getElementById('chatshopInstallHelp');
-  if(old){old.remove();return;}
-  const box=document.createElement('div');
-  box.id='chatshopInstallHelp';
-  box.style.cssText='position:fixed;left:14px;right:14px;bottom:82px;z-index:99999;background:#fff;border:1px solid #ddd;border-radius:14px;padding:14px 16px;box-shadow:0 10px 35px rgba(0,0,0,.22);font-family:Arial,sans-serif;color:#1f2937;max-width:420px;margin:auto';
-  box.innerHTML='<b style="display:block;margin-bottom:6px">📲 Instalar ChatShop</b><span style="font-size:13px;line-height:1.45">No navegador, toque no menu <b>⋮</b> e escolha <b>Adicionar à tela inicial</b> ou <b>Instalar app</b>.</span><button type="button" aria-label="Fechar" style="position:absolute;right:9px;top:7px;border:0;background:transparent;font-size:20px;cursor:pointer">×</button>';
-  box.querySelector('button').onclick=()=>box.remove();
-  document.body.appendChild(box);
-}
-
-function installButton(){
-  if(alreadyInstalled()||document.getElementById('chatshopInstallButton'))return;
-  const button=document.createElement('button');
-  button.id='chatshopInstallButton';
-  button.type='button';
-  button.innerHTML='📲 Baixar ChatShop';
-  button.style.cssText='position:fixed;left:14px;bottom:18px;z-index:99998;border:0;border-radius:999px;background:#6d28d9;color:#fff;padding:12px 17px;font:800 14px Arial,sans-serif;box-shadow:0 7px 22px rgba(76,29,149,.35);cursor:pointer;min-height:46px';
-  button.onclick=async()=>{
-    if(deferredInstallPrompt){
-      deferredInstallPrompt.prompt();
-      try{await deferredInstallPrompt.userChoice}catch(e){}
-      deferredInstallPrompt=null;
-      if(alreadyInstalled())button.remove();
-    }else{
-      showManualInstructions();
-    }
-  };
-  document.body.appendChild(button);
-}
-
-ensurePwaMeta();
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(error=>console.warn('PWA ChatShop:',error)));
-}
-window.addEventListener('beforeinstallprompt',event=>{
-  event.preventDefault();
-  deferredInstallPrompt=event;
-  installButton();
-});
-window.addEventListener('appinstalled',()=>{
-  deferredInstallPrompt=null;
-  document.getElementById('chatshopInstallButton')?.remove();
-  document.getElementById('chatshopInstallHelp')?.remove();
-});
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installButton,{once:true});else installButton();
+function ensurePwaMeta(){if(!document.querySelector('link[rel="manifest"]')){const link=document.createElement('link');link.rel='manifest';link.href='/manifest.webmanifest';document.head.appendChild(link)}if(!document.querySelector('meta[name="theme-color"]')){const meta=document.createElement('meta');meta.name='theme-color';meta.content='#6d28d9';document.head.appendChild(meta)}if(!document.querySelector('link[rel="apple-touch-icon"]')){const icon=document.createElement('link');icon.rel='apple-touch-icon';icon.href='/chatshop-icon.svg';document.head.appendChild(icon)}}
+function alreadyInstalled(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true}
+function showManualInstructions(){const old=document.getElementById('chatshopInstallHelp');if(old){old.remove();return}const box=document.createElement('div');box.id='chatshopInstallHelp';box.style.cssText='position:fixed;left:14px;right:14px;bottom:82px;z-index:99999;background:#fff;border:1px solid #ddd;border-radius:14px;padding:14px 16px;box-shadow:0 10px 35px rgba(0,0,0,.22);font-family:Arial,sans-serif;color:#1f2937;max-width:420px;margin:auto';box.innerHTML='<b style="display:block;margin-bottom:6px">📲 Instalar ChatShop</b><span style="font-size:13px;line-height:1.45">No navegador, toque no menu <b>⋮</b> e escolha <b>Adicionar à tela inicial</b> ou <b>Instalar app</b>.</span><button type="button" aria-label="Fechar" style="position:absolute;right:9px;top:7px;border:0;background:transparent;font-size:20px;cursor:pointer">×</button>';box.querySelector('button').onclick=()=>box.remove();document.body.appendChild(box)}
+function installButton(){if(alreadyInstalled()||document.getElementById('chatshopInstallButton'))return;const button=document.createElement('button');button.id='chatshopInstallButton';button.type='button';button.innerHTML='📲 Baixar ChatShop';button.style.cssText='position:fixed;left:14px;bottom:18px;z-index:99998;border:0;border-radius:999px;background:#6d28d9;color:#fff;padding:12px 17px;font:800 14px Arial,sans-serif;box-shadow:0 7px 22px rgba(76,29,149,.35);cursor:pointer;min-height:46px';button.onclick=async()=>{if(deferredInstallPrompt){deferredInstallPrompt.prompt();try{await deferredInstallPrompt.userChoice}catch(e){}deferredInstallPrompt=null;if(alreadyInstalled())button.remove()}else showManualInstructions()};document.body.appendChild(button)}
+ensurePwaMeta();if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(error=>console.warn('PWA ChatShop:',error)));window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event;installButton()});window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;document.getElementById('chatshopInstallButton')?.remove();document.getElementById('chatshopInstallHelp')?.remove()});if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installButton,{once:true});else installButton();
 })();
 
 /* Rastreamento de origem das campanhas ShopAds. */
-(function(){
-'use strict';
-if(document.getElementById('shopadsTrackerScript'))return;
-const script=document.createElement('script');
-script.id='shopadsTrackerScript';
-script.src='/shopads-tracker.js';
-script.async=true;
-document.head.appendChild(script);
-})();
-
+(function(){'use strict';if(document.getElementById('shopadsTrackerScript'))return;const script=document.createElement('script');script.id='shopadsTrackerScript';script.src='/shopads-tracker.js';script.async=true;document.head.appendChild(script)})();
 /* Botão ShopAds do painel admin principal. */
-(function(){
-'use strict';
-if(document.getElementById('shopadsAdminMainButtonScript'))return;
-const script=document.createElement('script');
-script.id='shopadsAdminMainButtonScript';
-script.src='/shopads-admin-main-button.js';
-script.async=true;
-document.head.appendChild(script);
-})();
-
+(function(){'use strict';if(document.getElementById('shopadsAdminMainButtonScript'))return;const script=document.createElement('script');script.id='shopadsAdminMainButtonScript';script.src='/shopads-admin-main-button.js';script.async=true;document.head.appendChild(script)})();
 /* Painel de afiliados das lojas do usuário. */
-(function(){
-'use strict';
-if(document.getElementById('storeAffiliatesManagerScript'))return;
-const script=document.createElement('script');
-script.id='storeAffiliatesManagerScript';
-script.src='/store-affiliates-manager.js';
-script.async=true;
-document.head.appendChild(script);
-})();
-
+(function(){'use strict';if(document.getElementById('storeAffiliatesManagerScript'))return;const script=document.createElement('script');script.id='storeAffiliatesManagerScript';script.src='/store-affiliates-manager.js';script.async=true;document.head.appendChild(script)})();
 /* Opções do botão Ganhe dinheiro: indicação ou perfil de divulgador. */
-(function(){
-'use strict';
-if(document.getElementById('ganheDinheiroOptionsScript'))return;
-const script=document.createElement('script');
-script.id='ganheDinheiroOptionsScript';
-script.src='/ganhe-dinheiro-options.js?v=20260905';
-script.async=true;
-document.head.appendChild(script);
-})();
-
+(function(){'use strict';if(document.getElementById('ganheDinheiroOptionsScript'))return;const script=document.createElement('script');script.id='ganheDinheiroOptionsScript';script.src='/ganhe-dinheiro-options.js?v=20260905';script.async=true;document.head.appendChild(script)})();
 /* Painel de cliques, indicações e ganhos do afiliado dentro do Meu Perfil. */
-(function(){
-'use strict';
-if(document.getElementById('affiliateProfileDashboardScript'))return;
-const script=document.createElement('script');
-script.id='affiliateProfileDashboardScript';
-script.src='/affiliate-profile-dashboard.js?v=20260905';
-script.async=true;
-document.head.appendChild(script);
-})();
+(function(){'use strict';if(document.getElementById('affiliateProfileDashboardScript'))return;const script=document.createElement('script');script.id='affiliateProfileDashboardScript';script.src='/affiliate-profile-dashboard.js?v=20260905-1309';script.async=true;document.head.appendChild(script)})();
