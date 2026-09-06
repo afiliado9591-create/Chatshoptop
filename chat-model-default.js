@@ -27,6 +27,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (function(){'use strict';if(document.getElementById('shopadsAdminMainButtonScript'))return;const script=document.createElement('script');script.id='shopadsAdminMainButtonScript';script.src='/shopads-admin-main-button.js';script.async=true;document.head.appendChild(script)})();
 /* Painel de afiliados das lojas do usuário. */
 (function(){'use strict';if(document.getElementById('storeAffiliatesManagerScript'))return;const script=document.createElement('script');script.id='storeAffiliatesManagerScript';script.src='/store-affiliates-manager.js';script.async=true;document.head.appendChild(script)})();
+/* Pedidos de saque no painel do dono da loja. */
+(function(){'use strict';if(document.getElementById('storeAffiliateWithdrawalsAdminScript'))return;const script=document.createElement('script');script.id='storeAffiliateWithdrawalsAdminScript';script.src='/store-affiliate-withdrawals-admin.js?v=20260906-1208';script.async=true;document.head.appendChild(script)})();
+/* Painel central de afiliações do usuário. */
+(function(){'use strict';if(document.getElementById('myStoreAffiliationsScript'))return;const script=document.createElement('script');script.id='myStoreAffiliationsScript';script.src='/my-store-affiliations.js?v=20260906-1208';script.async=true;document.head.appendChild(script)})();
 /* Opções do botão Ganhe dinheiro: indicação ou perfil de divulgador. */
 (function(){'use strict';if(document.getElementById('ganheDinheiroOptionsScript'))return;const script=document.createElement('script');script.id='ganheDinheiroOptionsScript';script.src='/ganhe-dinheiro-options.js?v=20260905';script.async=true;document.head.appendChild(script)})();
 /* Atalho verde para o mensageiro Chama no ChatShop. */
