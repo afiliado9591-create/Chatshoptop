@@ -5,33 +5,40 @@ if(window.__CHATSHOP_VIDEO_AUTO_NARRATION__)return;
 window.__CHATSHOP_VIDEO_AUTO_NARRATION__=true;
 const $=id=>document.getElementById(id);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-let imageTexts=[],piperPromise=null;
+let imageTexts=[];
+const piperPromises={};
+const VOICES={
+  faber:{label:'Brasileira 1 — Faber',download:'cerca de 30 MB'},
+  cadu:{label:'Brasileira 2 — Cadu',download:'cerca de 75 MB',urlModelo:'https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/cadu/medium/pt_BR-cadu-medium.onnx?download=true',urlConfig:'https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/cadu/medium/pt_BR-cadu-medium.onnx.json?download=true'}
+};
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function ensureTts(){
-  if(piperPromise)return piperPromise;
-  const status=$('autoStatus');
-  piperPromise=(async()=>{
-    if(status){status.textContent='Carregando voz neural brasileira pela primeira vez…';status.className='status'}
+function selectedVoice(){const key=$('autoVoiceModel')?.value||'faber';return VOICES[key]?key:'faber'}
+async function ensureTts(voiceKey=selectedVoice()){
+  if(piperPromises[voiceKey])return piperPromises[voiceKey];
+  const status=$('autoStatus'),voice=VOICES[voiceKey]||VOICES.faber;
+  piperPromises[voiceKey]=(async()=>{
+    if(status){status.textContent=`Carregando ${voice.label} pela primeira vez…`;status.className='status'}
     let mod;
     try{mod=await import('https://esm.sh/@pedrobef/vozz@0.2.7/piper?bundle')}
     catch(e){throw new Error('Não foi possível carregar o motor de voz neural. Verifique a internet e tente novamente.')}
     if(!mod?.Piper)throw new Error('Motor de voz neural indisponível neste navegador.');
-    const tts=await mod.Piper.carregar({
-      dispositivo:'wasm',
+    const opts={
+      dispositivo:'wasm',threads:1,
       aoProgredir:p=>{
         if(!status||p?.status!=='baixando')return;
         const pct=Number.isFinite(Number(p.progresso))?Math.round(Number(p.progresso)*100):0;
-        status.textContent=`Baixando voz neural brasileira… ${pct}%\nIsso acontece só no primeiro uso e depois fica em cache no aparelho.`;
+        status.textContent=`Baixando ${voice.label}… ${pct}%\nIsso acontece só no primeiro uso desta voz; depois ela fica em cache no aparelho.`;
       }
-    });
-    return tts;
-  })().catch(e=>{piperPromise=null;throw e});
-  return piperPromise;
+    };
+    if(voice.urlModelo){opts.urlModelo=voice.urlModelo;opts.urlConfig=voice.urlConfig}
+    return mod.Piper.carregar(opts);
+  })().catch(e=>{delete piperPromises[voiceKey];throw e});
+  return piperPromises[voiceKey];
 }
-async function synth(text){
+async function synth(text,voiceKey=selectedVoice()){
   const clean=String(text||'').trim();if(!clean)return null;
-  const tts=await ensureTts();
+  const tts=await ensureTts(voiceKey);
   const velocidade=Math.max(.65,Math.min(1.45,Number($('autoVoiceSpeed')?.value||165)/165));
   const expressividade=Math.max(.45,Math.min(.95,Number($('autoVoicePitch')?.value||48)/70));
   const audio=await tts.falar(clean,{velocidade,ruido:expressividade,maxFonemas:220});
@@ -55,10 +62,11 @@ function renderImageTexts(){
 function installUi(){
   if($('autoNarrationCard'))return;
   const productCard=$('images')?.closest('.card');if(!productCard)return;
-  const card=document.createElement('div');card.className='card';card.id='autoNarrationCard';card.innerHTML=`<div class="section-title">✨ Narração automática por imagem</div><div class="notice" style="margin-bottom:10px">Voz neural brasileira mais natural. Esta opção é adicional: microfone, arquivo de narração e todas as opções antigas continuam funcionando.</div><div id="autoImageTexts"></div><div class="grid2"><div><label>Velocidade da voz</label><input id="autoVoiceSpeed" type="range" min="120" max="220" value="165"><div class="box">Mais à esquerda = voz mais lenta.</div></div><div><label>Expressividade da voz</label><input id="autoVoicePitch" type="range" min="25" max="75" value="48"><div class="box">Ajusta a variação natural da voz.</div></div></div><label style="display:flex;gap:8px;align-items:center;font-weight:800"><input id="autoShowText" type="checkbox" checked style="width:auto"> Mostrar um trecho do texto sobre cada imagem</label><button id="generateAuto" type="button" style="margin-top:12px">✨ Gerar vídeo com narração automática</button><div class="box" style="margin-top:10px">No primeiro uso, a voz neural baixa cerca de 30 MB. Depois fica armazenada no aparelho e não consome Firebase para narrar.</div><div id="autoStatus" class="status"></div>`;
+  const card=document.createElement('div');card.className='card';card.id='autoNarrationCard';card.innerHTML=`<div class="section-title">✨ Narração automática por imagem</div><div class="notice" style="margin-bottom:10px">Vozes neurais brasileiras naturais. Esta opção é adicional: microfone, arquivo de narração e todas as opções antigas continuam funcionando.</div><div id="autoImageTexts"></div><label>Escolher voz brasileira</label><select id="autoVoiceModel"><option value="faber">Brasileira 1 — Faber</option><option value="cadu">Brasileira 2 — Cadu</option></select><div id="autoVoiceInfo" class="box">Faber: voz neural brasileira atual. No primeiro uso baixa cerca de 30 MB.</div><div class="grid2"><div><label>Velocidade da voz</label><input id="autoVoiceSpeed" type="range" min="120" max="220" value="165"><div class="box">Mais à esquerda = voz mais lenta.</div></div><div><label>Expressividade da voz</label><input id="autoVoicePitch" type="range" min="25" max="75" value="48"><div class="box">Ajusta a variação natural da voz.</div></div></div><label style="display:flex;gap:8px;align-items:center;font-weight:800"><input id="autoShowText" type="checkbox" checked style="width:auto"> Mostrar um trecho do texto sobre cada imagem</label><button id="generateAuto" type="button" style="margin-top:12px">✨ Gerar vídeo com narração automática</button><div class="box" style="margin-top:10px">Cada voz é um modelo diferente. A primeira vez que você usar uma voz nova, o modelo será baixado; depois fica armazenado no aparelho.</div><div id="autoStatus" class="status"></div>`;
   productCard.insertAdjacentElement('afterend',card);
   const style=document.createElement('style');style.textContent='.auto-image-row{display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid #e5e7eb}.auto-image-row:first-child{border-top:0}.auto-image-row img{width:92px;height:92px;object-fit:cover;border-radius:10px}.auto-image-row textarea{min-height:78px}.auto-image-row small{display:block;color:#6b7280;margin-top:4px;line-height:1.35}.auto-empty{padding:12px;border:1px dashed #cbd5e1;border-radius:10px;color:#6b7280;background:#f8fafc}@media(max-width:520px){.auto-image-row{grid-template-columns:72px 1fr}.auto-image-row img{width:72px;height:72px}}';document.head.appendChild(style);
   $('images').addEventListener('change',()=>{imageTexts=[];setTimeout(renderImageTexts,0)});
+  $('autoVoiceModel').addEventListener('change',()=>{const k=selectedVoice(),v=VOICES[k];$('autoVoiceInfo').textContent=`${v.label}: modelo brasileiro diferente. No primeiro uso baixa ${v.download}.`;$('autoStatus').textContent=''});
   $('generateAuto').onclick=generateAutoVideo;
   renderImageTexts();
 }
@@ -78,12 +86,13 @@ async function generateAutoVideo(){
   const files=[...($('images')?.files||[])];if(!files.length)return alert('Escolha pelo menos uma imagem.');
   const texts=files.map((_,i)=>String(imageTexts[i]||'').trim());if(!texts.some(Boolean))return alert('Escreva o texto de pelo menos uma imagem para a narração automática.');
   if(!HTMLCanvasElement.prototype.captureStream||!window.MediaRecorder){$('autoStatus').textContent='Use o Chrome atualizado para gerar o vídeo.';$('autoStatus').className='status err';return}
-  const btn=$('generateAuto');btn.disabled=true;$('download')?.classList.add('hidden');if($('preview'))$('preview').style.display='none';$('autoStatus').textContent='Preparando voz neural brasileira…';$('autoStatus').className='status';
+  const voiceKey=selectedVoice(),voice=VOICES[voiceKey];
+  const btn=$('generateAuto');btn.disabled=true;$('download')?.classList.add('hidden');if($('preview'))$('preview').style.display='none';$('autoStatus').textContent=`Preparando ${voice.label}…`;$('autoStatus').className='status';
   let ac,musicSourceNode;const voiceNodes=[];
   try{
-    await ensureTts();
+    await ensureTts(voiceKey);
     const imgs=await Promise.all(files.map(loadImg));
-    const wavs=[];for(let i=0;i<texts.length;i++){if(texts[i]){$('autoStatus').textContent=`Criando narração natural ${i+1} de ${texts.length}…`;wavs.push(await synth(texts[i]))}else wavs.push(null)}
+    const wavs=[];for(let i=0;i<texts.length;i++){if(texts[i]){$('autoStatus').textContent=`Criando narração com ${voice.label}: ${i+1} de ${texts.length}…`;wavs.push(await synth(texts[i],voiceKey))}else wavs.push(null)}
     const AC=window.AudioContext||window.webkitAudioContext;ac=new AC();await ac.resume();
     const voiceBuffers=[];for(let i=0;i<wavs.length;i++)voiceBuffers.push(wavs[i]?await decode(ac,wavs[i],'narração'):null);
     const slots=voiceBuffers.map(b=>Math.max(2.2,(b?.duration||1.6)+0.55));const total=slots.reduce((a,b)=>a+b,0);
@@ -95,7 +104,7 @@ async function generateAutoVideo(){
     const canvas=$('canvas'),ctx=canvas.getContext('2d'),videoStream=canvas.captureStream(24),audioTracks=dest.stream.getAudioTracks(),combined=new MediaStream([...videoStream.getVideoTracks(),...audioTracks]),mt=mime();if(!mt)throw new Error('Formato de vídeo não suportado neste navegador.');if(audioTracks.length===0)throw new Error('O navegador não conseguiu criar a faixa de áudio.');
     const chunks=[],rec=new MediaRecorder(combined,{mimeType:mt,videoBitsPerSecond:3200000,audioBitsPerSecond:128000});
     rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
-    rec.onstop=async()=>{try{musicSourceNode?.stop()}catch(e){}voiceNodes.forEach(n=>{try{n.stop()}catch(e){}});const blob=new Blob(chunks,{type:mt}),url=URL.createObjectURL(blob);if($('preview')){$('preview').src=url;$('preview').style.display='block'}if($('download')){$('download').href=url;$('download').classList.remove('hidden')}$('autoStatus').textContent='✓ Vídeo pronto. A voz neural brasileira foi gravada dentro do vídeo. Salve no aparelho.';$('autoStatus').className='status ok';btn.disabled=false;try{await ac.close()}catch(e){}};
+    rec.onstop=async()=>{try{musicSourceNode?.stop()}catch(e){}voiceNodes.forEach(n=>{try{n.stop()}catch(e){}});const blob=new Blob(chunks,{type:mt}),url=URL.createObjectURL(blob);if($('preview')){$('preview').src=url;$('preview').style.display='block'}if($('download')){$('download').href=url;$('download').classList.remove('hidden')}$('autoStatus').textContent=`✓ Vídeo pronto. ${voice.label} foi gravada dentro do vídeo. Salve no aparelho.`;$('autoStatus').className='status ok';btn.disabled=false;try{await ac.close()}catch(e){}};
     drawFrame(ctx,imgs[0],0,slots[0],texts[0]);rec.start(250);await sleep(120);const start=performance.now();const boundaries=[];let sum=0;for(const s of slots){sum+=s;boundaries.push(sum)}
     function anim(now){const elapsed=(now-start)/1000;let idx=boundaries.findIndex(x=>elapsed<x);if(idx<0)idx=imgs.length-1;const before=idx?boundaries[idx-1]:0;drawFrame(ctx,imgs[idx],elapsed-before,slots[idx],texts[idx]);if(elapsed<total)requestAnimationFrame(anim);else setTimeout(()=>rec.stop(),420)}requestAnimationFrame(anim);
   }catch(e){console.error(e);$('autoStatus').textContent='Erro na narração automática: '+(e.message||e);$('autoStatus').className='status err';btn.disabled=false;try{musicSourceNode?.stop()}catch(x){}voiceNodes.forEach(n=>{try{n.stop()}catch(x){}});try{await ac?.close()}catch(x){}}
