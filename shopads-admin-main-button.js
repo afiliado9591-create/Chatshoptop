@@ -17,6 +17,10 @@ function ensurePaymentScript(){
   if(document.getElementById('shopAdsPaymentScript'))return;
   const s=document.createElement('script');s.id='shopAdsPaymentScript';s.src='/shopads-payment.js?v=20260905-2211';s.async=true;document.head.appendChild(s);
 }
+function ensureCpmScript(){
+  if(document.getElementById('shopAdsCpmScript'))return;
+  const s=document.createElement('script');s.id='shopAdsCpmScript';s.src='/shopads-cpm-option.js?v=20260905-2225';s.async=true;document.head.appendChild(s);
+}
 function ensureAdminScript(){
   if(typeof window.openShopAdsAdmin==='function'||document.getElementById('shopAdsAdminScriptMain'))return;
   const s=document.createElement('script');s.id='shopAdsAdminScriptMain';s.src='/shopads-admin.js';s.async=true;document.head.appendChild(s);
@@ -24,6 +28,7 @@ function ensureAdminScript(){
 function install(){
   ensureCampaignControls();
   ensurePaymentScript();
+  ensureCpmScript();
   const anchor=document.getElementById('adminBtn');
   let b=document.getElementById('shopAdsAdminMainBtn');
   if(!admin()){
