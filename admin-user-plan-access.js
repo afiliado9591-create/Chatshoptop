@@ -12,22 +12,23 @@ const PLAN={
   basico:{label:'Básico gratuito',productLimit:30,chatLimit:1,features:{catalog:true,whatsapp:true,virtual:false,chat:true,shipping:false,coupons:false,customDomain:false,mercadoPago:false}},
   profissional:{label:'Profissional',productLimit:1000000,chatLimit:2,features:{catalog:true,whatsapp:true,virtual:true,chat:true,shipping:true,coupons:true,customDomain:true,mercadoPago:true}}
 };
-let users=[];
+let users=[],usersLoadedAt=0;const USERS_CACHE_MS=60000,USERS_PAGE=100;
 function planKey(v){const s=String(v||'basico').toLowerCase();if(s.includes('prof')||s==='pro'||s.includes('premium'))return'profissional';return'basico'}
-async function load(){
+async function load(force=false){
   if(!adminOk())return;
   const box=$('#adminConteudo');if(!box)return;
+  if(!force&&users.length&&Date.now()-usersLoadedAt<USERS_CACHE_MS){render();return}
   box.innerHTML='<p class="empty-hint">Carregando usuários...</p>';
   try{
     const d=dbRef();if(!d)throw new Error('Banco indisponível');
-    const snap=await d.collection('users').orderBy('createdAt','desc').limit(500).get();
-    users=snap.docs.map(doc=>({uid:doc.id,...(doc.data()||{})}));
+    const snap=await d.collection('users').orderBy('createdAt','desc').limit(USERS_PAGE).get();
+    users=snap.docs.map(doc=>({uid:doc.id,...(doc.data()||{})}));usersLoadedAt=Date.now();
     render();
   }catch(e){console.error(e);box.innerHTML='<p class="empty-hint">Não foi possível carregar os usuários.</p>'}
 }
 function render(){
   const box=$('#adminConteudo');if(!box)return;
-  box.innerHTML=`<div style="margin-bottom:12px"><h3 style="margin:0 0 4px">💳 Gerenciar planos</h3><small style="color:var(--muted)">Básico é gratuito com até 30 produtos. Profissional libera produtos ilimitados e Loja Virtual.</small></div><div class="field"><input id="adminPlanSearch" placeholder="Buscar por e-mail" style="width:100%"></div><div id="adminPlanList"></div>`;
+  box.innerHTML=`<div style="margin-bottom:12px"><h3 style="margin:0 0 4px">💳 Gerenciar planos</h3><small style="color:var(--muted)">Básico é gratuito com até 30 produtos. Profissional libera produtos ilimitados e Loja Virtual. Mostrando até ${USERS_PAGE} usuários recentes para economizar leituras.</small></div><div class="field"><input id="adminPlanSearch" placeholder="Buscar por e-mail entre os carregados" style="width:100%"></div><div id="adminPlanList"></div>`;
   $('#adminPlanSearch')?.addEventListener('input',draw);draw();
 }
 function draw(){
@@ -71,8 +72,6 @@ async function setPlan(uid,key){
         virtualStoreAccess:key==='profissional'
       },{merge:true})));
     }catch(e){console.warn('Plano salvo no usuário, mas houve falha ao sincronizar lojas',e)}
-    const fresh=await d.collection('users').doc(uid).get();
-    if(!fresh.exists||planKey(fresh.data()?.plan)!==key)throw new Error('O plano não ficou salvo no usuário.');
     const item=users.find(u=>u.uid===uid);if(item)Object.assign(item,update);
     notify(`Plano ${p.label} salvo. ${storeCount} loja(s) sincronizada(s).`);
     draw();
@@ -82,7 +81,7 @@ function installTab(){
   if(!adminOk())return false;
   if($('#adminTabPlanAccess'))return true;
   const anchor=$('#adminTabVirtualAccess')||$('#adminTabUsuarios');if(!anchor)return false;
-  const b=document.createElement('button');b.className='btn';b.id='adminTabPlanAccess';b.type='button';b.textContent='💳 Gerenciar Planos';anchor.insertAdjacentElement('afterend',b);b.onclick=load;return true;
+  const b=document.createElement('button');b.className='btn';b.id='adminTabPlanAccess';b.type='button';b.textContent='💳 Gerenciar Planos';anchor.insertAdjacentElement('afterend',b);b.onclick=()=>load(false);return true;
 }
 function boot(){let tries=0;const t=setInterval(()=>{tries++;if(installTab()||tries>120)clearInterval(t)},100)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
