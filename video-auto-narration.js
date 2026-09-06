@@ -1,4 +1,4 @@
-/* ChatShop — narração automática por imagem, 100% no navegador. Preserva o gerador original. */
+/* ChatShop — narração automática por imagem. Preserva o gerador original. */
 (function(){
 'use strict';
 if(window.__CHATSHOP_VIDEO_AUTO_NARRATION__)return;
@@ -6,33 +6,60 @@ window.__CHATSHOP_VIDEO_AUTO_NARRATION__=true;
 const $=id=>document.getElementById(id);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let imageTexts=[];
+let ttsReadyPromise=null;
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function loadScript(src){return new Promise((resolve,reject)=>{const old=document.querySelector('script[data-auto-tts]');if(old&&window.meSpeak)return resolve();const s=old||document.createElement('script');if(!old){s.src=src;s.async=true;s.dataset.autoTts='1';document.head.appendChild(s)}s.addEventListener('load',resolve,{once:true});s.addEventListener('error',()=>reject(new Error('Não foi possível carregar a voz automática. Verifique sua internet.')),{once:true})})}
-function loadMeSpeakData(){return new Promise((resolve,reject)=>{
-  if(!window.meSpeak)return reject(new Error('Motor de voz não carregou.'));
-  let configDone=false,voiceDone=false,failed=false;
-  const finish=()=>{if(configDone&&voiceDone&&!failed)resolve()};
-  const fail=msg=>{if(failed)return;failed=true;reject(new Error(msg))};
-  try{
-    meSpeak.loadConfig('https://cdn.jsdelivr.net/gh/btopro/mespeak@master/mespeak_config.json',(ok,msg)=>{if(ok===false)return fail('Não foi possível carregar a configuração da voz. '+(msg||''));configDone=true;finish()});
-    meSpeak.loadVoice('https://cdn.jsdelivr.net/gh/btopro/mespeak@master/voices/pt.json',(ok,msg)=>{if(ok===false)return fail('Não foi possível carregar a voz em português. '+(msg||''));voiceDone=true;finish()});
-    setTimeout(()=>{if(!failed&&(!configDone||!voiceDone))fail('A voz automática demorou demais para carregar. Tente novamente.')},20000);
-  }catch(e){fail(e.message||String(e))}
+function previewText(text,max=105){const s=String(text||'').trim().replace(/\s+/g,' ');return s.length>max?s.slice(0,max).trimEnd()+'…':s}
+function removeTtsScript(){document.querySelectorAll('script[data-auto-tts]').forEach(s=>s.remove())}
+function loadScript(src,timeout=18000){return new Promise((resolve,reject)=>{
+  if(window.meSpeak)return resolve();
+  removeTtsScript();
+  const s=document.createElement('script');s.src=src;s.async=true;s.dataset.autoTts='1';
+  const timer=setTimeout(()=>{s.remove();reject(new Error('tempo esgotado ao carregar o motor de voz'))},timeout);
+  s.onload=()=>{clearTimeout(timer);window.meSpeak?resolve():reject(new Error('motor de voz carregou incompleto'))};
+  s.onerror=()=>{clearTimeout(timer);s.remove();reject(new Error('falha ao baixar o motor de voz'))};
+  document.head.appendChild(s);
 })}
-let ttsReadyPromise=null;
+function waitUntil(test,timeout=25000){return new Promise((resolve,reject)=>{const start=Date.now();const tick=()=>{try{if(test())return resolve(true)}catch(e){}if(Date.now()-start>=timeout)return reject(new Error('tempo esgotado'));setTimeout(tick,120)};tick()})}
+async function loadData(base){
+  if(!window.meSpeak)throw new Error('Motor de voz não carregou.');
+  let configError='',voiceError='';
+  try{meSpeak.loadConfig(base+'mespeak_config.json',(ok,msg)=>{if(ok===false)configError=String(msg||'erro de configuração')})}catch(e){configError=e.message||String(e)}
+  try{await waitUntil(()=>meSpeak.isConfigLoaded&&meSpeak.isConfigLoaded(),22000)}catch(e){throw new Error('Configuração da voz não carregou'+(configError?': '+configError:''))}
+  try{meSpeak.loadVoice(base+'voices/pt.json',(ok,msg)=>{if(ok===false)voiceError=String(msg||'erro de voz')})}catch(e){voiceError=e.message||String(e)}
+  try{await waitUntil(()=>meSpeak.isVoiceLoaded&&meSpeak.isVoiceLoaded('pt'),30000)}catch(e){throw new Error('Voz em português não carregou'+(voiceError?': '+voiceError:''))}
+  try{meSpeak.setDefaultVoice&&meSpeak.setDefaultVoice('pt')}catch(e){}
+  return true;
+}
 async function ensureTts(){
+  if(window.meSpeak&&meSpeak.isConfigLoaded?.()&&meSpeak.isVoiceLoaded?.('pt'))return true;
   if(ttsReadyPromise)return ttsReadyPromise;
-  ttsReadyPromise=(async()=>{await loadScript('https://cdn.jsdelivr.net/gh/btopro/mespeak@master/mespeak.js');await loadMeSpeakData();return true})().catch(e=>{ttsReadyPromise=null;throw e});
+  const sources=[
+    {script:'https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak.js',base:'https://cdn.jsdelivr.net/npm/mespeak@2.0.2/'},
+    {script:'https://unpkg.com/mespeak@2.0.2/mespeak.js',base:'https://unpkg.com/mespeak@2.0.2/'},
+    {script:'https://cdn.jsdelivr.net/gh/btopro/mespeak@master/mespeak.js',base:'https://cdn.jsdelivr.net/gh/btopro/mespeak@master/'}
+  ];
+  ttsReadyPromise=(async()=>{
+    let lastError=null;
+    for(const src of sources){
+      try{
+        if(!window.meSpeak)await loadScript(src.script);
+        await loadData(src.base);
+        return true;
+      }catch(e){lastError=e;console.warn('Tentativa de voz automática falhou:',src.base,e);try{window.meSpeak=null}catch(x){}removeTtsScript()}
+    }
+    throw new Error('Não consegui carregar a voz automática neste aparelho. Verifique a internet e tente novamente. '+(lastError?.message||''));
+  })().catch(e=>{ttsReadyPromise=null;throw e});
   return ttsReadyPromise;
 }
 function synth(text){
   const clean=String(text||'').trim();if(!clean)return null;
   const raw=meSpeak.speak(clean,{voice:'pt',variant:'f2',speed:Number($('autoVoiceSpeed')?.value||165),pitch:Number($('autoVoicePitch')?.value||48),amplitude:100,rawdata:true});
-  if(!raw||!raw.length)throw new Error('Não foi possível criar a narração deste texto.');
-  return raw instanceof Uint8Array?raw:new Uint8Array(raw);
+  if(!raw||!(raw.byteLength||raw.length))throw new Error('Não foi possível criar a narração deste texto.');
+  if(raw instanceof Uint8Array)return raw;
+  if(raw instanceof ArrayBuffer)return new Uint8Array(raw);
+  return new Uint8Array(raw);
 }
-function previewText(text,max=105){const s=String(text||'').trim().replace(/\s+/g,' ');return s.length>max?s.slice(0,max).trimEnd()+'…':s}
 function renderImageTexts(){
   const files=[...($('images')?.files||[])],box=$('autoImageTexts');if(!box)return;
   if(!files.length){box.innerHTML='<div class="auto-empty">Escolha as imagens acima. Depois aparecerá um campo de texto para cada imagem.</div>';return}
@@ -57,19 +84,20 @@ function drawFrame(ctx,img,elapsed,slot,text){
   ctx.clearRect(0,0,720,1280);ctx.fillStyle='#000';ctx.fillRect(0,0,720,1280);
   if(img){cover(ctx,img,1+.07*(elapsed/Math.max(slot,.001)));const g=ctx.createLinearGradient(0,0,0,1280);g.addColorStop(0,'#0005');g.addColorStop(.55,'#0000');g.addColorStop(1,'#000d');ctx.fillStyle=g;ctx.fillRect(0,0,720,1280)}
   ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='bold 52px Arial';wrap(ctx,$('title')?.value||'',620).slice(0,3).forEach((x,i)=>ctx.fillText(x,360,110+i*62));
-  if($('autoShowText')?.checked&&text){ctx.font='bold 36px Arial';const lines=wrap(ctx,previewText(text),610).slice(0,3);const y=940;lines.forEach((x,i)=>ctx.fillText(x,360,y+i*47))}
+  if($('autoShowText')?.checked&&text){ctx.font='bold 36px Arial';wrap(ctx,previewText(text),610).slice(0,3).forEach((x,i)=>ctx.fillText(x,360,940+i*47))}
   const price=String($('price')?.value||'').trim();if(price){ctx.font='bold 56px Arial';const w=Math.min(620,ctx.measureText(price).width+70);ctx.fillStyle='#fffffff0';ctx.fillRect((720-w)/2,1155,w,82);ctx.fillStyle='#111';ctx.fillText(price,360,1212)}
 }
-async function decode(ac,source,label){if(!source)return null;let arr;if(source instanceof Blob)arr=await source.arrayBuffer();else if(source instanceof Uint8Array)arr=source.buffer.slice(source.byteOffset,source.byteOffset+source.byteLength);else{const r=await fetch(source,{cache:'no-store'});if(!r.ok)throw new Error(label+' não encontrado.');arr=await r.arrayBuffer()}return ac.decodeAudioData(arr.slice(0))}
+async function decode(ac,source,label){if(!source)return null;let arr;if(source instanceof Blob)arr=await source.arrayBuffer();else if(source instanceof Uint8Array)arr=source.buffer.slice(source.byteOffset,source.byteOffset+source.byteLength);else if(source instanceof ArrayBuffer)arr=source;else{const r=await fetch(source,{cache:'no-store'});if(!r.ok)throw new Error(label+' não encontrado.');arr=await r.arrayBuffer()}return ac.decodeAudioData(arr.slice(0))}
 function mime(){for(const m of ['video/webm;codecs=vp8,opus','video/webm;codecs=vp9,opus','video/webm'])if(MediaRecorder.isTypeSupported(m))return m;return''}
 async function generateAutoVideo(){
   const files=[...($('images')?.files||[])];if(!files.length)return alert('Escolha pelo menos uma imagem.');
   const texts=files.map((_,i)=>String(imageTexts[i]||'').trim());if(!texts.some(Boolean))return alert('Escreva o texto de pelo menos uma imagem para a narração automática.');
   if(!HTMLCanvasElement.prototype.captureStream||!window.MediaRecorder){$('autoStatus').textContent='Use o Chrome atualizado para gerar o vídeo.';$('autoStatus').className='status err';return}
-  const btn=$('generateAuto');btn.disabled=true;$('download')?.classList.add('hidden');if($('preview'))$('preview').style.display='none';$('autoStatus').textContent='Preparando voz automática...';$('autoStatus').className='status';
+  const btn=$('generateAuto');btn.disabled=true;$('download')?.classList.add('hidden');if($('preview'))$('preview').style.display='none';$('autoStatus').textContent='Preparando voz automática... Na primeira vez pode levar alguns segundos.';$('autoStatus').className='status';
   let ac,musicSourceNode;const voiceNodes=[];
   try{
     await ensureTts();
+    $('autoStatus').textContent='Criando a narração e montando o vídeo...';
     const imgs=await Promise.all(files.map(loadImg));
     const wavs=texts.map(t=>t?synth(t):null);
     const AC=window.AudioContext||window.webkitAudioContext;ac=new AC();await ac.resume();
