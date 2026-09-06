@@ -19,7 +19,7 @@ function ensurePaymentScript(){
 }
 function ensureCpmScript(){
   if(document.getElementById('shopAdsCpmScript'))return;
-  const s=document.createElement('script');s.id='shopAdsCpmScript';s.src='/shopads-cpm-option.js?v=20260905-2225';s.async=true;document.head.appendChild(s);
+  const s=document.createElement('script');s.id='shopAdsCpmScript';s.src='/shopads-cpm-option.js?v=20260905-2240';s.async=true;document.head.appendChild(s);
 }
 function ensureAdminScript(){
   if(typeof window.openShopAdsAdmin==='function'||document.getElementById('shopAdsAdminScriptMain'))return;
