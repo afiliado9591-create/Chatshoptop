@@ -1,3 +1,4 @@
+const admin=require('firebase-admin');
 const PROJECT_ID = 'chatshop-97ea3';
 const API_KEY = 'AIzaSyBZlCM-6l_iV_GTirvTwUumKM3ZGRvgxt8';
 const BASE_DOMAIN = 'www.alibr.com.br';
@@ -57,6 +58,63 @@ async function getPlatformAccessToken(){
   return '';
 }
 
+function parseServiceAccount(raw){
+  let text=String(raw||'').trim();
+  if(!text)throw new Error('CHATSHOP_FIREBASE_SERVICE_ACCOUNT ausente');
+  try{let parsed=JSON.parse(text);if(typeof parsed==='string')parsed=JSON.parse(parsed);if(parsed.private_key)parsed.private_key=String(parsed.private_key).replace(/\\n/g,'\n');return parsed}catch(_){}
+  const start=text.indexOf('{');if(start<0)throw new Error('CHATSHOP_FIREBASE_SERVICE_ACCOUNT inválida');
+  let depth=0,inString=false,escapeNext=false,end=-1;
+  for(let i=start;i<text.length;i++){const ch=text[i];if(escapeNext){escapeNext=false;continue}if(ch==='\\'&&inString){escapeNext=true;continue}if(ch==='"'){inString=!inString;continue}if(inString)continue;if(ch==='{')depth++;else if(ch==='}'){depth--;if(depth===0){end=i;break}}}
+  if(end<0)throw new Error('CHATSHOP_FIREBASE_SERVICE_ACCOUNT inválida');
+  const parsed=JSON.parse(text.slice(start,end+1));if(parsed.private_key)parsed.private_key=String(parsed.private_key).replace(/\\n/g,'\n');return parsed;
+}
+function getAdmin(){if(admin.apps.length)return admin.app();const service=parseServiceAccount(process.env.CHATSHOP_FIREBASE_SERVICE_ACCOUNT);return admin.initializeApp({credential:admin.credential.cert(service),projectId:PROJECT_ID})}
+function money(v){const n=Number(v);return Number.isFinite(n)?n:0}
+async function shopAdsCampaign(id){const cid=clean(id,180);if(!cid)return null;const snap=await getAdmin().firestore().collection('shopadsCampaigns').doc(cid).get();return snap.exists?{id:snap.id,...snap.data()}:null}
+async function confirmShopAdsPayment(paymentId,expectedCampaign,expectedUid){
+  const accessToken=await getPlatformAccessToken();if(!accessToken)throw new Error('Pagamento ainda não configurado.');
+  const pid=clean(paymentId,100);if(!pid)throw new Error('Pagamento inválido.');
+  const r=await fetch('https://api.mercadopago.com/v1/payments/'+encodeURIComponent(pid),{headers:{authorization:'Bearer '+accessToken,accept:'application/json'}});
+  const p=await parseJsonSafe(r);if(!r.ok)throw new Error('Não foi possível confirmar o pagamento no Mercado Pago.');
+  const ref=String(p.external_reference||'');const parts=ref.split(':');if(parts[0]!=='shopads'||!parts[1]||!parts[2])throw new Error('Pagamento não pertence ao ShopAds.');
+  const campaignId=parts[1],ownerUid=parts.slice(2).join(':');
+  if(expectedCampaign&&campaignId!==expectedCampaign)throw new Error('Pagamento não corresponde a esta campanha.');
+  if(expectedUid&&ownerUid!==expectedUid)throw new Error('Pagamento não corresponde a este anunciante.');
+  const c=await shopAdsCampaign(campaignId);if(!c||String(c.ownerUid||'')!==ownerUid)throw new Error('Campanha não encontrada para este pagamento.');
+  const paid=String(p.status||'')==='approved';const amount=money(p.transaction_amount);const expected=money(c.budget);
+  if(paid&&Math.abs(amount-expected)>0.01)throw new Error('O valor confirmado não corresponde ao orçamento da campanha.');
+  const patch={paymentStatus:paid?'approved':String(p.status||'pending'),paymentId:String(p.id||pid),paymentAmount:amount,paymentUpdatedAt:admin.firestore.FieldValue.serverTimestamp()};
+  if(paid){patch.paidAt=admin.firestore.FieldValue.serverTimestamp();patch.status='revisao';patch.submittedAt=admin.firestore.FieldValue.serverTimestamp()}
+  await getAdmin().firestore().collection('shopadsCampaigns').doc(campaignId).set(patch,{merge:true});
+  return{approved:paid,status:String(p.status||'pending'),campaignId,amount};
+}
+
+async function handleShopAdsPayment(req,res){
+  res.setHeader('Cache-Control','no-store');if(req.method!=='POST')return res.status(405).json({error:'method_not_allowed',message:'Método não permitido.'});
+  try{
+    const body=typeof req.body==='string'?JSON.parse(req.body||'{}'):(req.body||{}),campaignId=clean(body.campaignId,180),uid=clean(body.uid,180),email=clean(body.email,180).toLowerCase();
+    if(!campaignId||!uid||!validEmail(email))return res.status(400).json({error:'Dados inválidos.',message:'Entre novamente e tente pagar a campanha.'});
+    const c=await shopAdsCampaign(campaignId);if(!c)return res.status(404).json({error:'campaign_not_found',message:'Campanha não encontrada.'});
+    if(String(c.ownerUid||'')!==uid||String(c.ownerEmail||'').toLowerCase()!==email)return res.status(403).json({error:'forbidden',message:'Esta campanha não pertence à sua conta.'});
+    const budget=money(c.budget);if(budget<5)return res.status(400).json({error:'budget_too_low',message:'O orçamento mínimo da campanha é R$ 5,00.'});
+    if(c.paymentStatus==='approved')return res.status(200).json({ok:true,alreadyPaid:true,message:'Esta campanha já está paga.'});
+    const accessToken=await getPlatformAccessToken();if(!accessToken)return res.status(503).json({error:'payment_not_configured',message:'Pagamento ainda não configurado no Mercado Pago.'});
+    const origin='https://www.alibr.com.br',returnUrl=`${origin}/?shopads_payment=return&campaign=${encodeURIComponent(campaignId)}`,externalReference=`shopads:${campaignId}:${uid}`;
+    const preference={items:[{id:campaignId,title:String('ShopAds - '+(c.title||'Campanha')).slice(0,120),quantity:1,currency_id:'BRL',unit_price:Number(budget.toFixed(2))}],payer:{email},external_reference:externalReference,statement_descriptor:'SHOPADS',back_urls:{success:returnUrl,failure:returnUrl,pending:returnUrl},auto_return:'approved',notification_url:`${origin}/api/content.js?action=shopads-webhook`,metadata:{shopads_campaign_id:campaignId,shopads_owner_uid:uid}};
+    const r=await fetch('https://api.mercadopago.com/checkout/preferences',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+accessToken,'x-idempotency-key':`shopads-${campaignId}-${Date.now()}`},body:JSON.stringify(preference)});const j=await parseJsonSafe(r);
+    if(!r.ok||!j?.init_point){console.error('ShopAds preference error:',r.status,j);return res.status(400).json({error:'preference_failed',message:'O Mercado Pago não conseguiu criar o pagamento agora.'});}
+    await getAdmin().firestore().collection('shopadsCampaigns').doc(campaignId).set({paymentStatus:'pending',paymentPreferenceId:String(j.id||''),paymentAmount:budget,paymentRequestedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
+    return res.status(200).json({ok:true,checkoutUrl:j.init_point,preferenceId:j.id||'',amount:budget});
+  }catch(e){console.error('shopads-pagamento',e);return res.status(500).json({error:'shopads_payment_failed',message:String(e.message||'Não foi possível iniciar o pagamento.')});}
+}
+async function handleShopAdsStatus(req,res){
+  res.setHeader('Cache-Control','no-store');if(req.method!=='POST')return res.status(405).json({error:'method_not_allowed'});
+  try{const body=typeof req.body==='string'?JSON.parse(req.body||'{}'):(req.body||{});const result=await confirmShopAdsPayment(clean(body.paymentId,100),clean(body.campaignId,180),clean(body.uid,180));return res.status(200).json({ok:true,...result})}catch(e){console.error('shopads-status',e);return res.status(400).json({error:'payment_not_confirmed',message:String(e.message||'Pagamento ainda não confirmado.')})}
+}
+async function handleShopAdsWebhook(req,res){
+  try{const id=clean(req.query?.['data.id']||req.query?.id||req.body?.data?.id||req.body?.id,100);if(id)await confirmShopAdsPayment(id,'','');return res.status(200).json({ok:true})}catch(e){console.error('shopads-webhook',e);return res.status(200).json({ok:false})}
+}
+
 async function handleSubscription(req,res){
   res.setHeader('Cache-Control','no-store');
   if(req.method!=='POST')return res.status(405).json({error:'method_not_allowed',message:'Método não permitido.'});
@@ -99,7 +157,11 @@ async function getPlatformSeo(){
 }
 
 module.exports = async function handler(req,res){
-  if(String(req.query?.action||'')==='assinatura')return handleSubscription(req,res);
+  const action=String(req.query?.action||'');
+  if(action==='assinatura')return handleSubscription(req,res);
+  if(action==='shopads-pagamento')return handleShopAdsPayment(req,res);
+  if(action==='shopads-status')return handleShopAdsStatus(req,res);
+  if(action==='shopads-webhook')return handleShopAdsWebhook(req,res);
   try{
     const slug = cleanSlug(req.query && req.query.slug);
     if(!slug){ res.status(404).send('Página não encontrada.'); return; }
@@ -120,15 +182,7 @@ module.exports = async function handler(req,res){
     const links = Array.isArray(page.links) ? page.links.filter(x => x && x.label && /^https?:\/\//i.test(String(x.url || ''))) : [];
     const ga=/^G-[A-Z0-9]+$/.test(String(platformSeo.googleAnalyticsId||'').toUpperCase())?String(platformSeo.googleAnalyticsId).toUpperCase():'';
     const verification=/^[A-Za-z0-9_\-=]{6,200}$/.test(String(platformSeo.googleSearchConsoleVerification||''))?String(platformSeo.googleSearchConsoleVerification):'';
-    const jsonLd = {
-      '@context':'https://schema.org',
-      '@type':'Article',
-      headline:title,
-      description,
-      mainEntityOfPage:canonical,
-      publisher:{'@type':'Organization',name:'ChatShop',url:`https://${BASE_DOMAIN}/site`},
-      ...(ogImage ? {image:[ogImage]} : {})
-    };
+    const jsonLd = {'@context':'https://schema.org','@type':'Article',headline:title,description,mainEntityOfPage:canonical,publisher:{'@type':'Organization',name:'ChatShop',url:`https://${BASE_DOMAIN}/site`},...(ogImage ? {image:[ogImage]} : {})};
 
     const html = `<!doctype html>
 <html lang="pt-BR">
