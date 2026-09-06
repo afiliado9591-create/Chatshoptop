@@ -1,20 +1,21 @@
-/* Acrescenta CPM e informa a divisão financeira do ShopAds. */
+/* CPM + configuração segura da comissão do divulgador no ShopAds. */
 (function(){
 'use strict';
-const RATE=.30;
+const DEFAULT_PERCENT=70;
+function dbRef(){try{return typeof db!=='undefined'&&db?db:null}catch(e){return null}}
+function admin(){try{if(typeof isAdmin!=='undefined'&&isAdmin===true)return true}catch(e){}const u=window.currentUser||firebase?.auth?.().currentUser;return['jeanaguiar636@gmail.com','afiliado9591@gmail.com'].includes(String(u?.email||'').toLowerCase())}
 function money(v){return Number(String(v||'0').replace(',','.'))||0}
 function brl(v){return 'R$ '+Number(v||0).toFixed(3).replace('.',',').replace(/0+$/,'').replace(/,$/,',00')}
-function enhance(){
-  document.querySelectorAll('select[name="resultType"]').forEach(select=>{
-    if(!select.querySelector('option[value="cpm"]')){const option=document.createElement('option');option.value='cpm';option.textContent='CPM — 1.000 visualizações';select.appendChild(option)}
-    const form=select.closest('form');if(!form)return;
-    const reward=form.querySelector('input[name="reward"]');if(!reward)return;
-    let note=form.querySelector('[data-shopads-split-note]');
-    if(!note){note=document.createElement('small');note.dataset.shopadsSplitNote='1';note.style.cssText='display:block;margin-top:6px;color:#6b7280;line-height:1.35';reward.parentElement.appendChild(note)}
-    const update=()=>{const gross=money(reward.value),fee=gross*RATE,affiliate=gross-fee;note.textContent=gross>0?`Do valor por resultado: divulgador recebe ${brl(affiliate)} (70%) e ShopAds recebe ${brl(fee)} (30%).`:'O valor por resultado será dividido: 70% para o divulgador e 30% para o ShopAds.'};
-    if(!reward.dataset.shopadsSplitBound){reward.dataset.shopadsSplitBound='1';reward.addEventListener('input',update)}update();
-  });
-}
-function boot(){enhance();const observer=new MutationObserver(enhance);observer.observe(document.body||document.documentElement,{childList:true,subtree:true})}
+function clamp(v){const n=Number(v);return Number.isFinite(n)?Math.max(0,Math.min(100,n)):DEFAULT_PERCENT}
+async function defaultPercent(){const d=dbRef();if(!d)return DEFAULT_PERCENT;try{const s=await d.collection('config').doc('shopadsCommission').get();return s.exists?clamp(s.data()?.promoterPercent):DEFAULT_PERCENT}catch(e){return DEFAULT_PERCENT}}
+async function enhance(){const pct=await defaultPercent();document.querySelectorAll('select[name="resultType"]').forEach(select=>{
+ if(!select.querySelector('option[value="cpm"]')){const o=document.createElement('option');o.value='cpm';o.textContent='CPM — 1.000 visualizações';select.appendChild(o)}
+ const form=select.closest('form');if(!form)return;const reward=form.querySelector('input[name="reward"]');if(!reward)return;
+ let field=form.querySelector('[data-shopads-percent-field]');if(!field){field=document.createElement('label');field.dataset.shopadsPercentField='1';field.style.cssText='display:block;margin-top:10px;font-weight:700';field.innerHTML=`Comissão do divulgador nesta campanha (%)<input name="promoterPercent" type="number" min="0" max="100" step="1" value="${pct}" style="display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #d1d5db;border-radius:9px"><small style="display:block;margin-top:4px;color:#6b7280;font-weight:400">Padrão atual: ${pct}%. Você pode mudar somente esta campanha.</small>`;reward.parentElement.parentElement?.appendChild(field)}
+ const percent=field.querySelector('input[name="promoterPercent"]');let note=form.querySelector('[data-shopads-split-note]');if(!note){note=document.createElement('small');note.dataset.shopadsSplitNote='1';note.style.cssText='display:block;margin-top:6px;color:#6b7280;line-height:1.35';field.appendChild(note)}
+ const update=()=>{const gross=money(reward.value),p=clamp(percent.value),fee=100-p;note.textContent=gross>0?`Divulgador: ${brl(gross*p/100)} (${p}%) · ShopAds: ${brl(gross*fee/100)} (${fee}%).`:`Divisão: ${p}% para o divulgador e ${fee}% para o ShopAds.`};if(!reward.dataset.shopadsSplitBound){reward.dataset.shopadsSplitBound='1';reward.addEventListener('input',update);percent.addEventListener('input',update)}update();
+ });}
+function addAdminControl(){if(!admin()||document.getElementById('shopadsCommissionAdmin'))return;const panel=document.querySelector('#shopAdsAdminPanel .saa-body');if(!panel)return;const box=document.createElement('section');box.id='shopadsCommissionAdmin';box.className='saa-card';box.innerHTML=`<h2>⚙️ Comissão padrão ShopAds</h2><p class="saa-meta">Define a comissão padrão do divulgador para novas campanhas. O restante fica para o ShopAds.</p><div style="display:flex;gap:8px;align-items:center"><input id="shopadsDefaultPercent" type="number" min="0" max="100" step="1" style="width:100px;padding:10px;border:1px solid #d1d5db;border-radius:9px"><button id="shopadsSavePercent" class="saa-ok">Salvar</button></div><div id="shopadsPercentInfo" class="saa-meta" style="margin-top:7px"></div>`;panel.insertBefore(box,panel.firstChild);defaultPercent().then(p=>{box.querySelector('#shopadsDefaultPercent').value=p;box.querySelector('#shopadsPercentInfo').textContent=`Divulgador ${p}% · ShopAds ${100-p}%`});box.querySelector('#shopadsSavePercent').onclick=async()=>{const p=clamp(box.querySelector('#shopadsDefaultPercent').value);try{await dbRef().collection('config').doc('shopadsCommission').set({promoterPercent:p,platformPercent:100-p,updatedAt:new Date().toISOString()},{merge:true});box.querySelector('#shopadsPercentInfo').textContent=`Salvo: divulgador ${p}% · ShopAds ${100-p}%`;alert('Comissão padrão atualizada.')}catch(e){alert('Não foi possível salvar a comissão: '+e.message)}}}
+function boot(){enhance();addAdminControl();new MutationObserver(()=>{enhance();addAdminControl()}).observe(document.body||document.documentElement,{childList:true,subtree:true})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
