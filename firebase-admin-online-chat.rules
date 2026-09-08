@@ -1,0 +1,40 @@
+// Cole dentro de match /databases/{database}/documents, antes do bloqueio final.
+// Esta regra usa a função isAdmin() que já existe nas regras do ChatShop.
+
+match /adminPresence/{userId} {
+  allow read: if isAdmin()
+    || (request.auth != null && request.auth.uid == userId);
+
+  allow create, update: if request.auth != null
+    && request.auth.uid == userId
+    && request.resource.data.uid == request.auth.uid
+    && request.resource.data.keys().hasOnly([
+      "uid", "email", "name", "photo", "status", "lastSeen"
+    ]);
+
+  allow delete: if isAdmin()
+    || (request.auth != null && request.auth.uid == userId);
+}
+
+match /adminChats/{userId}/messages/{messageId} {
+  allow read: if isAdmin()
+    || (request.auth != null && request.auth.uid == userId);
+
+  allow create: if request.auth != null
+    && request.resource.data.senderUid == request.auth.uid
+    && request.resource.data.text is string
+    && request.resource.data.text.size() > 0
+    && request.resource.data.text.size() <= 1000
+    && request.resource.data.keys().hasOnly([
+      "text", "senderUid", "senderRole", "createdAt"
+    ])
+    && (
+      (isAdmin() && request.resource.data.senderRole == "admin")
+      || (
+        request.auth.uid == userId
+        && request.resource.data.senderRole == "user"
+      )
+    );
+
+  allow update, delete: if false;
+}
