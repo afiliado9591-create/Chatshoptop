@@ -106,6 +106,7 @@ function addUserSupport(user){
 }
 
 function init(){
+ if(typeof STOREFRONT_MODE!=='undefined'&&STOREFRONT_MODE)return;
  styles();addAdminTab();
  const timer=setInterval(addAdminTab,1000);setTimeout(()=>clearInterval(timer),20000);
  if(typeof auth==='undefined')return;
