@@ -56,9 +56,10 @@ async function totalVisits(){
 }
 
 function addAdminTab(){
- const metric=document.getElementById('adminTabMetricas');if(!metric||document.getElementById('adminTabOnline'))return;
- const b=document.createElement('button');b.className='btn';b.id='adminTabOnline';b.type='button';b.textContent='🟢 Online agora';
- metric.insertAdjacentElement('afterend',b);b.onclick=showOnline;
+ const metric=document.getElementById('adminTabMetricas');if(!metric)return;
+ let b=document.getElementById('adminTabOnline');
+ if(!b){b=document.createElement('button');b.className='btn';b.id='adminTabOnline';b.type='button';b.textContent='🟢 Online agora';metric.insertAdjacentElement('afterend',b)}
+ b.onclick=showOnline;
 }
 
 async function showOnline(){
