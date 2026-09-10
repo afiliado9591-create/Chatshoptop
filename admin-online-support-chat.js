@@ -107,7 +107,12 @@ function addUserSupport(user){
 }
 
 function init(){
- if(typeof STOREFRONT_MODE!=='undefined'&&STOREFRONT_MODE)return;
+ // O suporte roxo é exclusivo do painel ChatShop autenticado.
+ // Nunca deve ser injetado em uma loja pública, catálogo ou domínio próprio.
+ const publicStore=!!document.documentElement.classList.contains('store-public-boot')
+   || (typeof STOREFRONT_MODE!=='undefined'&&STOREFRONT_MODE)
+   || (typeof CUSTOM_DOMAIN_MODE!=='undefined'&&CUSTOM_DOMAIN_MODE);
+ if(publicStore)return;
  styles();addAdminTab();
  const timer=setInterval(addAdminTab,1000);setTimeout(()=>clearInterval(timer),20000);
  if(typeof auth==='undefined')return;
