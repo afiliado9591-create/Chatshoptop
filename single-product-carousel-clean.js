@@ -23,13 +23,14 @@ function installStyle(){
     body.chatshop-virtual-tiktok #pubChatToggle{display:none!important}
     body.chatshop-virtual-tiktok #singleProductFloatingBag{display:none!important}
     body.chatshop-virtual-tiktok .csv-body .vts-card-category,body.chatshop-virtual-tiktok .vs-card-body .vts-card-category{display:none!important}
-    body.chatshop-virtual-tiktok .spc-gallery{position:absolute!important;inset:0!important;z-index:1;display:flex!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory!important;overscroll-behavior-x:contain!important;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;background:#f7f3f3!important;scrollbar-width:none}
+    /* Produto único: imagem menor para deixar espaço visual para os controles. */
+    body.chatshop-virtual-tiktok .spc-gallery{position:absolute!important;left:0!important;right:0!important;top:0!important;height:68%!important;z-index:1;display:flex!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory!important;overscroll-behavior-x:contain!important;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;background:#f7f3f3!important;scrollbar-width:none;border-radius:0 0 16px 16px}
     body.chatshop-virtual-tiktok .spc-gallery::-webkit-scrollbar{display:none}
-    body.chatshop-virtual-tiktok .spc-shot{position:relative!important;min-width:100%!important;width:100%!important;height:100%!important;scroll-snap-align:start!important;scroll-snap-stop:always!important;display:block!important;object-fit:cover!important;object-position:center top!important;background:#f7f3f3!important}
+    body.chatshop-virtual-tiktok .spc-shot{position:relative!important;min-width:100%!important;width:100%!important;height:100%!important;scroll-snap-align:start!important;scroll-snap-stop:always!important;display:block!important;object-fit:contain!important;object-position:center center!important;background:#f7f3f3!important}
     body.chatshop-virtual-tiktok .spc-dots{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:14;display:flex;gap:5px;background:rgba(0,0,0,.26);padding:6px 8px;border-radius:999px}
     body.chatshop-virtual-tiktok .spc-dot{width:7px;height:7px;border:0;border-radius:50%;padding:0;background:rgba(255,255,255,.45)}
     body.chatshop-virtual-tiktok .spc-dot.active{background:#fff;transform:scale(1.18)}
-    body.chatshop-virtual-tiktok .spc-actions{position:absolute;right:12px;bottom:116px;z-index:22;display:flex;flex-direction:column;gap:10px;align-items:center}
+    body.chatshop-virtual-tiktok .spc-actions{position:absolute;right:12px;top:calc(68% + 14px);bottom:auto;z-index:22;display:flex;flex-direction:column;gap:10px;align-items:center}
     body.chatshop-virtual-tiktok .spc-action{width:54px;height:54px;border:0;border-radius:50%;background:rgba(255,255,255,.96);color:#111827;font-size:22px;display:grid;place-items:center;box-shadow:0 5px 18px rgba(0,0,0,.28);cursor:pointer}
     body.chatshop-virtual-tiktok .spc-action.buy{background:var(--store-main,#7A2E3B);color:#fff}
     body.chatshop-virtual-tiktok .spc-action span{position:absolute;right:62px;background:rgba(17,24,39,.84);color:#fff;padding:6px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;opacity:0;pointer-events:none}
@@ -90,7 +91,6 @@ function installEditorExtras(){
      Remove o bloco legado para não duplicar campos e altura no celular. */
   $$('.spc-editor-extra').forEach(el=>el.remove());
 }
-
 function wrapCollect(){
   try{
     if(typeof collect!=='function'||collect.__spcWrapped)return;
@@ -108,8 +108,6 @@ function boot(){
   const refreshEditor=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;installEditorExtras();fillEditorFromData();wrapCollect()})};
   const attachEditorObserver=()=>{const products=$('#products');if(!products||products.dataset.spcObserved==='1')return false;products.dataset.spcObserved='1';new MutationObserver(refreshEditor).observe(products,{childList:true,subtree:true});return true};
   if(!attachEditorObserver()){let tries=0;const timer=setInterval(()=>{tries++;installEditorExtras();fillEditorFromData();wrapCollect();if(attachEditorObserver()||tries>=40)clearInterval(timer)},250)}
-  /* Observa somente a grade. Evita varrer o documento inteiro a cada alteração do chat,
-     da sacola ou de outros recursos da página. */
   let publicQueued=false,gridObserver=null,observedGrid=null;
   const refreshPublished=()=>{if(publicQueued)return;publicQueued=true;requestAnimationFrame(()=>{publicQueued=false;decoratePublished()})};
   const attachPublishedObserver=()=>{
