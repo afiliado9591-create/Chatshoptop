@@ -1,6 +1,7 @@
 /* ChatShop — acesso aos catálogos para afiliados.
    - Dridália Modas: catálogo completo liberado no Aprendiz.
    - Outros catálogos: seguem a flag liberadoGratis definida pelo admin.
+   - Administrador: pode testar/usar qualquer catálogo, independentemente do plano.
    - Botão de afiliação usa o link cadastrado no catálogo.
 */
 (function(){
@@ -29,6 +30,22 @@ function unlockDridaliaForFree(){
     const status=spans[spans.length-1];
     if(status){status.textContent='🎁 catálogo completo grátis';status.style.color='#15803d';status.style.fontWeight='800'}
     btn.dataset.catalogoDridalia='1';
+  });
+}
+
+// O administrador precisa conseguir testar qualquer catálogo, inclusive os
+// catálogos que estão bloqueados para o plano Aprendiz. Isso não altera a
+// permissão dos usuários comuns nem a regra liberadoGratis do catálogo.
+function unlockAllCatalogsForAdmin(){
+  if(!isAdminUser())return;
+  const list=$('#catalogoPickerLista');if(!list)return;
+  $$('button[data-id]',list).forEach(btn=>{
+    btn.dataset.bloqueado='';
+    btn.style.opacity='1';
+    const spans=btn.querySelectorAll('span');
+    const status=spans[spans.length-1];
+    if(status){status.textContent='🔓 liberado para administrador';status.style.color='#15803d';status.style.fontWeight='800'}
+    btn.dataset.catalogoAdmin='1';
   });
 }
 
@@ -82,7 +99,12 @@ function decorateAdminCatalogs(){
   });
 }
 
-function refresh(){decorateAffiliateButton();unlockDridaliaForFree();decorateAdminCatalogs()}
+function refresh(){
+  decorateAffiliateButton();
+  unlockDridaliaForFree();
+  unlockAllCatalogsForAdmin();
+  decorateAdminCatalogs();
+}
 function boot(){
   decorateAffiliateButton();
   ensureDridaliaDatabaseFlag().finally(()=>setTimeout(refresh,100));
