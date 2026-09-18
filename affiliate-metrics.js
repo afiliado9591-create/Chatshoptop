@@ -54,8 +54,24 @@ function trackPublic(){
   }catch(e){}
   try{const p=new URLSearchParams(location.search),ref=p.get('ref');if(ref){localStorage.setItem('chatshop_affiliate_ref',ref);window.__CHATSHOP_AFFILIATE_REF=ref}}catch(e){}
 }
+function installCheckoutAttribution(){
+  if(window.__CHATSHOP_AFFILIATE_CHECKOUT_PATCHED)return;
+  window.__CHATSHOP_AFFILIATE_CHECKOUT_PATCHED=true;
+  const nativeFetch=window.fetch.bind(window);
+  window.fetch=async function(input,init){
+    try{
+      const url=typeof input==='string'?input:String(input?.url||'');
+      if(/\\/api\\/mercadopago\\/checkout\\.js(?:\\?|$)/.test(url) && String(init?.method||'GET').toUpperCase()==='POST'){
+        const body=typeof init.body==='string'?JSON.parse(init.body||'{}'):null;
+        const ref=String(window.__CHATSHOP_AFFILIATE_REF||localStorage.getItem('chatshop_affiliate_ref')||'').trim();
+        if(body&&ref){body.affiliateRef=ref;init={...init,body:JSON.stringify(body)};return nativeFetch('/api/affiliate-checkout.js',init)}
+      }
+    }catch(e){}
+    return nativeFetch(input,init);
+  };
+}
 function install(){
-  if(installed)return;installed=true;ensureStyles();
+  if(installed)return;installed=true;ensureStyles();installCheckoutAttribution();
   const tick=()=>{addButton();trackPublic()};
   tick();setTimeout(tick,300);setTimeout(tick,1200);
   new MutationObserver(tick).observe(document.documentElement,{childList:true,subtree:true});
