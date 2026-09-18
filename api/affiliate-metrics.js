@@ -34,23 +34,27 @@ module.exports=async function(req,res){
     }
     const result=[];
     for(const item of mine){
-      const clicksSnap=await db.collection('chatshops').doc(item.slug).collection('affiliateClicks').where('affiliateCode','==',item.code).get();
+      const storeRef=db.collection('chatshops').doc(item.slug);
+      const clicksSnap=await storeRef.collection('affiliateClicks').where('affiliateCode','==',item.code).get();
       let sales=0,total=0,approvedSales=0;
-      if(item.storeType==='virtual' && item.entry && item.entry.affiliateCode && item.entry.affiliateStatus!=='inactive' && item.commissionPercent>=0 && item.commissionPercent<=100){
-        const store=(await db.collection('chatshops').doc(item.slug).get()).data()||{};
+      if(item.storeType==='virtual' && item.entry && item.entry.affiliateCode && item.entry.affiliateStatus!=='inactive'){
+        const store=(await storeRef.get()).data()||{};
         if(store.mercadoPagoConnection?.connected===true && store.mercadoPagoVault){
           try{
             const vault=decryptMerchantTokens(store.mercadoPagoVault),payments=await searchPayments(vault);
+            const attrs=await storeRef.collection('affiliateAttributions').where('affiliateCode','==',item.code).get();
+            const attributed=new Set(attrs.docs.map(d=>String(d.data()?.orderNumber||d.id)));
             for(const p of payments){
-              const ref=String(p?.metadata?.affiliate_ref||'');
-              if(ref!==item.code)continue;
+              const external=String(p?.external_reference||'');
+              const orderNumber=external.split(':').pop()||'';
+              if(!attributed.has(orderNumber))continue;
               const status=String(p?.status||'').toLowerCase();
-              sales++;
               if(status==='approved'){approvedSales++;total+=num(p.transaction_amount||0);}
             }
           }catch(e){console.warn('affiliate-metrics payments',item.slug,e.message)}
         }
       }
+      sales=approvedSales;
       result.push({
         slug:item.slug,brand:item.brand,code:item.code,
         clicks:clicksSnap.size,sales:approvedSales,totalSalesValue:Number(total.toFixed(2)),
