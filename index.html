@@ -2150,6 +2150,25 @@ $('#addProduct').onclick=()=>{
   addProduct({}, {prepend:true,focus:true});renderLive();atualizarAvisoLimite();
 };
 let catalogoAtualId = null, catalogoAtualNome = '', catalogoAtualLink = '';
+async function catalogAccess(action, catalogId=''){
+  if(!auth || !auth.currentUser) throw new Error('Login necessário. Entre novamente no ChatShop.');
+  const token = await auth.currentUser.getIdToken();
+  const params = new URLSearchParams();
+  params.set('action', action);
+  if(catalogId) params.set('catalogId', catalogId);
+  const response = await fetch('/api/catalog-access?' + params.toString(), {
+    method:'GET',
+    headers:{ Authorization:'Bearer ' + token, accept:'application/json' },
+    cache:'no-store'
+  });
+  let data = null;
+  try{ data = await response.json(); }catch(e){}
+  if(!response.ok){
+    throw new Error(data?.message || data?.error || 'Não foi possível carregar o catálogo.');
+  }
+  return data || {};
+}
+
 async function abrirCatalogoGeral(){
   $('#catalogoModal').style.display='flex';
   $('#catalogoModalTitulo').textContent = '📦 Catálogos Alibr';
@@ -2158,26 +2177,38 @@ async function abrirCatalogoGeral(){
   const lista = $('#catalogoPickerLista');
   lista.innerHTML = '<p class="empty-hint">Carregando catálogos...</p>';
   try{
-    const snap = await db.collection(COLECAO_CATALOGOS).orderBy('createdAt','desc').limit(100).get();
-    if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum catálogo disponível ainda.</p>'; return; }
-    lista.innerHTML = snap.docs.map(d=>{
-      const c = d.data();
-      const bloqueado = myPlan === 'aprendiz' && !c.liberadoGratis;
+    const data = await catalogAccess('list');
+    const catalogs = Array.isArray(data.catalogs) ? data.catalogs : [];
+    if(!catalogs.length){
+      lista.innerHTML = '<p class="empty-hint">Nenhum catálogo disponível ainda.</p>';
+      return;
+    }
+    lista.innerHTML = catalogs.map(c=>{
+      const bloqueado = c.allowed === false;
       const statusTxt = bloqueado ? '🔒 assine pra usar' : 'ver produtos →';
-      return `<button type="button" class="btn" data-id="${d.id}" data-bloqueado="${bloqueado?'1':''}" style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;${bloqueado?'opacity:.6':''}">
-        <span>📦 ${esc(c.nome)}</span>
+      return `<button type="button" class="btn" data-id="${esc(c.id)}" data-bloqueado="${bloqueado?'1':''}" style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;${bloqueado?'opacity:.6':''}">
+        <span>📦 ${esc(c.nome||'Catálogo')}</span>
         <span style="font-size:11px;color:${bloqueado?'#dc2626':'var(--muted)'}">${statusTxt}</span>
       </button>`;
     }).join('');
     lista.querySelectorAll('button[data-id]').forEach(btn=>{
       btn.onclick = ()=>{
-        if(btn.dataset.bloqueado){ $('#catalogoModal').style.display='none'; abrirPlanos(); return; }
-        const c = snap.docs.find(d=>d.id===btn.dataset.id).data();
-        abrirCatalogoDetalhe(btn.dataset.id, c.nome, c.linkAfiliacao||'');
+        if(btn.dataset.bloqueado){
+          $('#catalogoModal').style.display='none';
+          abrirPlanos();
+          return;
+        }
+        const c = catalogs.find(item=>String(item.id)===String(btn.dataset.id));
+        if(!c) return;
+        abrirCatalogoDetalhe(c.id, c.nome||'Catálogo', c.linkAfiliacao||'');
       };
     });
-  }catch(e){ console.error(e); lista.innerHTML = '<p class="empty-hint">Não foi possível carregar os catálogos. Confira as regras do Firestore.</p>'; }
+  }catch(e){
+    console.error('catalogAccess list:', e);
+    lista.innerHTML = '<p class="empty-hint">Não foi possível carregar os catálogos.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>';
+  }
 }
+
 async function abrirCatalogoDetalhe(catalogoId, catalogoNome, linkAfiliacao){
   catalogoAtualId = catalogoId; catalogoAtualNome = catalogoNome; catalogoAtualLink = linkAfiliacao;
   $('#catalogoModalTitulo').textContent = '📦 ' + catalogoNome;
@@ -2188,30 +2219,53 @@ async function abrirCatalogoDetalhe(catalogoId, catalogoNome, linkAfiliacao){
   const lista = $('#catalogoLista');
   lista.innerHTML = '<p class="empty-hint">Carregando produtos...</p>';
   try{
-    const snapRaw = await db.collection(COLECAO_CATALOGO_GERAL).where('catalogoId','==',catalogoId).limit(300).get();
-    const snap = { empty: snapRaw.empty, docs: snapRaw.docs.slice().sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0)) };
-    if(snap.empty){ lista.innerHTML = '<p class="empty-hint">Nenhum produto neste catálogo ainda.</p>'; return; }
-    lista.innerHTML = snap.docs.map(d=>{
-      const p = d.data();
+    const data = await catalogAccess('products', catalogoId);
+    const products = Array.isArray(data.products) ? data.products : [];
+    if(!products.length){
+      lista.innerHTML = '<p class="empty-hint">Nenhum produto neste catálogo ainda.</p>';
+      return;
+    }
+    lista.innerHTML = products.map(p=>{
       return `<div style="display:flex;gap:10px;align-items:center;border:1px solid #eee;border-radius:8px;padding:8px">
         ${p.image ? `<img src="${esc(p.image)}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0">` : '<div style="width:56px;height:56px;background:#f3f4f6;border-radius:6px;flex-shrink:0"></div>'}
-        <div style="flex:1;min-width:0"><b style="font-size:13px">${esc(p.name)}</b><br><span style="font-size:11px;color:var(--muted)">${esc(p.category||'sem categoria')}</span></div>
-        <button class="btn primary" data-id="${d.id}" type="button" style="font-size:12px;white-space:nowrap">Usar este</button>
+        <div style="flex:1;min-width:0"><b style="font-size:13px">${esc(p.name||'Produto')}</b><br><span style="font-size:11px;color:var(--muted)">${esc(p.category||'sem categoria')}</span></div>
+        <button class="btn primary" data-id="${esc(p.id)}" type="button" style="font-size:12px;white-space:nowrap">Usar este</button>
       </div>`;
     }).join('');
     lista.querySelectorAll('button[data-id]').forEach(btn=>{
       btn.onclick = ()=>{
-        const docSnap = snap.docs.find(d=>d.id===btn.dataset.id);
-        const p = docSnap.data();
+        const p = products.find(item=>String(item.id)===String(btn.dataset.id));
+        if(!p) return;
         const atual = document.querySelectorAll('#products .product').length;
-        if(atual >= myProductLimit){ $('#catalogoModal').style.display='none'; abrirPlanos(); return; }
-        addProduct({ name:p.name, imageUrl:p.image||'', category:p.category||'', keywords:(p.keywords||[]).join(', '), price:p.price||'', link:'https://', fromCatalog:true, qna:p.qna||[], buttonText:p.buttonText||'Comprar agora', buttonColor:p.buttonColor||'#7A2E3B', displayText:p.displayText||'', voiceText:p.voiceText||'' }, {prepend:true,focus:false});
-        renderLive(); atualizarAvisoLimite();
+        if(atual >= myProductLimit){
+          $('#catalogoModal').style.display='none';
+          abrirPlanos();
+          return;
+        }
+        addProduct({
+          name:p.name,
+          imageUrl:p.image||'',
+          category:p.category||'',
+          keywords:(p.keywords||[]).join(', '),
+          price:p.price||'',
+          link:'https://',
+          fromCatalog:true,
+          qna:p.qna||[],
+          buttonText:p.buttonText||'Comprar agora',
+          buttonColor:p.buttonColor||'#7A2E3B',
+          displayText:p.displayText||'',
+          voiceText:p.voiceText||''
+        }, {prepend:true,focus:false});
+        renderLive();
+        atualizarAvisoLimite();
         $('#catalogoModal').style.display='none';
         toast('Produto adicionado! Agora cole o link completo dele no campo destacado.');
       };
     });
-  }catch(e){ console.error(e); lista.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>'; }
+  }catch(e){
+    console.error('catalogAccess products:', e);
+    lista.innerHTML = '<p class="empty-hint">Não foi possível carregar.<br><small style="color:#dc2626">Erro técnico: '+esc(e.message||String(e))+'</small></p>';
+  }
 }
 $('#usarCatalogoBtn').onclick = abrirCatalogoGeral;
 $('#voltarCatalogos').onclick = abrirCatalogoGeral;
