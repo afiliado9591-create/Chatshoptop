@@ -41,8 +41,27 @@ function safeDoc(doc){return{id:doc.id,...(doc.data()||{})}}
 
 module.exports=async function handler(req,res){
   res.setHeader('Cache-Control','no-store');
-  if(req.method!=='GET')return res.status(405).json({error:'method_not_allowed'});
   try{
+    if(req.method==='POST'){
+      const {db}=await authAdmin(req);
+      const b=req.body||{};
+      const catalogoId=clean(b.catalogoId,160);
+      const name=clean(b.name,200);
+      const image=clean(b.image,1000000);
+      if(!catalogoId||!name||!image)return res.status(400).json({error:'missing_fields',message:'Nome, imagem e catálogo são obrigatórios.'});
+      const cat=await db.collection('catalogos').doc(catalogoId).get();
+      if(!cat.exists)return res.status(404).json({error:'catalog_not_found'});
+      const keywords=Array.isArray(b.keywords)?b.keywords.map(x=>clean(x,80)).filter(Boolean).slice(0,30):[];
+      const data={
+        name,image,category:clean(b.category,120),keywords,price:clean(b.price,40),
+        baseLink:clean(b.baseLink,2000),buttonText:clean(b.buttonText,40)||'Comprar agora',
+        buttonColor:/^#[0-9a-fA-F]{6}$/.test(String(b.buttonColor||''))?String(b.buttonColor):'#7A2E3B',
+        catalogoId,createdAt:admin.firestore.FieldValue.serverTimestamp(),updatedAt:admin.firestore.FieldValue.serverTimestamp()
+      };
+      const ref=await db.collection('catalogoGeral').add(data);
+      return res.status(200).json({ok:true,id:ref.id});
+    }
+    if(req.method!=='GET')return res.status(405).json({error:'method_not_allowed'});
     const decoded=await authUser(req);
     const db=getAdmin().firestore();
     const userSnap=await db.collection('users').doc(decoded.uid).get();
