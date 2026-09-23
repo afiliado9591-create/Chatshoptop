@@ -1164,8 +1164,21 @@ async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
       if(!name || !image){ toast('Preencha o nome e escolha uma imagem por link ou upload'); return; }
       try{
         const dadosProduto={ name, image, category, keywords, price, baseLink, buttonText, buttonColor, catalogoId, updatedAt:firebase.firestore.FieldValue.serverTimestamp() };
-        if(catEditandoId) await db.collection(COLECAO_CATALOGO_GERAL).doc(catEditandoId).update(dadosProduto);
-        else await db.collection(COLECAO_CATALOGO_GERAL).add({ ...dadosProduto, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        if(catEditandoId){
+          await db.collection(COLECAO_CATALOGO_GERAL).doc(catEditandoId).update(dadosProduto);
+        }else{
+          const user=firebase.auth().currentUser;
+          if(!user) throw new Error('Login necessário.');
+          const token=await user.getIdToken();
+          const resp=await fetch('/api/catalog-admin',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body:JSON.stringify({name,image,category,keywords,price,baseLink,buttonText,buttonColor,catalogoId})
+          });
+          let result={};
+          try{result=await resp.json()}catch(_){}
+          if(!resp.ok)throw new Error(result.message||'Não foi possível adicionar o produto.');
+        }
         toast(catEditandoId?'Produto atualizado!':'Produto adicionado!');
         mostrarAdminCatalogoProdutos(catalogoId, catalogoNome);
       }catch(e){ console.error(e); toast('Não foi possível salvar. Confira as regras do Firestore.'); }
