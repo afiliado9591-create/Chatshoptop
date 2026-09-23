@@ -1093,8 +1093,15 @@ async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
   const box = $('#adminConteudo');
   box.innerHTML = '<p class="empty-hint">Carregando produtos...</p>';
   try{
-    const snapRaw = await db.collection(COLECAO_CATALOGO_GERAL).where('catalogoId','==',catalogoId).limit(300).get();
-    const snap = { empty: snapRaw.empty, docs: snapRaw.docs.slice().sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0)) };
+    const user=firebase.auth().currentUser;
+    if(!user) throw new Error('Login necessário.');
+    const token=await user.getIdToken();
+    const resp=await fetch('/api/catalog-access?'+new URLSearchParams({action:'products',catalogId}),{headers:{'Authorization':'Bearer '+token}});
+    let result={};
+    try{result=await resp.json()}catch(_){ }
+    if(!resp.ok) throw new Error(result.message||result.error||'Não foi possível carregar os produtos.');
+    const docs=(result.products||[]).map(p=>({id:p.id,data:()=>p}));
+    const snap = { empty: docs.length===0, docs };
     box.innerHTML = `
       <button id="ctgVoltarBtn" type="button" style="border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0;margin-bottom:10px">← Voltar aos catálogos</button>
       <p style="font-weight:700;font-size:14px;margin:0 0 10px">📦 ${esc(catalogoNome)}</p>
