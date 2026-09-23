@@ -1177,7 +1177,7 @@ async function mostrarAdminCatalogoProdutos(catalogoId, catalogoNome){
           const user=firebase.auth().currentUser;
           if(!user) throw new Error('Login necessário.');
           const token=await user.getIdToken();
-          const resp=await fetch('/api/catalog-admin',{
+          const resp=await fetch('/api/catalog-access',{
             method:'POST',
             headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
             body:JSON.stringify({name,image,category,keywords,price,baseLink,buttonText,buttonColor,catalogoId})
